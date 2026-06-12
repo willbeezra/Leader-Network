@@ -4896,7 +4896,7 @@ admin.post('/cc-withdrawals/:id/review', requirePermission('cc_withdrawals.edit'
     action:         `CC_WITHDRAWAL_${action.toUpperCase()}`,
     description:    `${action === 'approved' ? 'Approbation' : 'Rejet'} remboursement CC #${withdrawalId} — ${withdrawal.amount}$`,
     metadata:       { withdrawal_id: withdrawalId, amount: withdrawal.amount, admin_note }
-  })
+  }).catch(() => {}) // audit log failure must never block the response
 
   return c.json({
     success:       true,
