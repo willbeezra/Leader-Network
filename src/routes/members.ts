@@ -3084,36 +3084,65 @@ members.get('/reserve-strategique', async (c) => {
   const rsBalanceVal     = member?.reserve_strategique || 0
   const totalReleased    = Math.min(totalReleasedRaw, rsBalanceVal)
 
-  // Valeur à l'échéance (avec abondement)
-  const totalWithAbondement = lockedEntries.reduce((s: number, e: any) => {
-    return s + (e.amount || 0) * (1 + (e.abondement_rate || 0))
+  // ── Calcul correct des parts pour CHAQUE entrée ──────────────────────────
+  // La colonne `amount` stocke déjà : prélèvement (10%) + abondement (10% ou 20%)
+  // tous deux calculés sur la prime brute du mois.
+  // Formule inverse : si rsPct=10% et abondementRate=20%
+  //   amount = grossPrime × (rsPct + abondementRate) / 100
+  //   → part_prelevement = amount × rsPct / (rsPct + abondementRate×100)
+  //   → part_abondement  = amount × abondementRate×100 / (rsPct + abondementRate×100)
+  const rsPct = parseFloat(cfg['reserve_strategique_pct'] ?? '10')
+
+  const enrichedEntries = allEntries.map((e: any) => {
+    const abondRate   = e.abondement_rate || 0          // ex: 0.20
+    const abondPct    = abondRate * 100                 // ex: 20
+    const divisor     = rsPct + abondPct                // ex: 30
+    const partPrelevement = divisor > 0
+      ? Math.round((e.amount || 0) * rsPct / divisor * 100) / 100
+      : 0
+    const partAbondement = divisor > 0
+      ? Math.round((e.amount || 0) * abondPct / divisor * 100) / 100
+      : 0
+    return {
+      ...e,
+      part_prelevement: partPrelevement,   // montant prélevé sur la prime
+      part_abondement:  partAbondement,    // bonus ajouté par LEADER Network
+    }
+  })
+
+  // Totaux des parts sur les entrées actives (locked uniquement)
+  const totalPrelevement = lockedEntries.reduce((s: number, e: any) => {
+    const abondPct = (e.abondement_rate || 0) * 100
+    const divisor  = rsPct + abondPct
+    return s + (divisor > 0 ? (e.amount || 0) * rsPct / divisor : 0)
   }, 0)
+  const totalAbondement = totalLocked - totalPrelevement
 
   // Prochaine date de libération (la plus proche parmi les locked)
   const nextUnlock = lockedEntries.length > 0
     ? lockedEntries.reduce((min: string, e: any) => (!min || e.locked_until < min) ? e.locked_until : min, '')
     : null
 
-  // Taux d'abondement moyen (ou le taux de la première entrée locked)
+  // Taux d'abondement de la première entrée active (pour info)
   const abondementRate = lockedEntries.length > 0 ? lockedEntries[0].abondement_rate : 0.10
 
   const withdrawalEnabled = (cfg['rs_withdrawal_enabled'] ?? '1') === '1'
 
   return c.json({
-    balance:            rsBalanceVal,
-    total_locked:       totalLocked,
-    total_released:     totalReleased,
-    total_with_abondement: totalWithAbondement,
-    gain_abondement:    totalWithAbondement - totalLocked,
-    abondement_rate:    abondementRate,
-    next_unlock_date:   nextUnlock,
-    entries:            allEntries,
-    locked_count:       lockedEntries.length,
-    released_count:     releasedEntries.length,
-    cancelled_count:    cancelledEntries.length,
-    withdrawn_count:    withdrawnEntries.length,
-    withdrawal_enabled: withdrawalEnabled,
-    rs_pct:             parseFloat(cfg['reserve_strategique_pct'] ?? '10'),
+    balance:              rsBalanceVal,
+    total_locked:         totalLocked,
+    total_released:       totalReleased,
+    total_prelevement:    Math.round(totalPrelevement * 100) / 100,
+    total_abondement:     Math.round(totalAbondement * 100) / 100,
+    abondement_rate:      abondementRate,
+    next_unlock_date:     nextUnlock,
+    entries:              enrichedEntries,
+    locked_count:         lockedEntries.length,
+    released_count:       releasedEntries.length,
+    cancelled_count:      cancelledEntries.length,
+    withdrawn_count:      withdrawnEntries.length,
+    withdrawal_enabled:   withdrawalEnabled,
+    rs_pct:               rsPct,
   })
 })
 
