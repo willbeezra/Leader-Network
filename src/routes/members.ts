@@ -2808,7 +2808,7 @@ members.get('/cc-wallet', async (c) => {
   const memberId = c.get('memberId' as any) as string
   const db = c.env.DB
 
-  const [balance, transactions, credits, withdrawals] = await Promise.all([
+  const [balance, transactions, credits, withdrawals, ccConfig] = await Promise.all([
     getCCBalance(db, memberId),
     db.prepare(
       `SELECT * FROM cc_transactions
@@ -2824,18 +2824,36 @@ members.get('/cc-wallet', async (c) => {
        ORDER BY available_at ASC`
     ).bind(memberId).all(),
     db.prepare(
-      `SELECT id, amount, description, status, admin_note, reviewed_at, created_at
+      `SELECT id, amount, description, justificatif_name, justificatif_type, status, admin_note, reviewed_at, created_at
        FROM cc_withdrawals
        WHERE member_id = ?
        ORDER BY created_at DESC`
     ).bind(memberId).all(),
+    // Config paramétrable (5 clés en 1 requête)
+    db.prepare(
+      `SELECT key, value FROM compensation_config
+       WHERE key IN ('cc_withdrawal_min_amount','cc_withdrawal_max_amount',
+                     'cc_withdrawal_desc_min_chars','cc_withdrawal_processing_time',
+                     'cc_withdrawal_max_pending')`
+    ).all(),
   ])
+
+  const cfgMap = Object.fromEntries(
+    (ccConfig.results as {key:string, value:string}[]).map(r => [r.key, r.value])
+  )
 
   return c.json({
     balance,
     transactions: transactions.results || [],
     credits:      credits.results      || [],
     withdrawals:  withdrawals.results  || [],
+    config: {
+      min_amount:        parseFloat(cfgMap['cc_withdrawal_min_amount']     ?? '10'),
+      max_amount:        parseFloat(cfgMap['cc_withdrawal_max_amount']     ?? '5000'),
+      desc_min_chars:    parseInt(cfgMap['cc_withdrawal_desc_min_chars']   ?? '10', 10),
+      processing_time:   cfgMap['cc_withdrawal_processing_time']           ?? '48h',
+      max_pending:       parseInt(cfgMap['cc_withdrawal_max_pending']      ?? '1', 10),
+    },
   })
 })
 
@@ -2880,14 +2898,28 @@ members.post('/cc-withdrawal', async (c) => {
     description = (body.description || '').trim()
   }
 
+  // Lire les paramètres CC depuis la config admin (tout configurable, rien de hardcodé)
+  const [cfgMinRaw, cfgMaxRaw, cfgDescMinRaw, cfgProcessingRaw, cfgMaxPendingRaw] = await Promise.all([
+    db.prepare(`SELECT value FROM compensation_config WHERE key='cc_withdrawal_min_amount'`).first<{value:string}>(),
+    db.prepare(`SELECT value FROM compensation_config WHERE key='cc_withdrawal_max_amount'`).first<{value:string}>(),
+    db.prepare(`SELECT value FROM compensation_config WHERE key='cc_withdrawal_desc_min_chars'`).first<{value:string}>(),
+    db.prepare(`SELECT value FROM compensation_config WHERE key='cc_withdrawal_processing_time'`).first<{value:string}>(),
+    db.prepare(`SELECT value FROM compensation_config WHERE key='cc_withdrawal_max_pending'`).first<{value:string}>(),
+  ])
+  const cfgMin        = parseFloat(cfgMinRaw?.value ?? '10')
+  const cfgMax        = parseFloat(cfgMaxRaw?.value ?? '5000')
+  const cfgDescMin    = parseInt(cfgDescMinRaw?.value ?? '10', 10)
+  const cfgProcessing = cfgProcessingRaw?.value ?? '48h'
+  const cfgMaxPending = parseInt(cfgMaxPendingRaw?.value ?? '1', 10)
+
   if (!amount || amount <= 0)
     return c.json({ error: 'Montant invalide' }, 400)
-  if (!description || description.length < 10)
-    return c.json({ error: 'Description requise (10 caractères minimum)' }, 400)
-  if (amount < 10)
-    return c.json({ error: 'Montant minimum : 10$' }, 400)
-  if (amount > 5000)
-    return c.json({ error: 'Montant maximum par demande : 5 000$' }, 400)
+  if (!description || description.length < cfgDescMin)
+    return c.json({ error: `Description requise (${cfgDescMin} caractères minimum)` }, 400)
+  if (amount < cfgMin)
+    return c.json({ error: `Montant minimum : ${cfgMin}$` }, 400)
+  if (cfgMax > 0 && amount > cfgMax)
+    return c.json({ error: `Montant maximum par demande : ${cfgMax.toLocaleString('fr-FR')}$` }, 400)
 
   // Vérifier solde disponible
   const bal = await getCCBalance(db, memberId)
@@ -2896,12 +2928,18 @@ members.post('/cc-withdrawal', async (c) => {
       error: `Solde CC disponible insuffisant — ${bal.available.toFixed(2)}$ disponible, ${amount}$ demandé`
     }, 422)
 
-  // Vérifier qu'il n'y a pas déjà une demande pending
-  const existing = await db.prepare(
-    `SELECT id FROM cc_withdrawals WHERE member_id = ? AND status = 'pending'`
-  ).bind(memberId).first() as any
-  if (existing)
-    return c.json({ error: 'Une demande de remboursement est déjà en cours de traitement' }, 409)
+  // Vérifier le nombre de demandes pending en cours
+  if (cfgMaxPending > 0) {
+    const pendingCount = await db.prepare(
+      `SELECT COUNT(*) as cnt FROM cc_withdrawals WHERE member_id = ? AND status = 'pending'`
+    ).bind(memberId).first<{cnt:number}>()
+    if ((pendingCount?.cnt ?? 0) >= cfgMaxPending)
+      return c.json({
+        error: cfgMaxPending === 1
+          ? 'Une demande de remboursement est déjà en cours de traitement'
+          : `Vous avez déjà ${cfgMaxPending} demande(s) en attente`
+      }, 409)
+  }
 
   const withdrawalId = `ccw_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`
 
@@ -2913,7 +2951,7 @@ members.post('/cc-withdrawal', async (c) => {
   return c.json({
     success:       true,
     withdrawal_id: withdrawalId,
-    message:       `Demande de remboursement de ${amount}$ soumise avec succès. Elle sera traitée sous 48h.`,
+    message:       `Demande de remboursement de ${amount}$ soumise avec succès. Elle sera traitée sous ${cfgProcessing}.`,
   })
 })
 

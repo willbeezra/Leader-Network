@@ -1445,7 +1445,10 @@ admin.get('/config/credit-croissance', requirePermission('settings.view'), async
   const [compRows, bonusRows, entriesRes] = await Promise.all([
     c.env.DB.prepare(
       `SELECT key, value FROM compensation_config
-       WHERE key IN ('credit_croissance_pct','credit_croissance_validity_months','credit_croissance_max_withdrawal')
+       WHERE key IN ('credit_croissance_pct','credit_croissance_validity_months','credit_croissance_max_withdrawal',
+                     'credit_croissance_cap',
+                     'cc_withdrawal_min_amount','cc_withdrawal_max_amount',
+                     'cc_withdrawal_desc_min_chars','cc_withdrawal_processing_time','cc_withdrawal_max_pending')
        ORDER BY key`
     ).all(),
     c.env.DB.prepare(
@@ -1481,8 +1484,15 @@ admin.get('/config/credit-croissance', requirePermission('settings.view'), async
     pct:              compMap['credit_croissance_pct']              ?? '20',
     validity_months:  compMap['credit_croissance_validity_months']  ?? '3',
     max_withdrawal:   compMap['credit_croissance_max_withdrawal']   ?? '0',
+    cap:              compMap['credit_croissance_cap']              ?? '5000',
     enabled:          bonusMap['credit_croissance_enabled']         ?? 'true',
     min_rank:         bonusMap['credit_croissance_rank']            ?? 'Leader',
+    // Paramètres des demandes de remboursement
+    withdrawal_min_amount:     compMap['cc_withdrawal_min_amount']      ?? '10',
+    withdrawal_max_amount:     compMap['cc_withdrawal_max_amount']      ?? '5000',
+    withdrawal_desc_min_chars: compMap['cc_withdrawal_desc_min_chars']  ?? '10',
+    withdrawal_processing_time:compMap['cc_withdrawal_processing_time'] ?? '48h',
+    withdrawal_max_pending:    compMap['cc_withdrawal_max_pending']     ?? '1',
     stats:            stats || { total_held:0, total_available:0, total_expired:0, active_members:0 },
     entries:          entriesRes.results || [],
   })
@@ -1494,9 +1504,15 @@ admin.put('/config/credit-croissance', requirePermission('settings.edit'), async
 
   // compensation_config
   const compKeys: Record<string, string> = {
-    pct:             'credit_croissance_pct',
-    validity_months: 'credit_croissance_validity_months',
-    max_withdrawal:  'credit_croissance_max_withdrawal',
+    pct:                      'credit_croissance_pct',
+    validity_months:          'credit_croissance_validity_months',
+    max_withdrawal:           'credit_croissance_max_withdrawal',
+    cap:                      'credit_croissance_cap',
+    withdrawal_min_amount:    'cc_withdrawal_min_amount',
+    withdrawal_max_amount:    'cc_withdrawal_max_amount',
+    withdrawal_desc_min_chars:'cc_withdrawal_desc_min_chars',
+    withdrawal_processing_time:'cc_withdrawal_processing_time',
+    withdrawal_max_pending:   'cc_withdrawal_max_pending',
   }
   for (const [field, key] of Object.entries(compKeys)) {
     if (body[field] !== undefined) {
