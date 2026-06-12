@@ -3071,12 +3071,18 @@ members.get('/reserve-strategique', async (c) => {
   const allEntries = (entries.results || []) as any[]
 
   // Calculs statistiques
-  const lockedEntries   = allEntries.filter(e => e.status === 'locked')
-  const releasedEntries = allEntries.filter(e => e.status === 'released' || e.status === 'unlocked')
+  const lockedEntries    = allEntries.filter(e => e.status === 'locked')
+  // 'released' et 'unlocked' = libérés disponibles au retrait (pas encore retirés)
+  // 'withdrawn' = déjà retirés, ne comptent plus dans le solde disponible
+  const releasedEntries  = allEntries.filter(e => e.status === 'released' || e.status === 'unlocked')
   const cancelledEntries = allEntries.filter(e => e.status === 'cancelled')
+  const withdrawnEntries = allEntries.filter(e => e.status === 'withdrawn')
 
   const totalLocked   = lockedEntries.reduce((s: number, e: any) => s + (e.amount || 0), 0)
-  const totalReleased = releasedEntries.reduce((s: number, e: any) => s + (e.amount || 0), 0)
+  // total_released = MIN(somme entrées libérées, solde RS réel) pour cohérence
+  const totalReleasedRaw = releasedEntries.reduce((s: number, e: any) => s + (e.amount || 0), 0)
+  const rsBalanceVal     = member?.reserve_strategique || 0
+  const totalReleased    = Math.min(totalReleasedRaw, rsBalanceVal)
 
   // Valeur à l'échéance (avec abondement)
   const totalWithAbondement = lockedEntries.reduce((s: number, e: any) => {
@@ -3094,7 +3100,7 @@ members.get('/reserve-strategique', async (c) => {
   const withdrawalEnabled = (cfg['rs_withdrawal_enabled'] ?? '1') === '1'
 
   return c.json({
-    balance:            member?.reserve_strategique || 0,
+    balance:            rsBalanceVal,
     total_locked:       totalLocked,
     total_released:     totalReleased,
     total_with_abondement: totalWithAbondement,
@@ -3105,6 +3111,7 @@ members.get('/reserve-strategique', async (c) => {
     locked_count:       lockedEntries.length,
     released_count:     releasedEntries.length,
     cancelled_count:    cancelledEntries.length,
+    withdrawn_count:    withdrawnEntries.length,
     withdrawal_enabled: withdrawalEnabled,
     rs_pct:             parseFloat(cfg['reserve_strategique_pct'] ?? '10'),
   })
