@@ -3326,6 +3326,82 @@ admin.put('/config/withdrawal', requirePermission('settings.edit'), async (c) =>
 // BRANDING & IDENTITÉ VISUELLE
 // ══════════════════════════════════════════════════════════════════════════
 
+// ── GET /admin/config/cc-withdrawal-fields — lire la config des champs du formulaire CC ──
+admin.get('/config/cc-withdrawal-fields', requirePermission('settings.view'), async (c) => {
+  const rows = await c.env.DB.prepare(`
+    SELECT key, value FROM compensation_config
+    WHERE key IN (
+      'cc_withdrawal_min_amount','cc_withdrawal_max_amount',
+      'cc_withdrawal_desc_min_chars','cc_withdrawal_processing_time','cc_withdrawal_max_pending',
+      'cc_field_description_visible','cc_field_description_required','cc_field_description_label',
+      'cc_field_justificatif_visible','cc_field_justificatif_required','cc_field_justificatif_label',
+      'cc_field_custom1_visible','cc_field_custom1_required','cc_field_custom1_label',
+      'cc_field_custom2_visible','cc_field_custom2_required','cc_field_custom2_label',
+      'cc_field_custom3_visible','cc_field_custom3_required','cc_field_custom3_label'
+    )`).all<{key:string; value:string}>()
+
+  const m: Record<string, string> = {}
+  for (const r of (rows.results || [])) m[r.key] = r.value
+
+  const fv = (k: string, def = '1') => m[`cc_field_${k}_visible`]  ?? def
+  const fr = (k: string, def = '0') => m[`cc_field_${k}_required`] ?? def
+  const fl = (k: string, def: string) => m[`cc_field_${k}_label`]  ?? def
+
+  return c.json({
+    // Paramètres généraux
+    min_amount:       m['cc_withdrawal_min_amount']       ?? '10',
+    max_amount:       m['cc_withdrawal_max_amount']       ?? '5000',
+    desc_min_chars:   m['cc_withdrawal_desc_min_chars']   ?? '10',
+    processing_time:  m['cc_withdrawal_processing_time']  ?? '48h',
+    max_pending:      m['cc_withdrawal_max_pending']      ?? '1',
+    // Champs dynamiques
+    fields: {
+      description:  { visible: fv('description','1'), required: fr('description','1'), label: fl('description','Motif de la demande') },
+      justificatif: { visible: fv('justificatif','1'), required: fr('justificatif','0'), label: fl('justificatif','Justificatif (PDF, JPG, PNG)') },
+      custom1:      { visible: fv('custom1','0'), required: fr('custom1','0'), label: fl('custom1','Information complémentaire 1') },
+      custom2:      { visible: fv('custom2','0'), required: fr('custom2','0'), label: fl('custom2','Information complémentaire 2') },
+      custom3:      { visible: fv('custom3','0'), required: fr('custom3','0'), label: fl('custom3','Information complémentaire 3') },
+    },
+  })
+})
+
+// ── PUT /admin/config/cc-withdrawal-fields — mettre à jour la config des champs CC ──
+admin.put('/config/cc-withdrawal-fields', requirePermission('settings.edit'), async (c) => {
+  const body = await c.req.json() as Record<string, any>
+
+  const upsert = async (key: string, value: string) => {
+    await c.env.DB.prepare(
+      `INSERT INTO compensation_config (id, key, value)
+       VALUES (lower(hex(randomblob(16))), ?, ?)
+       ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=datetime('now')`
+    ).bind(key, value).run()
+  }
+
+  // Paramètres généraux
+  const generalKeys: Record<string, string> = {
+    min_amount:      'cc_withdrawal_min_amount',
+    max_amount:      'cc_withdrawal_max_amount',
+    desc_min_chars:  'cc_withdrawal_desc_min_chars',
+    processing_time: 'cc_withdrawal_processing_time',
+    max_pending:     'cc_withdrawal_max_pending',
+  }
+  for (const [field, key] of Object.entries(generalKeys)) {
+    if (body[field] !== undefined) await upsert(key, String(body[field]))
+  }
+
+  // Champs dynamiques : description, justificatif, custom1, custom2, custom3
+  const fieldNames = ['description', 'justificatif', 'custom1', 'custom2', 'custom3']
+  for (const fname of fieldNames) {
+    const f = body.fields?.[fname]
+    if (!f) continue
+    if (f.visible  !== undefined) await upsert(`cc_field_${fname}_visible`,  f.visible  ? '1' : '0')
+    if (f.required !== undefined) await upsert(`cc_field_${fname}_required`, f.required ? '1' : '0')
+    if (f.label    !== undefined) await upsert(`cc_field_${fname}_label`,    String(f.label))
+  }
+
+  return c.json({ success: true })
+})
+
 // GET /admin/config/branding — lire tous les paramètres branding
 admin.get('/config/branding', requirePermission('settings.view'), async (c) => {
   const rows = await c.env.DB.prepare(

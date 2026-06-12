@@ -2829,12 +2829,18 @@ members.get('/cc-wallet', async (c) => {
        WHERE member_id = ?
        ORDER BY created_at DESC`
     ).bind(memberId).all(),
-    // Config paramétrable (5 clés en 1 requête)
+    // Config paramétrable (toutes les clés CC en 1 requête)
     db.prepare(
       `SELECT key, value FROM compensation_config
-       WHERE key IN ('cc_withdrawal_min_amount','cc_withdrawal_max_amount',
-                     'cc_withdrawal_desc_min_chars','cc_withdrawal_processing_time',
-                     'cc_withdrawal_max_pending')`
+       WHERE key IN (
+         'cc_withdrawal_min_amount','cc_withdrawal_max_amount',
+         'cc_withdrawal_desc_min_chars','cc_withdrawal_processing_time','cc_withdrawal_max_pending',
+         'cc_field_description_visible','cc_field_description_required','cc_field_description_label',
+         'cc_field_justificatif_visible','cc_field_justificatif_required','cc_field_justificatif_label',
+         'cc_field_custom1_visible','cc_field_custom1_required','cc_field_custom1_label',
+         'cc_field_custom2_visible','cc_field_custom2_required','cc_field_custom2_label',
+         'cc_field_custom3_visible','cc_field_custom3_required','cc_field_custom3_label'
+       )`
     ).all(),
   ])
 
@@ -2842,23 +2848,35 @@ members.get('/cc-wallet', async (c) => {
     (ccConfig.results as {key:string, value:string}[]).map(r => [r.key, r.value])
   )
 
+  const fv = (k: string, def = '1') => (cfgMap[`cc_field_${k}_visible`]  ?? def) === '1'
+  const fr = (k: string, def = '0') => (cfgMap[`cc_field_${k}_required`] ?? def) === '1'
+  const fl = (k: string, def: string) => cfgMap[`cc_field_${k}_label`] ?? def
+
   return c.json({
     balance,
     transactions: transactions.results || [],
     credits:      credits.results      || [],
     withdrawals:  withdrawals.results  || [],
     config: {
-      min_amount:        parseFloat(cfgMap['cc_withdrawal_min_amount']     ?? '10'),
-      max_amount:        parseFloat(cfgMap['cc_withdrawal_max_amount']     ?? '5000'),
-      desc_min_chars:    parseInt(cfgMap['cc_withdrawal_desc_min_chars']   ?? '10', 10),
-      processing_time:   cfgMap['cc_withdrawal_processing_time']           ?? '48h',
-      max_pending:       parseInt(cfgMap['cc_withdrawal_max_pending']      ?? '1', 10),
+      min_amount:      parseFloat(cfgMap['cc_withdrawal_min_amount']   ?? '10'),
+      max_amount:      parseFloat(cfgMap['cc_withdrawal_max_amount']   ?? '5000'),
+      desc_min_chars:  parseInt(cfgMap['cc_withdrawal_desc_min_chars'] ?? '10', 10),
+      processing_time: cfgMap['cc_withdrawal_processing_time']         ?? '48h',
+      max_pending:     parseInt(cfgMap['cc_withdrawal_max_pending']    ?? '1', 10),
+      // Champs dynamiques du formulaire
+      fields: {
+        description:  { visible: fv('description','1'), required: fr('description','1'), label: fl('description','Motif de la demande') },
+        justificatif: { visible: fv('justificatif','1'), required: fr('justificatif','0'), label: fl('justificatif','Justificatif (PDF, JPG, PNG)') },
+        custom1:      { visible: fv('custom1','0'), required: fr('custom1','0'), label: fl('custom1','Information complémentaire 1') },
+        custom2:      { visible: fv('custom2','0'), required: fr('custom2','0'), label: fl('custom2','Information complémentaire 2') },
+        custom3:      { visible: fv('custom3','0'), required: fr('custom3','0'), label: fl('custom3','Information complémentaire 3') },
+      },
     },
   })
 })
 
 // ── POST /api/members/cc-withdrawal ──────────────────────────────────────────
-// Soumettre une demande de remboursement CC (multipart/form-data avec justificatif optionnel)
+// Soumettre une demande de remboursement CC (multipart/form-data)
 members.post('/cc-withdrawal', async (c) => {
   const memberId = c.get('memberId' as any) as string
   const db = c.env.DB
@@ -2866,21 +2884,27 @@ members.post('/cc-withdrawal', async (c) => {
   // Détecter le type de contenu pour accepter JSON (ancien) ou multipart (nouveau)
   const contentType = c.req.header('content-type') || ''
   let amount: number
-  let description: string
+  let description: string = ''
   let justificatifUrl: string | null = null
   let justificatifName: string | null = null
   let justificatifType: string | null = null
+  let custom1: string | null = null
+  let custom2: string | null = null
+  let custom3: string | null = null
 
   if (contentType.includes('multipart/form-data')) {
-    const formData = await c.req.formData()
+    const formData  = await c.req.formData()
     const amountRaw = formData.get('amount')
     const descRaw   = formData.get('description')
     const file      = formData.get('justificatif') as File | null
 
     amount      = amountRaw ? parseFloat(amountRaw as string) : 0
     description = descRaw   ? (descRaw as string).trim()     : ''
+    custom1     = formData.get('custom1') ? (formData.get('custom1') as string).trim() : null
+    custom2     = formData.get('custom2') ? (formData.get('custom2') as string).trim() : null
+    custom3     = formData.get('custom3') ? (formData.get('custom3') as string).trim() : null
 
-    // Convertir le fichier en base64 data URL (PDF + images, taille illimitée)
+    // Convertir le fichier en base64 data URL (PDF + images)
     if (file && file.size > 0) {
       const buf    = await file.arrayBuffer()
       const bytes  = new Uint8Array(buf)
@@ -2898,37 +2922,69 @@ members.post('/cc-withdrawal', async (c) => {
     description = (body.description || '').trim()
   }
 
-  // Lire les paramètres CC depuis la config admin (tout configurable, rien de hardcodé)
-  const [cfgMinRaw, cfgMaxRaw, cfgDescMinRaw, cfgProcessingRaw, cfgMaxPendingRaw] = await Promise.all([
-    db.prepare(`SELECT value FROM compensation_config WHERE key='cc_withdrawal_min_amount'`).first<{value:string}>(),
-    db.prepare(`SELECT value FROM compensation_config WHERE key='cc_withdrawal_max_amount'`).first<{value:string}>(),
-    db.prepare(`SELECT value FROM compensation_config WHERE key='cc_withdrawal_desc_min_chars'`).first<{value:string}>(),
-    db.prepare(`SELECT value FROM compensation_config WHERE key='cc_withdrawal_processing_time'`).first<{value:string}>(),
-    db.prepare(`SELECT value FROM compensation_config WHERE key='cc_withdrawal_max_pending'`).first<{value:string}>(),
-  ])
-  const cfgMin        = parseFloat(cfgMinRaw?.value ?? '10')
-  const cfgMax        = parseFloat(cfgMaxRaw?.value ?? '5000')
-  const cfgDescMin    = parseInt(cfgDescMinRaw?.value ?? '10', 10)
-  const cfgProcessing = cfgProcessingRaw?.value ?? '48h'
-  const cfgMaxPending = parseInt(cfgMaxPendingRaw?.value ?? '1', 10)
+  // ── Lire TOUS les paramètres CC depuis la config admin ────────────────────
+  const cfgRows = await db.prepare(`
+    SELECT key, value FROM compensation_config
+    WHERE key IN (
+      'cc_withdrawal_min_amount','cc_withdrawal_max_amount',
+      'cc_withdrawal_desc_min_chars','cc_withdrawal_processing_time','cc_withdrawal_max_pending',
+      'cc_field_description_visible','cc_field_description_required',
+      'cc_field_justificatif_visible','cc_field_justificatif_required',
+      'cc_field_custom1_visible','cc_field_custom1_required','cc_field_custom1_label',
+      'cc_field_custom2_visible','cc_field_custom2_required','cc_field_custom2_label',
+      'cc_field_custom3_visible','cc_field_custom3_required','cc_field_custom3_label'
+    )`).all<{key:string; value:string}>()
 
+  const cfg: Record<string, string> = {}
+  for (const r of (cfgRows.results || [])) cfg[r.key] = r.value
+
+  const cfgMin        = parseFloat(cfg['cc_withdrawal_min_amount']     ?? '10')
+  const cfgMax        = parseFloat(cfg['cc_withdrawal_max_amount']     ?? '5000')
+  const cfgDescMin    = parseInt(cfg['cc_withdrawal_desc_min_chars']   ?? '10', 10)
+  const cfgProcessing = cfg['cc_withdrawal_processing_time']           ?? '48h'
+  const cfgMaxPending = parseInt(cfg['cc_withdrawal_max_pending']      ?? '1', 10)
+
+  // Helpers champs dynamiques
+  const fieldVisible  = (k: string, def = '1') => (cfg[`cc_field_${k}_visible`]  ?? def) === '1'
+  const fieldRequired = (k: string, def = '0') => (cfg[`cc_field_${k}_required`] ?? def) === '1'
+  const fieldLabel    = (k: string, def: string) => cfg[`cc_field_${k}_label`] ?? def
+
+  // ── Validations montant ───────────────────────────────────────────────────
   if (!amount || amount <= 0)
     return c.json({ error: 'Montant invalide' }, 400)
-  if (!description || description.length < cfgDescMin)
-    return c.json({ error: `Description requise (${cfgDescMin} caractères minimum)` }, 400)
   if (amount < cfgMin)
     return c.json({ error: `Montant minimum : ${cfgMin}$` }, 400)
   if (cfgMax > 0 && amount > cfgMax)
     return c.json({ error: `Montant maximum par demande : ${cfgMax.toLocaleString('fr-FR')}$` }, 400)
 
-  // Vérifier solde disponible
+  // ── Validation champ Description ─────────────────────────────────────────
+  if (fieldVisible('description')) {
+    if (fieldRequired('description') && (!description || description.length < cfgDescMin))
+      return c.json({ error: `${fieldLabel('description', 'Motif')} requis (${cfgDescMin} caractères minimum)` }, 400)
+    if (description && description.length > 0 && description.length < cfgDescMin)
+      return c.json({ error: `${fieldLabel('description', 'Motif')} : ${cfgDescMin} caractères minimum` }, 400)
+  }
+
+  // ── Validation champ Justificatif ─────────────────────────────────────────
+  if (fieldVisible('justificatif') && fieldRequired('justificatif') && !justificatifUrl)
+    return c.json({ error: `${fieldLabel('justificatif', 'Justificatif')} obligatoire` }, 400)
+
+  // ── Validation champs custom ──────────────────────────────────────────────
+  if (fieldVisible('custom1') && fieldRequired('custom1') && (!custom1 || custom1.length === 0))
+    return c.json({ error: `${fieldLabel('custom1', 'Information complémentaire 1')} obligatoire` }, 400)
+  if (fieldVisible('custom2') && fieldRequired('custom2') && (!custom2 || custom2.length === 0))
+    return c.json({ error: `${fieldLabel('custom2', 'Information complémentaire 2')} obligatoire` }, 400)
+  if (fieldVisible('custom3') && fieldRequired('custom3') && (!custom3 || custom3.length === 0))
+    return c.json({ error: `${fieldLabel('custom3', 'Information complémentaire 3')} obligatoire` }, 400)
+
+  // ── Vérifier solde disponible ─────────────────────────────────────────────
   const bal = await getCCBalance(db, memberId)
   if (bal.available < amount)
     return c.json({
       error: `Solde CC disponible insuffisant — ${bal.available.toFixed(2)}$ disponible, ${amount}$ demandé`
     }, 422)
 
-  // Vérifier le nombre de demandes pending en cours
+  // ── Vérifier le nombre de demandes pending ────────────────────────────────
   if (cfgMaxPending > 0) {
     const pendingCount = await db.prepare(
       `SELECT COUNT(*) as cnt FROM cc_withdrawals WHERE member_id = ? AND status = 'pending'`
@@ -2944,9 +3000,15 @@ members.post('/cc-withdrawal', async (c) => {
   const withdrawalId = `ccw_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`
 
   await db.prepare(
-    `INSERT INTO cc_withdrawals (id, member_id, amount, description, justificatif_url, justificatif_name, justificatif_type, status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', datetime('now'), datetime('now'))`
-  ).bind(withdrawalId, memberId, amount, description, justificatifUrl, justificatifName, justificatifType).run()
+    `INSERT INTO cc_withdrawals
+       (id, member_id, amount, description, justificatif_url, justificatif_name, justificatif_type,
+        custom1, custom2, custom3, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', datetime('now'), datetime('now'))`
+  ).bind(
+    withdrawalId, memberId, amount, description,
+    justificatifUrl, justificatifName, justificatifType,
+    custom1 || null, custom2 || null, custom3 || null
+  ).run()
 
   return c.json({
     success:       true,
