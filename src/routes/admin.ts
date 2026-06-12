@@ -4834,34 +4834,42 @@ admin.post('/cc-withdrawals/:id/review', requirePermission('cc_withdrawals.edit'
     return c.json({ error: `Demande déjà traitée (status: ${withdrawal.status})` }, 409)
 
   if (action === 'approved') {
-    // Vérifier solde disponible
-    const bal = await getCCBalance(db, withdrawal.member_id)
-    if (bal.available < withdrawal.amount)
+    try {
+      // Vérifier solde disponible
+      const bal = await getCCBalance(db, withdrawal.member_id)
+      if (bal.available < withdrawal.amount)
+        return c.json({
+          error: `Solde CC insuffisant — ${bal.available.toFixed(2)}$ disponible, ${withdrawal.amount}$ demandé`
+        }, 422)
+
+      // Consommer en FIFO + journaliser
+      await recordCCWithdrawal(db, withdrawal.member_id, withdrawal.amount, withdrawalId, admin_note || '')
+
+      // Créditer le wallet principal (disponible) du membre
+      await walletOperation(db, withdrawal.member_id, withdrawal.amount, 'credit', 'cc_withdrawal',
+        `Remboursement CC approuvé — demande #${withdrawalId}`)
+
+      await db.prepare(
+        `UPDATE cc_withdrawals
+         SET status='approved', admin_note=?, reviewed_by=?, reviewed_at=datetime('now'), updated_at=datetime('now')
+         WHERE id=?`
+      ).bind(admin_note || null, adminId, withdrawalId).run()
+
+      // Notification membre
+      await db.prepare(
+        `INSERT INTO notifications (id, member_id, type, title, message, created_at)
+         VALUES (lower(hex(randomblob(16))), ?, 'cc_withdrawal',
+                 'Remboursement CC approuvé',
+                 'Votre demande de remboursement de ' || ? || '$ sur votre Crédit de Croissance a été approuvée.',
+                 datetime('now'))`
+      ).bind(withdrawal.member_id, withdrawal.amount).run().catch(() => {})
+
+    } catch (err: any) {
+      console.error('[CC_WITHDRAWAL_APPROVE] Error:', err)
       return c.json({
-        error: `Solde CC insuffisant — ${bal.available.toFixed(2)}$ disponible, ${withdrawal.amount}$ demandé`
-      }, 422)
-
-    // Consommer en FIFO + journaliser
-    await recordCCWithdrawal(db, withdrawal.member_id, withdrawal.amount, withdrawalId, admin_note || '')
-
-    // Créditer le wallet principal (disponible) du membre
-    await walletOperation(db, withdrawal.member_id, withdrawal.amount, 'credit', 'cc_withdrawal',
-      `Remboursement CC approuvé — demande #${withdrawalId}`)
-
-    await db.prepare(
-      `UPDATE cc_withdrawals
-       SET status='approved', admin_note=?, reviewed_by=?, reviewed_at=datetime('now'), updated_at=datetime('now')
-       WHERE id=?`
-    ).bind(admin_note || null, adminId, withdrawalId).run()
-
-    // Notification membre
-    await db.prepare(
-      `INSERT INTO notifications (id, member_id, type, title, message, created_at)
-       VALUES (lower(hex(randomblob(16))), ?, 'cc_withdrawal',
-               'Remboursement CC approuvé',
-               'Votre demande de remboursement de ' || ? || '$ sur votre Crédit de Croissance a été approuvée.',
-               datetime('now'))`
-    ).bind(withdrawal.member_id, withdrawal.amount).run().catch(() => {})
+        error: err?.message || 'Erreur interne lors de l\'approbation — contactez le support'
+      }, 500)
+    }
 
   } else {
     await db.prepare(
