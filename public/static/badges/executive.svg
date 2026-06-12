@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#4A9A7A"/>
+      <stop offset="100%" stop-color="#001A10"/>
+    </radialGradient>
+    <radialGradient id="shine" cx="35%" cy="25%" r="55%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.30"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="shadow"><feDropShadow dx="0" dy="6" stdDeviation="9" flood-color="#000" flood-opacity="0.65"/></filter>
+    <linearGradient id="rim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#A0EED0"/>
+      <stop offset="45%" stop-color="#1A6A4A"/>
+      <stop offset="100%" stop-color="#A0EED0"/>
+    </linearGradient>
+    <linearGradient id="plat" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E8FFF4"/>
+      <stop offset="50%" stop-color="#50C090"/>
+      <stop offset="100%" stop-color="#107050"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFE896"/>
+      <stop offset="100%" stop-color="#C89010"/>
+    </linearGradient>
+  </defs>
+  <circle cx="100" cy="100" r="96" fill="url(#rim)" filter="url(#shadow)"/>
+  <circle cx="100" cy="100" r="88" fill="url(#bg)"/>
+  <circle cx="100" cy="100" r="88" fill="url(#shine)"/>
+  <!-- Diamond shape -->
+  <polygon points="100,38 148,90 100,148 52,90" fill="url(#plat)" filter="url(#glow)" stroke="#80E0B0" stroke-width="1.5"/>
+  <polygon points="100,38 148,90 100,75 52,90" fill="#A0FFC8" opacity="0.25"/>
+  <polygon points="100,148 148,90 100,108 52,90" fill="#004030" opacity="0.45"/>
+  <!-- Crown 5 points -->
+  <path d="M62 55 L72 32 L100 50 L128 32 L138 55 Z" fill="url(#gold)" filter="url(#glow)"/>
+  <path d="M62 55 L138 55 L133 67 L67 67 Z" fill="#A07010"/>
+  <circle cx="72" cy="32" r="5.5" fill="#FFE896"/>
+  <circle cx="100" cy="50" r="5.5" fill="#FFE896"/>
+  <circle cx="128" cy="32" r="5.5" fill="#FFE896"/>
+  <circle cx="62" cy="55" r="4" fill="#FFD860"/>
+  <circle cx="138" cy="55" r="4" fill="#FFD860"/>
+  <text x="100" y="164" text-anchor="middle" font-family="Georgia,serif" font-size="11" fill="#70D0A0" letter-spacing="3">EXECUTIVE</text>
+  <line x1="44" y1="159" x2="62" y2="159" stroke="#50A070" stroke-width="1.5" opacity="0.8"/>
+  <line x1="138" y1="159" x2="156" y2="159" stroke="#50A070" stroke-width="1.5" opacity="0.8"/>
+</svg>

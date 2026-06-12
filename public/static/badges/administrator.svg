@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <radialGradient id="bg-adm" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#7B9EA8"/>
+      <stop offset="100%" stop-color="#1A3A4A"/>
+    </radialGradient>
+    <radialGradient id="shine-adm" cx="40%" cy="30%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow-adm">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
+    <linearGradient id="rim-adm" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#B0C8D0"/>
+      <stop offset="50%" stop-color="#4A7A8A"/>
+      <stop offset="100%" stop-color="#B0C8D0"/>
+    </linearGradient>
+  </defs>
+  <!-- Outer rim -->
+  <circle cx="100" cy="100" r="96" fill="url(#rim-adm)" filter="url(#shadow-adm)"/>
+  <!-- Main body -->
+  <circle cx="100" cy="100" r="88" fill="url(#bg-adm)"/>
+  <!-- Shine overlay -->
+  <circle cx="100" cy="100" r="88" fill="url(#shine-adm)"/>
+  <!-- Hexagonal emblem -->
+  <polygon points="100,30 148,57.5 148,112.5 100,140 52,112.5 52,57.5" fill="none" stroke="#7FBDCD" stroke-width="2" opacity="0.6"/>
+  <!-- Shield icon -->
+  <path d="M100 55 L125 67 L125 95 Q125 115 100 128 Q75 115 75 95 L75 67 Z" fill="#2A5A6A" stroke="#7FBDCD" stroke-width="1.5"/>
+  <path d="M100 62 L118 72 L118 94 Q118 110 100 121 Q82 110 82 94 L82 72 Z" fill="#3A7A8A" opacity="0.5"/>
+  <!-- A letter -->
+  <text x="100" y="105" text-anchor="middle" font-family="Georgia,serif" font-size="30" font-weight="bold" fill="#B0D8E0" letter-spacing="1">A</text>
+  <!-- Label -->
+  <text x="100" y="162" text-anchor="middle" font-family="Georgia,serif" font-size="11" fill="#7FBDCD" letter-spacing="2">ADMINISTRATOR</text>
+  <!-- Decorative dots -->
+  <circle cx="60" cy="155" r="3" fill="#7FBDCD" opacity="0.7"/>
+  <circle cx="140" cy="155" r="3" fill="#7FBDCD" opacity="0.7"/>
+</svg>

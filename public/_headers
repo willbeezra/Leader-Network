@@ -1,0 +1,27 @@
+# Cloudflare Pages — Headers HTTP pour les fichiers statiques
+# Ces headers sont appliqués automatiquement par Cloudflare Pages
+
+# Fichiers JS/CSS statiques — no-cache pour forcer la revalidation (query string ?v= assure le cache-busting)
+/static/*.js
+  Cache-Control: no-cache, must-revalidate
+  X-Content-Type-Options: nosniff
+
+/static/*.css
+  Cache-Control: no-cache, must-revalidate
+  X-Content-Type-Options: nosniff
+
+# Images et assets
+/static/*.png
+  Cache-Control: public, max-age=86400
+/static/*.jpg
+  Cache-Control: public, max-age=86400
+/static/*.svg
+  Cache-Control: public, max-age=86400
+/static/*.ico
+  Cache-Control: public, max-age=86400
+
+# Sécurité globale
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin

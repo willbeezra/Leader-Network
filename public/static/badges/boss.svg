@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#CC6600"/>
+      <stop offset="100%" stop-color="#1A0500"/>
+    </radialGradient>
+    <radialGradient id="shine" cx="35%" cy="25%" r="55%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="6" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="shadow"><feDropShadow dx="0" dy="8" stdDeviation="11" flood-color="#000" flood-opacity="0.72"/></filter>
+    <linearGradient id="rim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFD090"/>
+      <stop offset="45%" stop-color="#804000"/>
+      <stop offset="100%" stop-color="#FFD090"/>
+    </linearGradient>
+    <linearGradient id="fire" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#FF4000"/>
+      <stop offset="50%" stop-color="#FF9000"/>
+      <stop offset="100%" stop-color="#FFE060"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFF4B0"/>
+      <stop offset="50%" stop-color="#E8B020"/>
+      <stop offset="100%" stop-color="#804000"/>
+    </linearGradient>
+  </defs>
+  <circle cx="100" cy="100" r="96" fill="url(#rim)" filter="url(#shadow)"/>
+  <circle cx="100" cy="100" r="88" fill="url(#bg)"/>
+  <circle cx="100" cy="100" r="88" fill="url(#shine)"/>
+  <!-- Fire rays -->
+  <polygon points="100,42 104,72 118,54 110,80 130,68 116,90 140,86 120,102 140,108 116,110 128,134 108,118 104,144 100,118 96,144 92,118 72,134 84,110 60,108 80,102 60,86 84,90 70,68 90,80 82,54 96,72" fill="url(#fire)" filter="url(#glow)" opacity="0.9"/>
+  <!-- Crown imperial ornate -->
+  <path d="M52 44 L63 16 L100 34 L137 16 L148 44 Z" fill="url(#gold)" filter="url(#glow)"/>
+  <path d="M52 44 L148 44 L142 58 L58 58 Z" fill="#804000"/>
+  <circle cx="63" cy="16" r="7" fill="#FFF4B0" stroke="#C09010" stroke-width="2"/>
+  <circle cx="100" cy="34" r="7" fill="#FFF4B0" stroke="#C09010" stroke-width="2"/>
+  <circle cx="137" cy="16" r="7" fill="#FFF4B0" stroke="#C09010" stroke-width="2"/>
+  <circle cx="52" cy="44" r="5.5" fill="#FFD840"/>
+  <circle cx="148" cy="44" r="5.5" fill="#FFD840"/>
+  <text x="100" y="166" text-anchor="middle" font-family="Georgia,serif" font-size="13" font-weight="bold" fill="#FFB040" letter-spacing="4">BOSS</text>
+  <line x1="36" y1="161" x2="60" y2="161" stroke="#C06000" stroke-width="2" opacity="0.9"/>
+  <line x1="140" y1="161" x2="164" y2="161" stroke="#C06000" stroke-width="2" opacity="0.9"/>
+</svg>

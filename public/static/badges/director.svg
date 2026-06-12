@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#8888CC"/>
+      <stop offset="100%" stop-color="#080820"/>
+    </radialGradient>
+    <radialGradient id="shine" cx="35%" cy="25%" r="55%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.32"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="shadow"><feDropShadow dx="0" dy="7" stdDeviation="10" flood-color="#000" flood-opacity="0.7"/></filter>
+    <linearGradient id="rim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#D0D0FF"/>
+      <stop offset="45%" stop-color="#3030A0"/>
+      <stop offset="100%" stop-color="#D0D0FF"/>
+    </linearGradient>
+    <linearGradient id="silver" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="40%" stop-color="#A0A0D0"/>
+      <stop offset="100%" stop-color="#303070"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFF4B0"/>
+      <stop offset="100%" stop-color="#B08000"/>
+    </linearGradient>
+  </defs>
+  <circle cx="100" cy="100" r="96" fill="url(#rim)" filter="url(#shadow)"/>
+  <circle cx="100" cy="100" r="88" fill="url(#bg)"/>
+  <circle cx="100" cy="100" r="88" fill="url(#shine)"/>
+  <!-- Decorative rings -->
+  <circle cx="100" cy="100" r="76" fill="none" stroke="#6060C0" stroke-width="1" stroke-dasharray="6,3" opacity="0.5"/>
+  <circle cx="100" cy="100" r="66" fill="none" stroke="#8080D0" stroke-width="0.5" opacity="0.4"/>
+  <!-- Octagon star -->
+  <polygon points="100,32 115,55 142,48 136,75 162,85 142,102 150,130 124,122 112,148 100,125 88,148 76,122 50,130 58,102 38,85 64,75 58,48 85,55" fill="url(#silver)" filter="url(#glow)" opacity="0.85"/>
+  <!-- Crown 5 pts imperial -->
+  <path d="M55 46 L66 20 L100 36 L134 20 L145 46 Z" fill="url(#gold)" filter="url(#glow)"/>
+  <path d="M55 46 L145 46 L140 58 L60 58 Z" fill="#906800"/>
+  <circle cx="66" cy="20" r="6.5" fill="#FFF4B0" stroke="#C09010" stroke-width="1.5"/>
+  <circle cx="100" cy="36" r="6.5" fill="#FFF4B0" stroke="#C09010" stroke-width="1.5"/>
+  <circle cx="134" cy="20" r="6.5" fill="#FFF4B0" stroke="#C09010" stroke-width="1.5"/>
+  <circle cx="55" cy="46" r="5" fill="#FFD840"/>
+  <circle cx="145" cy="46" r="5" fill="#FFD840"/>
+  <text x="100" y="165" text-anchor="middle" font-family="Georgia,serif" font-size="11" fill="#A0A0E8" letter-spacing="3">DIRECTOR</text>
+  <line x1="36" y1="160" x2="58" y2="160" stroke="#6060C0" stroke-width="1.5" opacity="0.9"/>
+  <line x1="142" y1="160" x2="164" y2="160" stroke="#6060C0" stroke-width="1.5" opacity="0.9"/>
+</svg>

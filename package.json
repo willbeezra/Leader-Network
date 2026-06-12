@@ -1,19 +1,28 @@
 {
-  "name": "webapp",
+  "name": "leader-network",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "preview": "wrangler pages dev",
-    "deploy": "npm run build && wrangler pages deploy",
-    "cf-typegen": "wrangler types --env-interface CloudflareBindings"
+    "dev:sandbox": "wrangler pages dev dist --d1=leader-network-production --local --ip 0.0.0.0 --port 3000",
+    "minify:static": "npx terser public/static/member-app.js --compress drop_console,passes=2 --mangle --output public/static/member-app.min.js && npx terser public/static/admin-app.js --compress drop_console,passes=2 --mangle --output public/static/admin-app.min.js",
+  "check:js": "node scripts/check-js-syntax.cjs",
+  "build": "node scripts/check-js-syntax.cjs && vite build",
+    "preview": "wrangler pages dev dist",
+    "deploy": "npm run build && wrangler pages deploy dist --project-name leader-network",
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "db:migrate:local": "wrangler d1 migrations apply leader-network-production --local",
+    "db:seed": "wrangler d1 execute leader-network-production --local --file=./seed.sql",
+    "db:reset": "rm -rf .wrangler/state/v3/d1 && npm run db:migrate:local && npm run db:seed"
   },
   "dependencies": {
-    "hono": "^4.12.23"
+    "hono": "^4.12.12"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250705.0",
     "@hono/vite-build": "^1.2.0",
-    "@hono/vite-dev-server": "^0.25.2",
+    "@hono/vite-dev-server": "^0.18.2",
+    "terser": "^5.47.1",
+    "typescript": "^5.0.0",
     "vite": "^6.3.5",
     "wrangler": "^4.4.0"
   }

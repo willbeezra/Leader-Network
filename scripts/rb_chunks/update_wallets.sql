@@ -1,0 +1,13 @@
+UPDATE wallets SET balance = ROUND(balance + (-10620.0000000000), 4),     updated_at = '2026-06-09 14:00:00' WHERE member_id = '210e5ddb-58fd-4eb6-8361-c60c7b576a3d';
+UPDATE wallets SET balance = ROUND(balance + (-26043.3329010000), 4),     updated_at = '2026-06-09 14:00:00' WHERE member_id = '503e854c-6c9a-49ab-9948-2a89df4d4a68';
+UPDATE wallets SET balance = ROUND(balance + (-2122.4516100000), 4),     updated_at = '2026-06-09 14:00:00' WHERE member_id = '53d91e73-4027-4210-b537-b18e22ed9bbf';
+UPDATE wallets SET balance = ROUND(balance + (0.0000000000), 4),     updated_at = '2026-06-09 14:00:00' WHERE member_id = '67086114-f9d2-4bdd-843c-2bf8ecf44156';
+UPDATE wallets SET balance = ROUND(balance + (0.0000000000), 4),     updated_at = '2026-06-09 14:00:00' WHERE member_id = '6a1b782d-af9d-4913-a680-3c3e957578ed';
+UPDATE wallets SET balance = ROUND(balance + (180.0000000000), 4),     updated_at = '2026-06-09 14:00:00' WHERE member_id = '6d3bd3ed-e29b-42c9-8e66-1b60b796bb86';
+UPDATE wallets SET balance = ROUND(balance + (-8793.3333000000), 4),     updated_at = '2026-06-09 14:00:00' WHERE member_id = '6e31a694-c993-41fc-b5f1-69448acf8453';
+UPDATE wallets SET balance = ROUND(balance + (2164.3333000000), 4),     updated_at = '2026-06-09 14:00:00' WHERE member_id = '76fd23c2-26bf-4b71-b114-e663c8c2661c';
+UPDATE wallets SET balance = ROUND(balance + (-8181.7333000000), 4),     updated_at = '2026-06-09 14:00:00' WHERE member_id = 'a2d63726-9f41-4c1b-aa67-7f96eb20f003';
+UPDATE wallets SET balance = ROUND(balance + (3633.3333000000), 4),     updated_at = '2026-06-09 14:00:00' WHERE member_id = 'adabc0e6-6cc5-470c-9176-6bd1ceb39f64';
+UPDATE wallets SET balance = ROUND(balance + (-1660.0000000000), 4),     updated_at = '2026-06-09 14:00:00' WHERE member_id = 'd2b204e7-66df-4f99-9032-7517e5297b7e';
+UPDATE wallets SET balance = ROUND(balance + (-8085.0000000000), 4),     updated_at = '2026-06-09 14:00:00' WHERE member_id = 'd45a41bd-346e-4ebd-a3a7-5d9c3209ab98';
+UPDATE wallets SET balance = ROUND(balance + (-491.3600000000), 4),     updated_at = '2026-06-09 14:00:00' WHERE member_id = 'root-system-000000000000000000000000';

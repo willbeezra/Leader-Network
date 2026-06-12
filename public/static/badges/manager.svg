@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#8FA86A"/>
+      <stop offset="100%" stop-color="#1E3010"/>
+    </radialGradient>
+    <radialGradient id="shine" cx="40%" cy="30%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow"><feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.5"/></filter>
+    <linearGradient id="rim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#C8D8A0"/>
+      <stop offset="50%" stop-color="#5A7830"/>
+      <stop offset="100%" stop-color="#C8D8A0"/>
+    </linearGradient>
+  </defs>
+  <circle cx="100" cy="100" r="96" fill="url(#rim)" filter="url(#shadow)"/>
+  <circle cx="100" cy="100" r="88" fill="url(#bg)"/>
+  <circle cx="100" cy="100" r="88" fill="url(#shine)"/>
+  <!-- Star burst -->
+  <polygon points="100,38 107,65 132,55 118,78 145,83 122,97 138,120 112,112 108,140 100,115 92,140 88,112 62,120 78,97 55,83 82,78 68,55 93,65" fill="#6A8840" opacity="0.5"/>
+  <!-- M badge -->
+  <circle cx="100" cy="95" r="36" fill="#2A4010" stroke="#A0C060" stroke-width="2"/>
+  <text x="100" y="108" text-anchor="middle" font-family="Georgia,serif" font-size="36" font-weight="bold" fill="#C8E080">M</text>
+  <text x="100" y="162" text-anchor="middle" font-family="Georgia,serif" font-size="11" fill="#A0C060" letter-spacing="3">MANAGER</text>
+  <circle cx="55" cy="155" r="3" fill="#A0C060" opacity="0.8"/>
+  <circle cx="145" cy="155" r="3" fill="#A0C060" opacity="0.8"/>
+</svg>

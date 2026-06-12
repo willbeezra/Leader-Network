@@ -1,1 +1,554 @@
-h1 { font-family: Arial, Helvetica, sans-serif; }
+/* ============================================================
+   LEADER Network — Styles globaux
+   ============================================================ */
+
+:root {
+  --rouge:      #791E15;
+  --rouge-lt:   #A02820;
+  --rouge-dk:   #5A1510;
+  --bleu-nuit:  #02072C;
+  --bleu-med:   #0A1240;
+  --bleu-clair: #12185A;
+  --blanc:      #FFFFFF;
+  --cream:      #F5F0E8;
+}
+
+/* ── Boutons charte LEADER ── */
+.btn-rouge {
+  background: linear-gradient(135deg, #791E15 0%, #A02820 50%, #791E15 100%);
+  color: #FFFFFF; font-weight: 700; border: none; cursor: pointer;
+  border-radius: 0.75rem; padding: 0.875rem; font-size: 1rem;
+  transition: opacity .2s; width: 100%;
+}
+.btn-rouge:hover { opacity: .9; }
+.btn-rouge:disabled { opacity: .5; cursor: not-allowed; }
+.btn-outline-rouge {
+  background: transparent; border: 1.5px solid rgba(121,30,21,0.6); color: #A02820;
+  border-radius: 0.75rem; padding: 0.75rem 1.5rem; cursor: pointer;
+  font-weight: 600; transition: all .2s;
+}
+.btn-outline-rouge:hover { background: rgba(121,30,21,0.1); }
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #040B24; }
+::-webkit-scrollbar-thumb { background: #12185A; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #791E15; }
+
+/* Nav active */
+.nav-btn.active, .admin-nav-btn.active {
+  background: linear-gradient(135deg, rgba(121,30,21,0.18), rgba(121,30,21,0.08));
+  color: #791E15 !important;
+  border-right: 2px solid #791E15;
+}
+.admin-nav-btn.active {
+  background: linear-gradient(135deg, rgba(239,68,68,0.15), rgba(239,68,68,0.05));
+  color: #EF4444 !important;
+  border-right: 2px solid #EF4444;
+}
+
+/* Cards */
+.stat-card {
+  background: linear-gradient(135deg, #040B24, #0A1240);
+  border: 1px solid #12185A;
+  border-radius: 16px;
+  padding: 20px;
+  transition: transform 0.2s, box-shadow 0.2s;
+  min-width: 0;
+}
+.stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+
+/* Rank badges */
+.rank-none       { color: #6B7280; background: rgba(107,114,128,0.15); }
+.rank-administrator { color: #60A5FA; background: rgba(96,165,250,0.15); }
+.rank-manager    { color: #34D399; background: rgba(52,211,153,0.15); }
+.rank-captain    { color: #A02820; background: rgba(121,30,21,0.18); }
+.rank-leader     { color: #F97316; background: rgba(249,115,22,0.15); }
+.rank-mentor     { color: #A78BFA; background: rgba(167,139,250,0.15); }
+.rank-superviseur{ color: #EC4899; background: rgba(236,72,153,0.15); }
+.rank-executive  { color: #06B6D4; background: rgba(6,182,212,0.15); }
+.rank-president  { color: #EF4444; background: rgba(239,68,68,0.15); }
+.rank-director   { color: #8B5CF6; background: rgba(139,92,246,0.15); }
+.rank-boss       { color: #791E15; background: rgba(121,30,21,0.2); }
+.rank-visionary  { 
+  background: linear-gradient(135deg, rgba(121,30,21,0.3), rgba(239,68,68,0.2));
+  color: #C03020;
+}
+
+/* Status badges */
+.status-ami     { color: #A02820; background: rgba(121,30,21,0.18); }
+.status-partner { color: #34D399; background: rgba(52,211,153,0.15); }
+.status-client  { color: #60A5FA; background: rgba(96,165,250,0.15); }
+.status-member  { color: #9CA3AF; background: rgba(156,163,175,0.15); }
+
+/* Table */
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th {
+  background: #0A1240;
+  color: #9CA3AF;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 500;
+  border-bottom: 1px solid #12185A;
+}
+.data-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #0A1240;
+  font-size: 13px;
+  color: #D1D5DB;
+}
+.data-table tr:hover td { background: rgba(121,30,21,0.06); }
+.data-table tr:last-child td { border-bottom: none; }
+
+/* Binary tree */
+.tree-node {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 120px;
+}
+.tree-node-card {
+  border: 1px solid #12185A;
+  border-radius: 12px;
+  padding: 10px 14px;
+  background: #0A1240;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 110px;
+}
+.tree-node-card:hover { border-color: #791E15; background: #12185A; }
+.tree-node-card.empty {
+  border-style: dashed;
+  border-color: #374151;
+  background: #040B24;
+  opacity: 0.6;
+}
+.tree-connector {
+  width: 2px;
+  height: 24px;
+  background: #12185A;
+  margin: 0 auto;
+}
+.tree-children {
+  display: flex;
+  gap: 16px;
+  position: relative;
+}
+.tree-children::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 60px);
+  height: 2px;
+  background: #12185A;
+}
+
+/* Progress bar */
+.progress-bar {
+  background: #12185A;
+  border-radius: 999px;
+  height: 8px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #791E15, #EF4444);
+  transition: width 0.6s ease;
+}
+
+/* Commission type badges */
+.comm-prime_leadership        { color: #A02820; }
+.comm-bonus_influence         { color: #60A5FA; }
+.comm-bonus_rayonnement       { color: #34D399; }
+.comm-valorisation_recommandation { color: #A78BFA; }
+.comm-fast_start              { color: #F97316; }
+.comm-credit_croissance       { color: #EC4899; }
+.comm-reserve_strategique     { color: #06B6D4; }
+
+/* Animations */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.fade-in { animation: fadeIn 0.3s ease forwards; }
+
+@keyframes pulse-rouge { 0%, 100% { box-shadow: 0 0 0 0 rgba(121,30,21,0.45); } 50% { box-shadow: 0 0 0 8px rgba(121,30,21,0); } }
+.pulse-rouge { animation: pulse-rouge 2s infinite; }
+
+/* Input */
+.form-input {
+  width: 100%;
+  background: #0A1240;
+  border: 1px solid #12185A;
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: #fff;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.form-input:focus { border-color: #791E15; }
+.form-label { display: block; font-size: 12px; color: #9CA3AF; margin-bottom: 6px; font-weight: 500; }
+
+/* Modal */
+#modal-overlay { backdrop-filter: blur(4px); }
+
+/* Loader */
+.loader {
+  width: 36px; height: 36px;
+  border: 3px solid #12185A;
+  border-top-color: #791E15;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Toast */
+#toast.show { animation: slideUp 0.3s ease; }
+@keyframes slideUp { from { opacity:0; transform: translateY(20px); } to { opacity:1; transform: translateY(0); } }
+
+/* ── Recherche arbre binaire ── */
+#tree-search-dropdown {
+  animation: fadeIn 0.15s ease forwards;
+}
+#tree-search-dropdown::-webkit-scrollbar { width: 4px; }
+#tree-search-dropdown::-webkit-scrollbar-track { background: #0A1240; }
+#tree-search-dropdown::-webkit-scrollbar-thumb { background: #12185A; border-radius: 2px; }
+
+.tree-search-result {
+  transition: background 0.12s ease;
+}
+.tree-search-result:hover {
+  background: rgba(121,30,21,0.08) !important;
+}
+
+#tree-search-input:focus + kbd,
+#tree-search-input:not(:placeholder-shown) + kbd {
+  opacity: 0;
+}
+
+/* ============================================================
+   PAGINATION — composant réutilisable membre & admin
+   ============================================================ */
+
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 4px;
+  margin-top: 8px;
+}
+
+.pagination-pages {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.pagination-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 6px;
+  border: 1px solid #12185A;
+  border-radius: 8px;
+  background: #040B24;
+  color: #9CA3AF;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  user-select: none;
+}
+
+.pagination-btn:hover:not(:disabled):not(.active) {
+  background: rgba(121,30,21,0.14);
+  border-color: rgba(121,30,21,0.45);
+  color: #791E15;
+}
+
+.pagination-btn.active {
+  background: linear-gradient(135deg, rgba(121,30,21,0.28), rgba(121,30,21,0.14));
+  border-color: rgba(121,30,21,0.65);
+  color: #791E15;
+  font-weight: 700;
+  cursor: default;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.pagination-ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 32px;
+  color: #4B5563;
+  font-size: 13px;
+  user-select: none;
+}
+
+.pagination-perpage {
+  appearance: none;
+  background: #040B24;
+  border: 1px solid #12185A;
+  border-radius: 8px;
+  color: #9CA3AF;
+  font-size: 12px;
+  padding: 4px 28px 4px 10px;
+  height: 32px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  transition: border-color 0.15s;
+}
+
+.pagination-perpage:hover,
+.pagination-perpage:focus {
+  border-color: rgba(121,30,21,0.45);
+  color: #791E15;
+  outline: none;
+}
+
+/* Admin : teinte rouge pour les boutons de pagination */
+.admin-pagination .pagination-btn:hover:not(:disabled):not(.active) {
+  background: rgba(239,68,68,0.1);
+  border-color: rgba(239,68,68,0.4);
+  color: #EF4444;
+}
+
+.admin-pagination .pagination-btn.active {
+  background: linear-gradient(135deg, rgba(239,68,68,0.25), rgba(239,68,68,0.1));
+  border-color: rgba(239,68,68,0.6);
+  color: #EF4444;
+}
+
+.admin-pagination .pagination-perpage:hover,
+.admin-pagination .pagination-perpage:focus {
+  border-color: rgba(239,68,68,0.4);
+  color: #EF4444;
+}
+
+/* ============================================================
+   RESPONSIVE MOBILE — fixes globaux
+   ============================================================ */
+
+/* Zone de contenu principale : scroll horizontal si débordement */
+#page-content,
+#admin-page-content {
+  overflow-x: auto;
+  min-width: 0;
+}
+
+/* Le main ne scrolle pas latéralement — seul le contenu interne scrolle */
+main {
+  overflow-x: hidden;
+  min-width: 0;
+}
+
+/* Tous les wrappers de tableaux : scroll horizontal automatique */
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* data-table : toujours au minimum 480px pour rester lisible,
+   le wrapper parent gère le scroll */
+.data-table {
+  min-width: 480px;
+}
+
+/* Stat cards : padding réduit sur très petits écrans */
+@media (max-width: 480px) {
+  .stat-card {
+    padding: 14px 12px;
+  }
+}
+
+/* Lignes header (titre + boutons) : wrap automatique sur mobile */
+@media (max-width: 767px) {
+  /* Tous les flex row contenant des boutons d'action → wrap */
+  .flex.items-center.justify-between.flex-wrap,
+  .flex.items-center.justify-between.gap-3,
+  .flex.items-center.justify-between.gap-4,
+  .flex.gap-3.flex-1,
+  .flex.gap-2 {
+    flex-wrap: wrap;
+  }
+
+  /* Inputs de recherche : pleine largeur sur mobile */
+  .flex.gap-3.flex-1 input[type="text"],
+  .flex.gap-3.flex-1 select {
+    min-width: 0;
+    flex: 1 1 120px;
+  }
+
+  /* Boutons d'action dans les tableaux : icône seule, pas de texte */
+  .data-table td .flex.gap-1 button,
+  .data-table td .flex.gap-2 button {
+    min-width: 30px;
+    padding: 4px 6px;
+  }
+
+  /* form-input : taille de police normale pour éviter le zoom iOS */
+  .form-input,
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  /* Grilles 4 colonnes → 2 colonnes sur mobile */
+  .grid.grid-cols-4,
+  .grid.lg\:grid-cols-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* Modales : pleine largeur avec scroll */
+  #modal-content,
+  #member-modal-content {
+    max-height: 85vh;
+    overflow-y: auto;
+    margin: 0;
+  }
+
+  /* Tables dans les sections : wrap du header de section */
+  .bg-dark-800 > .px-6.py-4.border-b.flex {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Page content padding réduit sur mobile (déjà fait via md: mais renforcé) */
+  #page-content {
+    padding: 12px;
+  }
+  #admin-page-content {
+    padding: 12px;
+  }
+
+  /* Boutons avec texte long → ellipsis ou wrap */
+  .whitespace-nowrap {
+    white-space: nowrap;
+  }
+
+  /* Filtres et boutons d'entête des pages admin */
+  .space-y-4 > div:first-child,
+  .space-y-6 > div:first-child {
+    flex-wrap: wrap;
+  }
+}
+
+/* Très petits écrans (< 360px) */
+@media (max-width: 360px) {
+  .stat-card {
+    padding: 10px 8px;
+  }
+  #page-content,
+  #admin-page-content {
+    padding: 8px;
+  }
+}
+
+/* ── Fix spécifique : en-têtes de section avec boutons d'action ── */
+/* Forcer le wrap sur tous les conteneurs flex des zones de contenu */
+#page-content .space-y-4 > div:first-child,
+#page-content .space-y-6 > div:first-child,
+#admin-page-content .space-y-4 > div:first-child,
+#admin-page-content .space-y-6 > div:first-child {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Tous les flex row dans les zones de contenu → flex-wrap par défaut sur mobile */
+@media (max-width: 767px) {
+  #page-content > *,
+  #admin-page-content > * {
+    min-width: 0;
+  }
+
+  /* Forcer le flex-wrap sur toutes les div flex directement dans le contenu de page */
+  #page-content [class*="flex"][class*="justify-between"],
+  #admin-page-content [class*="flex"][class*="justify-between"] {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Boutons d'action dans les en-têtes de tableaux/sections */
+  #page-content .flex.gap-2,
+  #page-content .flex.gap-3,
+  #admin-page-content .flex.gap-2,
+  #admin-page-content .flex.gap-3 {
+    flex-wrap: wrap;
+  }
+
+  /* Les tableaux wrappés ont toujours le scroll */
+  #page-content .overflow-x-auto,
+  #admin-page-content .overflow-x-auto {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* min-width sur data-table pour forcer le scroll plutôt que le rétrécissement */
+  #page-content .overflow-x-auto .data-table,
+  #admin-page-content .overflow-x-auto .data-table {
+    min-width: 560px;
+  }
+
+  /* Boutons dans les tableaux : compacts */
+  .data-table td button {
+    padding: 4px 8px !important;
+    font-size: 11px !important;
+  }
+
+  /* Inputs de recherche et selects : min-width pour rester utilisables */
+  #page-content input[type="text"],
+  #admin-page-content input[type="text"] {
+    min-width: 120px;
+    flex: 1 1 120px;
+  }
+
+  /* Grilles stat-cards : 2 colonnes sur mobile */
+  #page-content .grid.lg\\:grid-cols-4,
+  #admin-page-content .grid.lg\\:grid-cols-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Barre de scroll horizontale visible sur mobile pour les tableaux */
+.data-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 0 0 16px 16px;
+}
+
+/* Indicateur visuel de scroll horizontal sur mobile */
+@media (max-width: 767px) {
+  .overflow-x-auto::after,
+  .data-table-wrap::after {
+    content: '';
+    display: block;
+    height: 0;
+  }
+}

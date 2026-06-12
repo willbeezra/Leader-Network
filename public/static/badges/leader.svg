@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#C0834A"/>
+      <stop offset="100%" stop-color="#2A0E00"/>
+    </radialGradient>
+    <radialGradient id="shine" cx="35%" cy="25%" r="55%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="shadow"><feDropShadow dx="0" dy="5" stdDeviation="8" flood-color="#000" flood-opacity="0.6"/></filter>
+    <linearGradient id="rim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFDCAA"/>
+      <stop offset="45%" stop-color="#8B4A10"/>
+      <stop offset="100%" stop-color="#FFDCAA"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFE896"/>
+      <stop offset="50%" stop-color="#D4A520"/>
+      <stop offset="100%" stop-color="#8B6000"/>
+    </linearGradient>
+  </defs>
+  <circle cx="100" cy="100" r="96" fill="url(#rim)" filter="url(#shadow)"/>
+  <circle cx="100" cy="100" r="88" fill="url(#bg)"/>
+  <circle cx="100" cy="100" r="88" fill="url(#shine)"/>
+  <!-- 5-point star -->
+  <polygon points="100,42 111,77 148,77 119,99 130,134 100,112 70,134 81,99 52,77 89,77" fill="url(#gold)" filter="url(#glow)" stroke="#FFE896" stroke-width="1"/>
+  <!-- Crown atop -->
+  <path d="M78 42 L85 28 L100 38 L115 28 L122 42 Z" fill="url(#gold)" filter="url(#glow)"/>
+  <circle cx="85" cy="28" r="4.5" fill="#FFE896" stroke="#C8A020" stroke-width="1"/>
+  <circle cx="100" cy="38" r="4.5" fill="#FFE896" stroke="#C8A020" stroke-width="1"/>
+  <circle cx="115" cy="28" r="4.5" fill="#FFE896" stroke="#C8A020" stroke-width="1"/>
+  <text x="100" y="163" text-anchor="middle" font-family="Georgia,serif" font-size="11" fill="#FFCA60" letter-spacing="4">LEADER</text>
+  <line x1="48" y1="158" x2="68" y2="158" stroke="#D4A520" stroke-width="1.5" opacity="0.7"/>
+  <line x1="132" y1="158" x2="152" y2="158" stroke="#D4A520" stroke-width="1.5" opacity="0.7"/>
+</svg>
