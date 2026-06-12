@@ -1170,7 +1170,8 @@ members.get('/wallet-history', async (c) => {
                pwe.last_paid_at, pwe.created_at,
                sm.first_name || ' ' || sm.last_name AS source_name,
                sm.unique_id                         AS source_unique_id,
-               sm.current_rank                      AS source_rank
+               sm.current_rank                      AS source_rank,
+               c.rank_at_time                       AS commission_rank
         FROM pending_wallet_entries pwe
         LEFT JOIN commissions c  ON c.id  = pwe.commission_id
         LEFT JOIN members     sm ON sm.id = c.source_member_id
