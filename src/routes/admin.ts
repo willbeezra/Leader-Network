@@ -61,7 +61,7 @@ admin.get('/dashboard', async (c) => {
   const [
     totalMembers, activeAMI, partenaires, pendingOrders,
     pendingWithdrawals, pendingKYC, holdingTank,
-    totalCommissions, totalWithdrawn, pendingBVQueue
+    totalCommissions, totalWithdrawn, pendingBVQueue, pendingCCWithdrawals
   ] = await Promise.all([
     c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM members`).first() as any,
     c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM members WHERE member_status='AMI' AND license_active=1`).first() as any,
@@ -77,6 +77,7 @@ admin.get('/dashboard', async (c) => {
     c.env.DB.prepare(`SELECT SUM(amount) as total FROM commissions WHERE status IN ('approved','paid')`).first() as any,
     c.env.DB.prepare(`SELECT SUM(net_amount) as total FROM withdrawals WHERE status='completed'`).first() as any,
     c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM bv_queue WHERE status='pending'`).first() as any,
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM cc_withdrawals WHERE status='pending'`).first() as any,
   ])
 
   const recentMembers = await c.env.DB.prepare(
@@ -104,7 +105,8 @@ admin.get('/dashboard', async (c) => {
       holdingTankCount:  holdingTank?.cnt        || 0,
       totalCommissions:  totalCommissions?.total || 0,
       totalWithdrawn:    totalWithdrawn?.total   || 0,
-      pendingBVQueue:    pendingBVQueue?.cnt      || 0,
+      pendingBVQueue:          pendingBVQueue?.cnt          || 0,
+      pendingCCWithdrawals:    pendingCCWithdrawals?.cnt    || 0,
     },
     recentMembers:    recentMembers.results,
     rankDistribution: rankDistribution.results,
