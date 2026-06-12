@@ -2896,7 +2896,6 @@ members.post('/cc-withdrawal', async (c) => {
     const formData  = await c.req.formData()
     const amountRaw = formData.get('amount')
     const descRaw   = formData.get('description')
-    const file      = formData.get('justificatif') as File | null
 
     amount      = amountRaw ? parseFloat(amountRaw as string) : 0
     description = descRaw   ? (descRaw as string).trim()     : ''
@@ -2904,8 +2903,22 @@ members.post('/cc-withdrawal', async (c) => {
     custom2     = formData.get('custom2') ? (formData.get('custom2') as string).trim() : null
     custom3     = formData.get('custom3') ? (formData.get('custom3') as string).trim() : null
 
-    // Convertir le fichier en base64 data URL (PDF + images)
-    if (file && file.size > 0) {
+    // Collecter tous les fichiers justificatif_0, justificatif_1, ... (multi-fichiers)
+    // Compatibilité : accepte aussi l'ancien champ "justificatif" (1 seul fichier)
+    const fileEntries: File[] = []
+    for (let i = 0; i < 10; i++) {
+      const f = formData.get(`justificatif_${i}`) as File | null
+      if (f && f.size > 0) fileEntries.push(f)
+    }
+    // Fallback ancien format
+    const legacyFile = formData.get('justificatif') as File | null
+    if (legacyFile && legacyFile.size > 0 && fileEntries.length === 0) {
+      fileEntries.push(legacyFile)
+    }
+
+    // Convertir chaque fichier en base64 data URL et stocker en JSON si plusieurs
+    if (fileEntries.length === 1) {
+      const file = fileEntries[0]
       const buf    = await file.arrayBuffer()
       const bytes  = new Uint8Array(buf)
       let binary   = ''
@@ -2914,6 +2927,19 @@ members.post('/cc-withdrawal', async (c) => {
       justificatifUrl  = `data:${file.type};base64,${b64}`
       justificatifName = file.name
       justificatifType = file.type
+    } else if (fileEntries.length > 1) {
+      // Stocker un tableau JSON d'objets {url, name, type}
+      const files = await Promise.all(fileEntries.map(async (file) => {
+        const buf   = await file.arrayBuffer()
+        const bytes = new Uint8Array(buf)
+        let binary  = ''
+        for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i])
+        const b64   = btoa(binary)
+        return { url: `data:${file.type};base64,${b64}`, name: file.name, type: file.type }
+      }))
+      justificatifUrl  = JSON.stringify(files)
+      justificatifName = files.map(f => f.name).join(', ')
+      justificatifType = 'multi'
     }
   } else {
     // Fallback JSON (compatibilité ancienne API)
