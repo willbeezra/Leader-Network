@@ -3044,6 +3044,156 @@ members.post('/cc-withdrawal', async (c) => {
 })
 
 // ══════════════════════════════════════════════════════════════════════════════
+// RÉSERVE STRATÉGIQUE — Page dédiée + retrait
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── GET /api/members/reserve-strategique ─────────────────────────────────────
+// Données complètes : solde, entrées, statistiques
+members.get('/reserve-strategique', async (c) => {
+  const memberId = c.get('memberId' as any) as string
+  const db = c.env.DB
+
+  const [member, entries, rsConfig] = await Promise.all([
+    db.prepare(`SELECT reserve_strategique FROM members WHERE id = ?`).bind(memberId).first() as any,
+    db.prepare(`
+      SELECT id, amount, period, source_commission_id,
+             abondement_rate, status, locked_until, unlocked_at, created_at
+      FROM reserve_strategique
+      WHERE member_id = ?
+      ORDER BY created_at DESC
+    `).bind(memberId).all(),
+    db.prepare(`SELECT key, value FROM compensation_config WHERE key IN ('reserve_strategique_pct','rs_withdrawal_enabled')`).all(),
+  ])
+
+  const cfg: Record<string, string> = {}
+  for (const r of ((rsConfig.results || []) as {key:string,value:string}[])) cfg[r.key] = r.value
+
+  const allEntries = (entries.results || []) as any[]
+
+  // Calculs statistiques
+  const lockedEntries   = allEntries.filter(e => e.status === 'locked')
+  const releasedEntries = allEntries.filter(e => e.status === 'released' || e.status === 'unlocked')
+  const cancelledEntries = allEntries.filter(e => e.status === 'cancelled')
+
+  const totalLocked   = lockedEntries.reduce((s: number, e: any) => s + (e.amount || 0), 0)
+  const totalReleased = releasedEntries.reduce((s: number, e: any) => s + (e.amount || 0), 0)
+
+  // Valeur à l'échéance (avec abondement)
+  const totalWithAbondement = lockedEntries.reduce((s: number, e: any) => {
+    return s + (e.amount || 0) * (1 + (e.abondement_rate || 0))
+  }, 0)
+
+  // Prochaine date de libération (la plus proche parmi les locked)
+  const nextUnlock = lockedEntries.length > 0
+    ? lockedEntries.reduce((min: string, e: any) => (!min || e.locked_until < min) ? e.locked_until : min, '')
+    : null
+
+  // Taux d'abondement moyen (ou le taux de la première entrée locked)
+  const abondementRate = lockedEntries.length > 0 ? lockedEntries[0].abondement_rate : 0.10
+
+  const withdrawalEnabled = (cfg['rs_withdrawal_enabled'] ?? '1') === '1'
+
+  return c.json({
+    balance:            member?.reserve_strategique || 0,
+    total_locked:       totalLocked,
+    total_released:     totalReleased,
+    total_with_abondement: totalWithAbondement,
+    gain_abondement:    totalWithAbondement - totalLocked,
+    abondement_rate:    abondementRate,
+    next_unlock_date:   nextUnlock,
+    entries:            allEntries,
+    locked_count:       lockedEntries.length,
+    released_count:     releasedEntries.length,
+    cancelled_count:    cancelledEntries.length,
+    withdrawal_enabled: withdrawalEnabled,
+    rs_pct:             parseFloat(cfg['reserve_strategique_pct'] ?? '10'),
+  })
+})
+
+// ── POST /api/members/reserve-strategique/withdraw ───────────────────────────
+// Retrait immédiat de la RS vers le wallet disponible
+// Pas de justificatif requis — montant transféré directement
+members.post('/reserve-strategique/withdraw', async (c) => {
+  const memberId = c.get('memberId' as any) as string
+  const db = c.env.DB
+
+  const body = await c.req.json() as { amount: number; entry_id?: string }
+  const amount = Number(body.amount)
+
+  if (!amount || amount <= 0)
+    return c.json({ error: 'Montant invalide' }, 400)
+
+  // Vérifier le solde RS actuel du membre
+  const member = await db.prepare(
+    `SELECT reserve_strategique FROM members WHERE id = ?`
+  ).bind(memberId).first() as any
+
+  const rsBalance = member?.reserve_strategique || 0
+  if (rsBalance < amount)
+    return c.json({
+      error: `Solde Réserve Stratégique insuffisant — ${rsBalance.toFixed(2)}$ disponible`
+    }, 422)
+
+  // Vérifier si le retrait RS est activé
+  const cfgRow = await db.prepare(
+    `SELECT value FROM compensation_config WHERE key = 'rs_withdrawal_enabled'`
+  ).bind().first() as any
+  if ((cfgRow?.value ?? '1') !== '1')
+    return c.json({ error: 'Les retraits de Réserve Stratégique sont temporairement désactivés' }, 403)
+
+  // ── Transaction atomique ──────────────────────────────────────────────────
+  // 1. Débiter la RS du membre
+  await db.prepare(
+    `UPDATE members SET reserve_strategique = reserve_strategique - ?, updated_at = datetime('now') WHERE id = ?`
+  ).bind(amount, memberId).run()
+
+  // 2. Créditer le wallet disponible via walletOperation
+  await walletOperation(db, memberId, amount, 'credit', 'reserve_strategique',
+    `Retrait Réserve Stratégique — ${amount.toFixed(2)}$`)
+
+  // 3. Marquer les entrées RS comme unlocked (FIFO — les plus anciennes d'abord)
+  //    Si entry_id fourni, libérer celle-là ; sinon libérer en FIFO jusqu'à couvrir le montant
+  if (body.entry_id) {
+    await db.prepare(
+      `UPDATE reserve_strategique
+       SET status = 'unlocked', unlocked_at = datetime('now')
+       WHERE id = ? AND member_id = ? AND status = 'locked'`
+    ).bind(body.entry_id, memberId).run()
+  } else {
+    // FIFO : libérer les entrées locked les plus anciennes jusqu'à couvrir le montant
+    const lockedRows = await db.prepare(
+      `SELECT id, amount FROM reserve_strategique
+       WHERE member_id = ? AND status = 'locked'
+       ORDER BY created_at ASC`
+    ).bind(memberId).all()
+    let remaining = amount
+    for (const row of ((lockedRows.results || []) as any[])) {
+      if (remaining <= 0) break
+      await db.prepare(
+        `UPDATE reserve_strategique
+         SET status = 'unlocked', unlocked_at = datetime('now')
+         WHERE id = ?`
+      ).bind(row.id).run()
+      remaining -= row.amount
+    }
+  }
+
+  // 4. Notification
+  await createNotification(db, memberId,
+    'Retrait Réserve Stratégique effectué',
+    `${amount.toFixed(2)}$ de votre Réserve Stratégique ont été transférés dans votre portefeuille disponible.`,
+    'rs_withdrawal'
+  )
+
+  return c.json({
+    success: true,
+    message: `${amount.toFixed(2)}$ transférés de votre Réserve Stratégique vers votre portefeuille disponible.`,
+    amount,
+    new_rs_balance: rsBalance - amount,
+  })
+})
+
+// ══════════════════════════════════════════════════════════════════════════════
 // PAYPAL INTEGRATION — Routes de paiement sécurisé
 // ══════════════════════════════════════════════════════════════════════════════
 
