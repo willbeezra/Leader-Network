@@ -29,9 +29,11 @@ function base64urlDecode(str: string): string {
 }
 
 async function sign(data: string, secret: string): Promise<string> {
+  // Fallback si le secret est vide ou undefined (worker sans variable d'env configurée)
+  const effectiveSecret = (secret && secret.length > 0) ? secret : JWT_SECRET
   const key = await crypto.subtle.importKey(
     'raw',
-    new TextEncoder().encode(secret),
+    new TextEncoder().encode(effectiveSecret),
     { name: 'HMAC', hash: 'SHA-256' },
     false,
     ['sign']
@@ -43,7 +45,8 @@ async function sign(data: string, secret: string): Promise<string> {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
 }
 
-export async function createJWT(payload: Omit<JWTPayload, 'exp' | 'iat'>, secret: string, expiresInDays = 7): Promise<string> {
+export async function createJWT(payload: Omit<JWTPayload, 'exp' | 'iat'>, secret: string | undefined, expiresInDays = 7): Promise<string> {
+  const effectiveSecret = (secret && secret.length > 0) ? secret : JWT_SECRET
   const header = base64urlEncode(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
   const now = Math.floor(Date.now() / 1000)
   const fullPayload = base64urlEncode(JSON.stringify({
@@ -52,16 +55,17 @@ export async function createJWT(payload: Omit<JWTPayload, 'exp' | 'iat'>, secret
     exp: now + expiresInDays * 86400
   }))
   const sigInput = `${header}.${fullPayload}`
-  const signature = await sign(sigInput, secret)
+  const signature = await sign(sigInput, effectiveSecret)
   return `${sigInput}.${signature}`
 }
 
-export async function verifyJWT(token: string, secret: string): Promise<JWTPayload | null> {
+export async function verifyJWT(token: string, secret: string | undefined): Promise<JWTPayload | null> {
+  const effectiveSecret = (secret && secret.length > 0) ? secret : JWT_SECRET
   try {
     const parts = token.split('.')
     if (parts.length !== 3) return null
     const sigInput = `${parts[0]}.${parts[1]}`
-    const expectedSig = await sign(sigInput, secret)
+    const expectedSig = await sign(sigInput, effectiveSecret)
     if (expectedSig !== parts[2]) return null
     const payload = JSON.parse(base64urlDecode(parts[1])) as JWTPayload
     if (payload.exp < Math.floor(Date.now() / 1000)) return null
