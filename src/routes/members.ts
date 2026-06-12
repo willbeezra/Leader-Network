@@ -2840,17 +2840,49 @@ members.get('/cc-wallet', async (c) => {
 })
 
 // ── POST /api/members/cc-withdrawal ──────────────────────────────────────────
-// Soumettre une demande de remboursement CC
+// Soumettre une demande de remboursement CC (multipart/form-data avec justificatif optionnel)
 members.post('/cc-withdrawal', async (c) => {
   const memberId = c.get('memberId' as any) as string
   const db = c.env.DB
 
-  const body = await c.req.json() as { amount: number; description: string }
-  const { amount, description } = body
+  // Détecter le type de contenu pour accepter JSON (ancien) ou multipart (nouveau)
+  const contentType = c.req.header('content-type') || ''
+  let amount: number
+  let description: string
+  let justificatifUrl: string | null = null
+  let justificatifName: string | null = null
+  let justificatifType: string | null = null
+
+  if (contentType.includes('multipart/form-data')) {
+    const formData = await c.req.formData()
+    const amountRaw = formData.get('amount')
+    const descRaw   = formData.get('description')
+    const file      = formData.get('justificatif') as File | null
+
+    amount      = amountRaw ? parseFloat(amountRaw as string) : 0
+    description = descRaw   ? (descRaw as string).trim()     : ''
+
+    // Convertir le fichier en base64 data URL (PDF + images, taille illimitée)
+    if (file && file.size > 0) {
+      const buf    = await file.arrayBuffer()
+      const bytes  = new Uint8Array(buf)
+      let binary   = ''
+      for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i])
+      const b64    = btoa(binary)
+      justificatifUrl  = `data:${file.type};base64,${b64}`
+      justificatifName = file.name
+      justificatifType = file.type
+    }
+  } else {
+    // Fallback JSON (compatibilité ancienne API)
+    const body = await c.req.json() as { amount: number; description: string }
+    amount      = body.amount
+    description = (body.description || '').trim()
+  }
 
   if (!amount || amount <= 0)
     return c.json({ error: 'Montant invalide' }, 400)
-  if (!description || description.trim().length < 10)
+  if (!description || description.length < 10)
     return c.json({ error: 'Description requise (10 caractères minimum)' }, 400)
   if (amount < 10)
     return c.json({ error: 'Montant minimum : 10$' }, 400)
@@ -2874,9 +2906,9 @@ members.post('/cc-withdrawal', async (c) => {
   const withdrawalId = `ccw_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`
 
   await db.prepare(
-    `INSERT INTO cc_withdrawals (id, member_id, amount, description, status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, 'pending', datetime('now'), datetime('now'))`
-  ).bind(withdrawalId, memberId, amount, description.trim()).run()
+    `INSERT INTO cc_withdrawals (id, member_id, amount, description, justificatif_url, justificatif_name, justificatif_type, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', datetime('now'), datetime('now'))`
+  ).bind(withdrawalId, memberId, amount, description, justificatifUrl, justificatifName, justificatifType).run()
 
   return c.json({
     success:       true,

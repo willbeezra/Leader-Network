@@ -4826,6 +4826,10 @@ admin.post('/cc-withdrawals/:id/review', requirePermission('cc_withdrawals.edit'
     // Consommer en FIFO + journaliser
     await recordCCWithdrawal(db, withdrawal.member_id, withdrawal.amount, withdrawalId, admin_note || '')
 
+    // Créditer le wallet principal (disponible) du membre
+    await walletOperation(db, withdrawal.member_id, withdrawal.amount, 'credit', 'cc_withdrawal',
+      `Remboursement CC approuvé — demande #${withdrawalId}`)
+
     await db.prepare(
       `UPDATE cc_withdrawals
        SET status='approved', admin_note=?, reviewed_by=?, reviewed_at=datetime('now'), updated_at=datetime('now')
