@@ -2299,6 +2299,21 @@ export async function processDailyPayments(db: D1Database): Promise<number> {
   // ⚠️ Toujours utiliser l'heure de Maurice (UTC+4) comme référence
   const todayStr = getMauritiusDateStr()
 
+  // ── VERROU GLOBAL : une seule exécution par jour (clé système) ────────────
+  // Protection contre les appels concurrents (plusieurs Workers en parallèle)
+  const lockKey = `daily_payment_lock_${todayStr}`
+  const existingLock = await db.prepare(
+    `SELECT value FROM system_config WHERE key = ?`
+  ).bind(lockKey).first() as any
+  if (existingLock) {
+    console.log(`[processDailyPayments] Déjà exécuté aujourd'hui (${todayStr}) — verrou actif`)
+    return 0
+  }
+  // Poser le verrou atomiquement (INSERT OR IGNORE évite les doublons)
+  await db.prepare(
+    `INSERT OR IGNORE INTO system_config (key, value, updated_at) VALUES (?, 'locked', datetime('now'))`
+  ).bind(lockKey).run()
+
   // Entrées dont la eligible_date est atteinte et qu'il reste des jours à payer
   // Pour prime_leadership : une seule entry par membre (rang le plus haut = amount_per_day MAX)
   // Les entries de rangs inférieurs (amount_per_day < MAX pour ce membre/période) sont ignorées
@@ -2341,7 +2356,7 @@ export async function processDailyPayments(db: D1Database): Promise<number> {
       continue
     }
 
-    // ── GUARD 2 : anti-doublon — déjà versé aujourd'hui pour cette entrée ──
+    // ── GUARD 2 (redondant avec le verrou global, mais conservé en sécurité) ─
     if (entry.last_paid_at) {
       const lastPaidDay = entry.last_paid_at.substring(0, 10) // 'YYYY-MM-DD'
       if (lastPaidDay === todayStr) {
