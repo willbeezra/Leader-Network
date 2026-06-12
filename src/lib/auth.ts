@@ -1,5 +1,5 @@
 // ============================================================
-// LEADER Network — Authentification JWT
+// LEADER — Authentification JWT
 // ============================================================
 
 // JWT_SECRET doit être défini comme variable d'environnement Cloudflare (secret)

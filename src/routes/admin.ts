@@ -1,5 +1,5 @@
 // ============================================================
-// LEADER Network — Routes Admin
+// LEADER — Routes Admin
 // CDC v6.0 — Plan de compensation intégral déployé
 // ============================================================
 import { Hono } from 'hono'
@@ -2994,7 +2994,7 @@ admin.post('/members/:id/mark-admin-fee-paid', requirePermission('admin_fee.edit
   ).bind(memberId).run()
 
   await createNotification(c.env.DB, memberId, 'success', 'Frais d\'administration réglés',
-    'Vos frais d\'administration ont été confirmés par l\'équipe LEADER Network.')
+    'Vos frais d\'administration ont été confirmés par l\'équipe LEADER.')
 
   return c.json({ success: true })
 })

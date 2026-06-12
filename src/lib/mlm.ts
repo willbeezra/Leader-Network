@@ -1,5 +1,5 @@
 // ============================================================
-// LEADER Network — Logique métier MLM complète
+// LEADER — Logique métier MLM complète
 // CDC v6.0 — Plan de compensation intégral
 // Corrections bugs audit : B1 B2 B3 B4 B5 B6 B7
 // ============================================================
@@ -1245,7 +1245,7 @@ export async function activateAndReward(
     ])
 
     await createNotification(db, memberId, 'success', 'Licence activée',
-      'Votre licence Finstrategia est maintenant active. Bienvenue dans LEADER Network !')
+      'Votre licence Finstrategia est maintenant active. Bienvenue dans LEADER !')
 
     return { success: true, message: 'Licence activée avec succès' }
   }

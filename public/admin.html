@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LEADER Network — Administration</title>
+  <title>LEADER — Administration</title>
   <!-- CSS critique inline : garantit rendu immédiat même si Tailwind tarde -->
   <style>
     body{background:#0A0A0F;color:#fff;font-family:system-ui,sans-serif;margin:0}
@@ -20,7 +20,7 @@
   </style>
   <style>
 /* ============================================================
-   LEADER Network — Styles globaux
+   LEADER — Styles globaux
    ============================================================ */
 
 * { box-sizing: border-box; }
@@ -223,7 +223,7 @@ body {
         <i class="fas fa-shield-halved text-white text-2xl"></i>
       </div>
       <h1 class="text-3xl font-bold text-white">Administration</h1>
-      <p class="text-gray-400 mt-1">LEADER Network — Accès restreint</p>
+      <p class="text-gray-400 mt-1">LEADER — Accès restreint</p>
     </div>
     <div class="bg-dark-800 rounded-2xl p-8 shadow-2xl border border-dark-600">
       <div class="space-y-4">
@@ -361,7 +361,7 @@ body {
 </script>
 <script>
 // ============================================================
-// LEADER Network — Application Admin v2.0
+// LEADER — Application Admin v2.0
 // Plan de compensation CDC v6.0 — Complet
 // ============================================================
 
@@ -3577,7 +3577,7 @@ const GW_GROUPS = [
   { id: 'bank',    label: 'Virement bancaire',  icon: 'fas fa-university', color: 'green',  fields: [
       { key: 'label',        label: 'Libelle (ex: BNP Paribas)',      type: 'text',     placeholder: 'Virement EUR' },
       { key: 'name',         label: 'Nom de la banque',               type: 'text',     placeholder: 'Societe Generale' },
-      { key: 'beneficiary',  label: 'Beneficiaire',                   type: 'text',     placeholder: 'LEADER Network SAS' },
+      { key: 'beneficiary',  label: 'Beneficiaire',                   type: 'text',     placeholder: 'LEADER SAS' },
       { key: 'iban',         label: 'IBAN',                           type: 'text',     placeholder: 'FR76 3000 6000 0112 3456 7890 189', mono: true },
       { key: 'swift',        label: 'BIC / SWIFT',                   type: 'text',     placeholder: 'AGRIFRPP', mono: true },
       { key: 'instructions', label: 'Reference / Instructions',       type: 'textarea', placeholder: 'Indiquez votre identifiant unique...' },
@@ -3823,7 +3823,7 @@ function showAddAssetModal() {
   showModal(`
   <div class="p-6 space-y-4">
     <div class="flex justify-between items-center"><h3 class="font-bold">Nouvel asset marketing</h3><button onclick="closeModal()" class="text-gray-400 hover:text-white"><i class="fas fa-times"></i></button></div>
-    <div><label class="form-label">Titre</label><input id="ma-title" class="form-input" placeholder="Présentation LEADER Network"></div>
+    <div><label class="form-label">Titre</label><input id="ma-title" class="form-input" placeholder="Présentation LEADER"></div>
     <div><label class="form-label">Type</label>
       <select id="ma-type" class="form-input">
         <option value="image">Image</option>

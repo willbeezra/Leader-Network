@@ -1,5 +1,5 @@
 // ============================================================
-// LEADER Network — Agent IA Admin (Copilote)
+// LEADER — Agent IA Admin (Copilote)
 // POST /api/admin/ai-agent/chat    → streaming SSE : étapes visibles en temps réel
 // POST /api/admin/ai-agent/execute → exécution après validation humaine
 // GET  /api/admin/ai-agent/history → historique sessions
@@ -39,7 +39,7 @@ const FORBIDDEN_PATTERNS = [
   /TRUNCATE/i, /ALTER\s+TABLE/i, /CREATE\s+TABLE/i, /PRAGMA/i,
 ]
 
-// ── Bible : Plan de Compensation LEADER Network 2025 ──────────
+// ── Bible : Plan de Compensation LEADER 2025 ──────────
 const PLAN_COMPENSATION = `
 ═══════════════════════════════════════════════════════════════
 PLAN DE COMPENSATION LEADER NETWORK 2025 — RÉFÉRENCE ABSOLUE
@@ -173,7 +173,7 @@ Si différent → anomalie à corriger
 `
 
 // ── Prompt Phase 1 : planification des requêtes SQL ───────────
-const PROMPT_PHASE1 = `Tu es l'Agent IA Admin de LEADER Network. Tu connais par cœur le plan de compensation ci-dessous — c'est ta bible absolue.
+const PROMPT_PHASE1 = `Tu es l'Agent IA Admin de LEADER. Tu connais par cœur le plan de compensation ci-dessous — c'est ta bible absolue.
 
 ${PLAN_COMPENSATION}
 
@@ -307,7 +307,7 @@ Maximum 10 requêtes. Pour un diagnostic VR : minimum 5 requêtes obligatoires.
 `
 
 // ── Prompt Phase 2 : analyse avec les données réelles ─────────
-const PROMPT_PHASE2 = `Tu es l'Agent IA Admin de LEADER Network. Tu es un assistant intelligent, clair et bienveillant — exactement comme ChatGPT ou Claude, mais spécialisé dans le plan de compensation MLM de LEADER.
+const PROMPT_PHASE2 = `Tu es l'Agent IA Admin de LEADER. Tu es un assistant intelligent, clair et bienveillant — exactement comme ChatGPT ou Claude, mais spécialisé dans le plan de compensation MLM de LEADER.
 
 Tu connais par cœur le plan de compensation ci-dessous — c'est ta bible absolue. Utilise-la pour valider chaque chiffre, détecter les anomalies et proposer des corrections précises.
 
@@ -401,7 +401,7 @@ Si bug de code détecté (requires_code_fix=true) :
 
 IMPORTANT pour reply_ticket :
 - "draft" = texte COMPLET prêt à envoyer au membre (pas un résumé, un vrai message)
-- Commence par "Bonjour [Prénom]," et termine par "Cordialement, L'équipe LEADER Network"
+- Commence par "Bonjour [Prénom]," et termine par "Cordialement, L'équipe LEADER"
 - Ton : professionnel, chaleureux, rassurant
 - Inclure les chiffres clés du diagnostic si pertinent
 

@@ -1,5 +1,5 @@
 // ============================================================
-// LEADER Network — Routes Broker Triomarkets
+// LEADER — Routes Broker Triomarkets
 // Flow : Membre choisit package → redirection Triomarkets →
 //        webhook On Registration → webhook On Deposit → activation BV
 // ============================================================

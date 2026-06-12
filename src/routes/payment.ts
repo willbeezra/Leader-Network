@@ -1,5 +1,5 @@
 // ============================================================
-// LEADER Network — Routes Payment Gateway V2
+// LEADER — Routes Payment Gateway V2
 // Gestion unifiée de tous les modes de paiement
 // ============================================================
 import { Hono } from 'hono'
@@ -225,7 +225,7 @@ paymentRouter.post('/topup/create', async (c) => {
       bank: 'Virement bancaire',
       paypal: 'PayPal / Carte bancaire',
       crypto: 'Cryptomonnaie',
-      wallet: 'Wallet LEADER Network',
+      wallet: 'Wallet LEADER',
       stripe: 'Carte bancaire / Apple Pay / Google Pay',
       coinpayments: 'Cryptomonnaie via CoinPayments',
       manual: 'Autre méthode'

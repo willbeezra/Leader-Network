@@ -4772,7 +4772,7 @@ function showAddPackageModal(e,t){const n=e?decodeURIComponent(t):"";showModal(`
     {id:'crypto',label:'Cryptomonnaies',icon:'fa-coins',color:'purple'},
     {id:'cash',label:'Espèces / Chèques',icon:'fa-money-bill',color:'orange'},
     {id:'digital_wallet',label:'Portefeuilles Digitaux',icon:'fa-wallet',color:'pink'},
-    {id:'internal_wallet',label:'Wallet LEADER Network',icon:'fa-network-wired',color:'indigo'}
+    {id:'internal_wallet',label:'Wallet LEADER',icon:'fa-network-wired',color:'indigo'}
   ];
   const COL={blue:'border-blue-500/40 bg-blue-900/20 text-blue-300',green:'border-green-500/40 bg-green-900/20 text-green-300',yellow:'border-yellow-500/40 bg-yellow-900/20 text-yellow-300',purple:'border-purple-500/40 bg-purple-900/20 text-purple-300',orange:'border-orange-500/40 bg-orange-900/20 text-orange-300',pink:'border-pink-500/40 bg-pink-900/20 text-pink-300',indigo:'border-indigo-500/40 bg-indigo-900/20 text-indigo-300'};
   e.innerHTML=`
@@ -4991,7 +4991,7 @@ let _pgwAllMethods=[];
 
 async function _pgwSelectCat(catId){
   _pgwCurrentCat=catId;
-  const CAT_LABELS={card:'Cartes Bancaires',bank:'Virement Bancaire',mobile_money:'Mobile Money',crypto:'Cryptomonnaies',cash:'Espèces / Chèques',digital_wallet:'Portefeuilles Digitaux',internal_wallet:'Wallet LEADER Network'};
+  const CAT_LABELS={card:'Cartes Bancaires',bank:'Virement Bancaire',mobile_money:'Mobile Money',crypto:'Cryptomonnaies',cash:'Espèces / Chèques',digital_wallet:'Portefeuilles Digitaux',internal_wallet:'Wallet LEADER'};
   const panel=document.getElementById('pgw-provider-panel');
   const catGrid=document.getElementById('pgw-cat-grid');
   const title=document.getElementById('pgw-provider-title');
@@ -9709,7 +9709,7 @@ async function adminMemberCards(e) {
       + '<div><label class="form-label">Prix (USD)</label><input id="cfg-physical-price" type="number" min="0" step="0.01" class="form-input" value="' + (cfg.physical_card_price || '19.90') + '"></div>'
       + '<div><label class="form-label">Devise</label><input id="cfg-physical-currency" class="form-input" value="' + (cfg.physical_card_currency || 'USD') + '" placeholder="USD"></div>'
       + '</div>'
-      + '<div class="mt-4"><label class="form-label">Description affichée au membre</label><input id="cfg-physical-desc" class="form-input" value="' + (cfg.physical_card_desc || 'Carte de membre physique LEADER Network') + '"></div>'
+      + '<div class="mt-4"><label class="form-label">Description affichée au membre</label><input id="cfg-physical-desc" class="form-input" value="' + (cfg.physical_card_desc || 'Carte de membre physique LEADER') + '"></div>'
       + '<div class="mt-4"><button onclick="savePhysicalCardConfig()" class="bg-amber-600 text-white font-bold px-6 py-2.5 rounded-xl hover:bg-amber-500 transition flex items-center gap-2"><i class="fas fa-save"></i> Sauvegarder carte physique</button></div>'
       + '</div>';
 
@@ -10011,7 +10011,7 @@ async function adminEmailsPage(el) {
               <label class="block text-xs text-gray-400 mb-1">Nom expéditeur (From Name)</label>
               <div class="flex gap-2">
                 <input type="text" id="cfg-from-name" value="${c.from_name||''}"
-                  placeholder="LEADER Network"
+                  placeholder="LEADER"
                   class="flex-1 bg-dark-700 border border-dark-500 rounded-xl px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none">
                 <button onclick="adminEmailsSaveConfig('from_name', document.getElementById('cfg-from-name').value)"
                   class="btn-primary px-4 py-2.5 text-sm rounded-xl">
@@ -10043,8 +10043,8 @@ async function adminEmailsPage(el) {
             <div>
               <label class="block text-xs text-gray-400 mb-1">Nom du réseau</label>
               <div class="flex gap-2">
-                <input type="text" id="cfg-network-name" value="${c.network_name||'LEADER Network'}"
-                  placeholder="LEADER Network"
+                <input type="text" id="cfg-network-name" value="${c.network_name||'LEADER'}"
+                  placeholder="LEADER"
                   class="flex-1 bg-dark-700 border border-dark-500 rounded-xl px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none">
                 <button onclick="adminEmailsSaveConfig('network_name', document.getElementById('cfg-network-name').value)"
                   class="btn-primary px-4 py-2.5 text-sm rounded-xl">

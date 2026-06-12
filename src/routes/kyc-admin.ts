@@ -1,5 +1,5 @@
 // ============================================================
-// LEADER Network — Routes Admin KYC
+// LEADER — Routes Admin KYC
 // Gestion complète et paramétrable depuis le backoffice admin
 // ============================================================
 import { Hono } from 'hono'

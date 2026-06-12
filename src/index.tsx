@@ -1,5 +1,5 @@
 // ============================================================
-// LEADER Network — Application principale
+// LEADER — Application principale
 // ============================================================
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
@@ -270,7 +270,7 @@ app.get('/api/files/:id', async (c) => {
 })
 
 // Health check
-app.get('/api/health', (c) => c.json({ status: 'ok', app: 'LEADER Network', version: '1.0.0' }))
+app.get('/api/health', (c) => c.json({ status: 'ok', app: 'LEADER', version: '1.0.0' }))
 
 // ── COINPAYMENTS IPN WEBHOOK ──────────────────────────────────────────────────
 // CoinPayments envoie un POST IPN après chaque changement de statut de transaction.
@@ -977,7 +977,7 @@ function registerHTML(opts: RegisterHTMLOpts): string {
     ? `Inscription — Placement direct (jambe ${posLabel})`
     : opts.mode === 'M3'
     ? 'Inscription — Via lien de parrainage'
-    : 'Créer un compte — LEADER Network'
+    : 'Créer un compte — LEADER'
 
   return `<!DOCTYPE html>
 <html lang="fr">
@@ -1051,7 +1051,7 @@ function registerHTML(opts: RegisterHTMLOpts): string {
     <a href="/" class="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 shadow-lg" style="background:linear-gradient(135deg,#791E15,#5A1510)">
       <i class="fas fa-crown text-dark-900 text-2xl"></i>
     </a>
-    <h1 class="text-2xl font-bold text-white">LEADER Network</h1>
+    <h1 class="text-2xl font-bold text-white">LEADER</h1>
     <p class="text-gray-400 mt-1 text-sm" id="page-subtitle">Création de votre compte</p>
   </div>
 
@@ -1202,7 +1202,7 @@ function registerHTML(opts: RegisterHTMLOpts): string {
           <input id="r-cgu" type="checkbox" class="mt-0.5 w-4 h-4 rounded accent-yellow-500 flex-shrink-0">
           <label for="r-cgu" class="text-sm text-gray-400 leading-relaxed">
             J'accepte les <button type="button" onclick="showCGU()" class="hover:underline" style="color:#A02820">conditions générales d'utilisation</button>
-            et la politique de confidentialité de LEADER Network. <span class="text-red-400">*</span>
+            et la politique de confidentialité de LEADER. <span class="text-red-400">*</span>
           </label>
         </div>
       </div>
@@ -1284,13 +1284,13 @@ function registerHTML(opts: RegisterHTMLOpts): string {
       <button onclick="hideCGU()" class="text-gray-400 hover:text-white text-xl leading-none">&times;</button>
     </div>
     <div class="p-6 text-sm text-gray-400 space-y-3">
-      <p class="font-semibold text-white">LEADER Network — CGU</p>
-      <p>En vous inscrivant sur LEADER Network, vous acceptez les présentes conditions.</p>
+      <p class="font-semibold text-white">LEADER — CGU</p>
+      <p>En vous inscrivant sur LEADER, vous acceptez les présentes conditions.</p>
       <p><strong class="text-white">1. Adhésion</strong> — L'adhésion est volontaire. Vous devez avoir au moins 18 ans.</p>
       <p><strong class="text-white">2. Commissions</strong> — Les commissions sont versées selon le plan de compensation en vigueur, sous réserve des conditions d'éligibilité (licence active, KYC validé).</p>
       <p><strong class="text-white">3. Retraits</strong> — Les retraits sont traités sous 48–72h ouvrées. Un PIN de sécurité est requis. KYC obligatoire pour tout retrait.</p>
       <p><strong class="text-white">4. Données personnelles</strong> — Vos données sont traitées conformément au RGPD. Elles ne sont pas revendues à des tiers.</p>
-      <p><strong class="text-white">5. Compte</strong> — LEADER Network se réserve le droit de suspendre tout compte en cas de fraude ou violation des présentes CGU.</p>
+      <p><strong class="text-white">5. Compte</strong> — LEADER se réserve le droit de suspendre tout compte en cas de fraude ou violation des présentes CGU.</p>
       <p><strong class="text-white">6. Résiliation</strong> — Vous pouvez résilier votre compte à tout moment en contactant le support.</p>
       <p class="text-gray-500 text-xs">Dernière mise à jour : Mai 2026</p>
     </div>
@@ -1812,7 +1812,7 @@ function memberHTML(opts: MemberHTMLOpts = {}, branding: BrandingPublic = { logo
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LEADER Network — Backoffice</title>
+  <title>LEADER — Backoffice</title>
   <script src="/static/tailwind.min.js"></script>
   <script>
     tailwind.config = { theme: { extend: { colors: {
@@ -2388,7 +2388,7 @@ function adminHTML(branding: BrandingPublic = { logoUri: '', networkName: 'LEADE
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LEADER Network — Administration</title>
+  <title>LEADER — Administration</title>
   <script src="/static/tailwind.min.js"></script>
   <script>
     tailwind.config = { theme: { extend: { colors: {

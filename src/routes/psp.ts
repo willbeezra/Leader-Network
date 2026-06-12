@@ -1,5 +1,5 @@
 // ============================================================
-// LEADER Network — PSP Router
+// LEADER — PSP Router
 // Initiation, callback, webhook pour chaque PSP automatique
 // Chaque provider a sa propre logique d'intégration API
 // ============================================================
@@ -281,7 +281,7 @@ pspRouter.post('/initiate', async (c) => {
           'payment_method_types[]': 'card',
           'line_items[0][price_data][currency]': currency.toLowerCase(),
           'line_items[0][price_data][unit_amount]': amountCents.toString(),
-          'line_items[0][price_data][product_data][name]': order_id ? 'Package LEADER Network' : 'Recharge portefeuille',
+          'line_items[0][price_data][product_data][name]': order_id ? 'Package LEADER' : 'Recharge portefeuille',
           'line_items[0][quantity]': '1',
           'mode': 'payment',
           'success_url': `${callbackUrl}?session_id={CHECKOUT_SESSION_ID}&type=stripe`,
@@ -338,12 +338,12 @@ pspRouter.post('/initiate', async (c) => {
             purchase_units: [{
               amount: { currency_code: currency.toUpperCase(), value: amount.toFixed(2) },
               custom_id: customId,
-              description: order_id ? 'Package LEADER Network' : 'Recharge portefeuille'
+              description: order_id ? 'Package LEADER' : 'Recharge portefeuille'
             }],
             application_context: {
               return_url: `${callbackUrl}?type=paypal`,
               cancel_url: finalReturnUrl,
-              brand_name: 'LEADER Network',
+              brand_name: 'LEADER',
               user_action: 'PAY_NOW'
             }
           })
@@ -379,7 +379,7 @@ pspRouter.post('/initiate', async (c) => {
           },
           body: JSON.stringify({
             amount: { currency: currency.toUpperCase(), value: amount.toFixed(2) },
-            description: order_id ? 'Package LEADER Network' : 'Recharge portefeuille',
+            description: order_id ? 'Package LEADER' : 'Recharge portefeuille',
             method: 'creditcard',   // Force carte bancaire — Apple Pay nécessite validation domaine
             redirectUrl: `${callbackUrl}?type=mollie`,
             webhookUrl: webhookUrl,
@@ -425,8 +425,8 @@ pspRouter.post('/initiate', async (c) => {
               name: `${member.first_name} ${member.last_name}`
             },
             customizations: {
-              title: 'LEADER Network',
-              description: order_id ? 'Package LEADER Network' : 'Recharge portefeuille'
+              title: 'LEADER',
+              description: order_id ? 'Package LEADER' : 'Recharge portefeuille'
             }
           })
         })
@@ -462,7 +462,7 @@ pspRouter.post('/initiate', async (c) => {
             amount: amountPaise,
             currency: currency.toUpperCase(),
             accept_partial: false,
-            description: order_id ? 'Package LEADER Network' : 'Recharge portefeuille',
+            description: order_id ? 'Package LEADER' : 'Recharge portefeuille',
             reference_id: receipt,
             notify: { sms: false, email: false },
             reminder_enable: false,
@@ -505,7 +505,7 @@ pspRouter.post('/initiate', async (c) => {
             order: {
               location_id: config.location_id,
               line_items: [{
-                name: order_id ? 'Package LEADER Network' : 'Recharge portefeuille',
+                name: order_id ? 'Package LEADER' : 'Recharge portefeuille',
                 quantity: '1',
                 base_price_money: { amount: amountCents, currency: currency.toUpperCase() }
               }]
@@ -630,7 +630,7 @@ pspRouter.post('/initiate', async (c) => {
           currency2: config.receive_currency || 'USDT.TRC20',
           buyer_email: member.email,
           buyer_name: `${member.first_name} ${member.last_name}`,
-          item_name: order_id ? 'Package LEADER Network' : 'Recharge portefeuille',
+          item_name: order_id ? 'Package LEADER' : 'Recharge portefeuille',
           ipn_url: ipnUrl,
           success_url: `${callbackUrl}?type=coinpayments`,
           cancel_url: finalReturnUrl,
@@ -684,7 +684,7 @@ pspRouter.post('/initiate', async (c) => {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            name: order_id ? 'Package LEADER Network' : 'Recharge portefeuille',
+            name: order_id ? 'Package LEADER' : 'Recharge portefeuille',
             description: `Paiement membre ${member.first_name} ${member.last_name}`,
             local_price: { amount: amount.toFixed(2), currency: currency.toUpperCase() },
             pricing_type: 'fixed_price',
@@ -725,7 +725,7 @@ pspRouter.post('/initiate', async (c) => {
             price_currency: currency.toLowerCase(),
             pay_currency: config.pay_currency || 'usdttrc20',
             order_id: orderId2,
-            order_description: order_id ? 'Package LEADER Network' : 'Recharge portefeuille',
+            order_description: order_id ? 'Package LEADER' : 'Recharge portefeuille',
             ipn_callback_url: `${baseUrl}/api/psp/webhook/nowpayments`,
             success_url: `${callbackUrl}?type=nowpayments`,
             cancel_url: finalReturnUrl,
@@ -771,7 +771,7 @@ pspRouter.post('/initiate', async (c) => {
             goodsType: '01',
             goodsCategory: 'Z000',
             referenceGoodsId: order_id || topup_id || memberId,
-            goodsName: order_id ? 'Package LEADER Network' : 'Recharge portefeuille',
+            goodsName: order_id ? 'Package LEADER' : 'Recharge portefeuille',
             goodsDetail: ''
           },
           returnUrl: `${callbackUrl}?type=binance_pay`,

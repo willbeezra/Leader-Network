@@ -1,5 +1,5 @@
 // ============================================================
-// LEADER Network — Routes Membres
+// LEADER — Routes Membres
 // ============================================================
 import { Hono } from 'hono'
 import { verifyJWT } from '../lib/auth.js'
@@ -2178,7 +2178,7 @@ members.post('/license/order', async (c) => {
     })
   }
 
-  // ── FLOW WALLET : paiement immédiat depuis le wallet LEADER Network ──────
+  // ── FLOW WALLET : paiement immédiat depuis le wallet LEADER ──────
   if (payment_method === 'wallet' || payment_method === 'internal_wallet') {
     const totalNeeded = licensePrice + adminFeeAmount
     // Vérifier le solde wallet
@@ -3106,7 +3106,7 @@ members.get('/reserve-strategique', async (c) => {
     return {
       ...e,
       part_prelevement: partPrelevement,   // montant prélevé sur la prime
-      part_abondement:  partAbondement,    // bonus ajouté par LEADER Network
+      part_abondement:  partAbondement,    // bonus ajouté par LEADER
     }
   })
 
@@ -3424,12 +3424,12 @@ members.post('/paypal/create-order', async (c) => {
           currency_code: currency,
           value: Number(amount).toFixed(2),
         },
-        description: description || 'LEADER Network — Paiement',
+        description: description || 'LEADER — Paiement',
         custom_id: customId,
         reference_id: customId,
       }],
       application_context: {
-        brand_name: 'LEADER Network',
+        brand_name: 'LEADER',
         locale: 'fr-FR',
         landing_page: 'NO_PREFERENCE',   // affiche carte ET PayPal
         shipping_preference: 'NO_SHIPPING',
@@ -3822,7 +3822,7 @@ members.post('/stripe/create-payment-intent', async (c) => {
       amount:                        String(Math.round(Number(amount) * 100)), // cents
       currency:                      currency.toLowerCase(),
       'automatic_payment_methods[enabled]': 'true',  // CB + Apple Pay + Google Pay auto
-      description:                   description || 'LEADER Network — Paiement',
+      description:                   description || 'LEADER — Paiement',
       'metadata[member_id]':         memberId,
       ...(order_id             && { 'metadata[order_id]':             order_id }),
       ...(license_id           && { 'metadata[license_id]':           license_id }),
@@ -4217,7 +4217,7 @@ members.post('/coinpayments/create-transaction', async (c) => {
       currency1:        'USD',          // Devise de référence (prix affiché en USD)
       currency2:        coin,           // Cryptomonnaie réelle pour le paiement
       buyer_email:      buyerEmail,
-      item_name:        description || `LEADER Network — Paiement`,
+      item_name:        description || `LEADER — Paiement`,
       item_number:      custom1,
       custom:           custom1,
       custom1,

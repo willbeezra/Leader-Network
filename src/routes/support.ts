@@ -1,5 +1,5 @@
 // ============================================================
-// LEADER Network — Routes Support Client
+// LEADER — Routes Support Client
 // ============================================================
 import { Hono } from 'hono'
 import type { Bindings } from '../types/index.js'
@@ -272,7 +272,7 @@ async function buildContextSnapshot(db: D1Database, memberId: string): Promise<s
 // ██ IA SUPPORT — GPT-4o réponse automatique (invisible membre)
 // ─────────────────────────────────────────────────────────────
 
-const LEADER_SYSTEM_PROMPT = `Tu es le Support LEADER, l'assistant officiel de LEADER Network.
+const LEADER_SYSTEM_PROMPT = `Tu es le Support LEADER, l'assistant officiel de LEADER.
 Tu réponds TOUJOURS en Français, de manière professionnelle et chaleureuse.
 Tu ne révèles JAMAIS que tu es une IA. Tu te comportes comme un agent humain senior.
 Tu signes tes réponses "L'équipe Support LEADER".

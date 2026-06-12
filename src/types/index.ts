@@ -1,5 +1,5 @@
 // ============================================================
-// LEADER Network — Types TypeScript
+// LEADER — Types TypeScript
 // ============================================================
 
 export type MemberStatus = 'Membre' | 'Client' | 'Partenaire' | 'AMI'

@@ -1,5 +1,5 @@
 // ============================================================
-// LEADER Network — Middleware de permissions RBAC
+// LEADER — Middleware de permissions RBAC
 // Système de rôles multi-rôles par admin
 // ============================================================
 

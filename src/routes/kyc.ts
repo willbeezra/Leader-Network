@@ -1,5 +1,5 @@
 // ============================================================
-// LEADER Network — Routes KYC
+// LEADER — Routes KYC
 // Système KYC complet et paramétrable
 // Stockage documents : Cloudflare R2 (kyc/{member_id}/{app_id}/{doc_type}.jpg)
 // ============================================================

@@ -1,5 +1,5 @@
 // ============================================================
-// LEADER Network — Sélecteur Pays Universel
+// LEADER — Sélecteur Pays Universel
 // 250+ pays + territoires + DOM-TOM avec indicatifs téléphoniques
 // Utilisation : CountrySelector.init(config)
 // ============================================================

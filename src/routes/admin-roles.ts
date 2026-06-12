@@ -1,5 +1,5 @@
 // ============================================================
-// LEADER Network — Routes Gestion des Rôles Admin
+// LEADER — Routes Gestion des Rôles Admin
 // RBAC entièrement paramétrable
 // ============================================================
 

@@ -1,5 +1,5 @@
 // ============================================================
-// LEADER Network — Authentification & Inscription (M1/M2/M3)
+// LEADER — Authentification & Inscription (M1/M2/M3)
 // CDC Module Inscriptions v1.0 — Mai 2026
 // ============================================================
 import { Hono } from 'hono'
@@ -421,7 +421,7 @@ auth.post('/register', async (c) => {
       `INSERT INTO notifications (id, member_id, type, title, message) VALUES (?,?,?,?,?)`
     ).bind(
       generateId(), id, 'welcome',
-      'Bienvenue sur LEADER Network !',
+      'Bienvenue sur LEADER !',
       `Votre compte a été créé avec succès. Votre identifiant unique est ${uniqueId}.`
     ).run()
 
