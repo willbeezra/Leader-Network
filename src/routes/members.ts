@@ -1165,12 +1165,17 @@ members.get('/wallet-history', async (c) => {
     // Wallet en attente : entrées pending_wallet_entries + mouvements wallet_transactions pending
     const [pendingEntries, pendingTx] = await Promise.all([
       c.env.DB.prepare(`
-        SELECT id, commission_type, period, total_amount, amount_per_day,
-               days_in_month, days_paid, eligible_date, start_date, status,
-               last_paid_at, created_at
-        FROM pending_wallet_entries
-        WHERE member_id = ?
-        ORDER BY created_at DESC
+        SELECT pwe.id, pwe.commission_type, pwe.period, pwe.total_amount, pwe.amount_per_day,
+               pwe.days_in_month, pwe.days_paid, pwe.eligible_date, pwe.start_date, pwe.status,
+               pwe.last_paid_at, pwe.created_at,
+               sm.first_name || ' ' || sm.last_name AS source_name,
+               sm.unique_id                         AS source_unique_id,
+               sm.current_rank                      AS source_rank
+        FROM pending_wallet_entries pwe
+        LEFT JOIN commissions c  ON c.id  = pwe.commission_id
+        LEFT JOIN members     sm ON sm.id = c.source_member_id
+        WHERE pwe.member_id = ? AND pwe.status IN ('pending_release', 'active')
+        ORDER BY pwe.created_at DESC
       `).bind(memberId).all(),
       c.env.DB.prepare(`
         SELECT id, transaction_type, amount, balance_before, balance_after,
