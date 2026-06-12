@@ -3129,6 +3129,28 @@ members.post('/reserve-strategique/withdraw', async (c) => {
   ).bind(memberId).first() as any
 
   const rsBalance = member?.reserve_strategique || 0
+
+  // ── Calculer le solde LIBÉRÉ uniquement (released + unlocked) ────────────
+  // Un retrait n'est autorisé que sur les entrées dont le statut est
+  // 'released' ou 'unlocked' — les entrées 'locked' sont intouchables.
+  const releasedRows = await db.prepare(
+    `SELECT id, amount FROM reserve_strategique
+     WHERE member_id = ? AND status IN ('released','unlocked')
+     ORDER BY created_at ASC`
+  ).bind(memberId).all()
+  const releasedEntries = (releasedRows.results || []) as any[]
+  const releasedBalance = releasedEntries.reduce((s: number, e: any) => s + (e.amount || 0), 0)
+
+  if (releasedBalance <= 0)
+    return c.json({
+      error: 'Aucun montant libéré disponible — vos fonds sont encore bloqués jusqu\'à la date de libération.'
+    }, 422)
+
+  if (amount > releasedBalance)
+    return c.json({
+      error: `Montant supérieur au solde libéré — ${releasedBalance.toFixed(2)}$ seulement disponibles au retrait.`
+    }, 422)
+
   if (rsBalance < amount)
     return c.json({
       error: `Solde Réserve Stratégique insuffisant — ${rsBalance.toFixed(2)}$ disponible`
@@ -3151,27 +3173,15 @@ members.post('/reserve-strategique/withdraw', async (c) => {
   await walletOperation(db, memberId, amount, 'credit', 'reserve_strategique',
     `Retrait Réserve Stratégique — ${amount.toFixed(2)}$`)
 
-  // 3. Marquer les entrées RS comme unlocked (FIFO — les plus anciennes d'abord)
-  //    Si entry_id fourni, libérer celle-là ; sinon libérer en FIFO jusqu'à couvrir le montant
-  if (body.entry_id) {
-    await db.prepare(
-      `UPDATE reserve_strategique
-       SET status = 'unlocked', unlocked_at = datetime('now')
-       WHERE id = ? AND member_id = ? AND status = 'locked'`
-    ).bind(body.entry_id, memberId).run()
-  } else {
-    // FIFO : libérer les entrées locked les plus anciennes jusqu'à couvrir le montant
-    const lockedRows = await db.prepare(
-      `SELECT id, amount FROM reserve_strategique
-       WHERE member_id = ? AND status = 'locked'
-       ORDER BY created_at ASC`
-    ).bind(memberId).all()
+  // 3. Consommer les entrées libérées (FIFO — les plus anciennes d'abord)
+  //    On ne touche QUE les entrées released/unlocked, jamais les locked
+  {
     let remaining = amount
-    for (const row of ((lockedRows.results || []) as any[])) {
+    for (const row of releasedEntries) {
       if (remaining <= 0) break
       await db.prepare(
         `UPDATE reserve_strategique
-         SET status = 'unlocked', unlocked_at = datetime('now')
+         SET status = 'withdrawn', unlocked_at = COALESCE(unlocked_at, datetime('now'))
          WHERE id = ?`
       ).bind(row.id).run()
       remaining -= row.amount
