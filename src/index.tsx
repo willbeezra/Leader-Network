@@ -2078,11 +2078,11 @@ function memberHTML(opts: MemberHTMLOpts = {}, branding: BrandingPublic = { logo
         </div>
       </div>
       <div class="mt-3 flex items-center justify-between">
-        <span class="text-xs text-gray-400">Statut</span>
+        <span class="text-xs text-gray-400" data-i18n="Statut">Statut</span>
         <span id="sidebar-status" class="text-xs px-2 py-0.5 rounded-full font-medium" style="background:rgba(121,30,21,0.2);color:#A02820">AMI</span>
       </div>
       <div class="mt-1 flex items-center justify-between">
-        <span class="text-xs text-gray-400">Rang</span>
+        <span class="text-xs text-gray-400" data-i18n="Rang">Rang</span>
         <span id="sidebar-rank" class="text-xs text-white font-medium">Captain</span>
       </div>
     </div>
@@ -2090,75 +2090,75 @@ function memberHTML(opts: MemberHTMLOpts = {}, branding: BrandingPublic = { logo
     <!-- Nav -->
     <nav class="flex-1 overflow-y-auto p-3 space-y-1">
       <button onclick="showPage('dashboard');closeSidebar()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="dashboard">
-        <i class="fas fa-home w-5 text-center"></i> Dashboard
+        <i class="fas fa-home w-5 text-center"></i> <span data-i18n="Dashboard">Dashboard</span>
       </button>
       <button onclick="showPage('team');closeSidebar()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="team">
-        <i class="fas fa-users w-5 text-center"></i> Mon Équipe
+        <i class="fas fa-users w-5 text-center"></i> <span data-i18n="Mon Équipe">Mon Équipe</span>
       </button>
       <button onclick="showPage('tree');closeSidebar()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="tree">
-        <i class="fas fa-sitemap w-5 text-center"></i> Arbre Binaire
+        <i class="fas fa-sitemap w-5 text-center"></i> <span data-i18n="Arbre Binaire">Arbre Binaire</span>
       </button>
       <button onclick="showPage('bv');closeSidebar()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="bv">
-        <i class="fas fa-chart-line w-5 text-center"></i> Journal BV
+        <i class="fas fa-chart-line w-5 text-center"></i> <span data-i18n="Journal BV">Journal BV</span>
       </button>
       <button onclick="showPage('commissions');closeSidebar()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="commissions">
-        <i class="fas fa-dollar-sign w-5 text-center"></i> Commissions
+        <i class="fas fa-dollar-sign w-5 text-center"></i> <span data-i18n="Commissions">Commissions</span>
       </button>
       <button onclick="showPage('wallet');closeSidebar()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="wallet">
-        <i class="fas fa-wallet w-5 text-center"></i> Portefeuille
+        <i class="fas fa-wallet w-5 text-center"></i> <span data-i18n="Portefeuille">Portefeuille</span>
       </button>
       <button onclick="showPage('withdraw');closeSidebar()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="withdraw">
-        <i class="fas fa-arrow-up-right-from-square w-5 text-center"></i> Retrait
+        <i class="fas fa-arrow-up-right-from-square w-5 text-center"></i> <span data-i18n="Retrait">Retrait</span>
       </button>
       <button onclick="showPage('transactions');closeSidebar()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="transactions">
-        <i class="fas fa-list w-5 text-center"></i> Transactions
+        <i class="fas fa-list w-5 text-center"></i> <span data-i18n="Transactions">Transactions</span>
       </button>
-      <div class="px-4 pt-4 pb-1 text-xs text-gray-500 uppercase tracking-wider">Mon Compte</div>
+      <div class="px-4 pt-4 pb-1 text-xs text-gray-500 uppercase tracking-wider" data-i18n="Mon Compte">Mon Compte</div>
       <button onclick="showPage('packages');closeSidebar()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="packages">
-        <i class="fas fa-box w-5 text-center"></i> Packages
+        <i class="fas fa-box w-5 text-center"></i> <span data-i18n="Packages">Packages</span>
       </button>
       <button onclick="showPage('license');closeSidebar()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="license">
-        <i class="fas fa-id-card w-5 text-center"></i> Ma Licence
+        <i class="fas fa-id-card w-5 text-center"></i> <span data-i18n="Ma Licence">Ma Licence</span>
       </button>
       <button onclick="showPage('kyc');closeSidebar()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="kyc">
-        <i class="fas fa-shield-halved w-5 text-center"></i> Mon KYC
+        <i class="fas fa-shield-halved w-5 text-center"></i> <span data-i18n="Mon KYC">Mon KYC</span>
       </button>
       <button onclick="showPage('reservoir');closeSidebar()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="reservoir">
-        <i class="fas fa-users-gear w-5 text-center"></i> Réservoir
+        <i class="fas fa-users-gear w-5 text-center"></i> <span data-i18n="Réservoir">Réservoir</span>
         <span id="reservoir-badge" class="hidden ml-auto bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">0</span>
       </button>
       <button onclick="showPage('services');closeSidebar()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="services">
         <i class="fas fa-th-large w-5 text-center" style="color:#791E15"></i>
-        <span>Services</span>
+        <span data-i18n="Services">Services</span>
       </button>
       <button onclick="showPage('marketing');closeSidebar()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="marketing">
-        <i class="fas fa-bullhorn w-5 text-center"></i> Marketing
+        <i class="fas fa-bullhorn w-5 text-center"></i> <span data-i18n="Marketing">Marketing</span>
       </button>
       <button onclick="showPage('earnings');closeSidebar()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="earnings">
         <i class="fas fa-file-invoice-dollar w-5 text-center text-emerald-400"></i>
-        <span class="flex-1">Earnings &amp; Docs</span>
+        <span class="flex-1" data-i18n="Earnings &amp; Docs">Earnings &amp; Docs</span>
         <span class="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-semibold">NEW</span>
       </button>
       <button onclick="showPage('notifications');closeSidebar()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="notifications">
-        <i class="fas fa-bell w-5 text-center"></i> Notifications
+        <i class="fas fa-bell w-5 text-center"></i> <span data-i18n="Notifications">Notifications</span>
         <span id="notif-badge" class="hidden ml-auto bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">0</span>
       </button>
       <button onclick="showPage('support');closeSidebar()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="support">
-        <i class="fas fa-headset w-5 text-center"></i> Support
+        <i class="fas fa-headset w-5 text-center"></i> <span data-i18n="Support">Support</span>
         <span id="support-badge" class="hidden ml-auto bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">0</span>
       </button>
       <button onclick="showPage('profile');closeSidebar()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="profile">
-        <i class="fas fa-user w-5 text-center"></i> Mon Profil
+        <i class="fas fa-user w-5 text-center"></i> <span data-i18n="Mon Profil">Mon Profil</span>
       </button>
       <button onclick="showPage('member-card');closeSidebar()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="member-card">
-        <i class="fas fa-id-badge w-5 text-center" style="color:#A02820"></i> Carte de Membre
+        <i class="fas fa-id-badge w-5 text-center" style="color:#A02820"></i> <span data-i18n="Carte de Membre">Carte de Membre</span>
       </button>
     </nav>
 
     <!-- Logout -->
     <div class="p-4 border-t border-dark-600">
       <button onclick="doLogout()" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-gray-400 hover:text-red-400 hover:bg-red-900/20 transition text-sm">
-        <i class="fas fa-sign-out-alt w-5 text-center"></i> Déconnexion
+        <i class="fas fa-sign-out-alt w-5 text-center"></i> <span data-i18n="Déconnexion">Déconnexion</span>
       </button>
     </div>
   </aside>
@@ -2172,7 +2172,7 @@ function memberHTML(opts: MemberHTMLOpts = {}, branding: BrandingPublic = { logo
       </button>
       <div class="flex items-center gap-4">
         <div id="header-balance" class="text-sm">
-          <span class="text-gray-400">Solde : </span>
+          <span class="text-gray-400" data-i18n="Solde :">Solde : </span>
           <span class="font-bold" style="color:#791E15">$0.00</span>
         </div>
         <!-- Bouton Rafraîchir — recharge la page courante sans déconnecter -->

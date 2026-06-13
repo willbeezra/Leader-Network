@@ -227,10 +227,25 @@
     html = html.replace(/>([^<]+)</g, (match, text) => {
       const t = text.trim();
       if (!t) return match;
-      const translated = resolveTranslation(t);
-      if (translated !== null) {
-        return '>' + text.replace(t, translated) + '<';
+
+      // 1. Correspondance exacte (clé = tout le texte)
+      const exact = resolveTranslation(t);
+      if (exact !== null) {
+        return '>' + text.replace(t, exact) + '<';
       }
+
+      // 2. Correspondance partielle via _dictRegex (ex: "Bonjour, Willy !")
+      // On remplace les sous-chaînes connues dans le texte complet
+      if (_dictRegex && t.length > 1) {
+        let changed = false;
+        const result = t.replace(_dictRegex, (found) => {
+          const tr = resolveTranslation(found);
+          if (tr !== null && tr !== found) { changed = true; return tr; }
+          return found;
+        });
+        if (changed) return '>' + text.replace(t, result) + '<';
+      }
+
       if (t.length > 1 && !/^\d+([.,]\d+)?[%€$]?$/.test(t)) {
         _missing.add(t);
         hasMissing = true;
