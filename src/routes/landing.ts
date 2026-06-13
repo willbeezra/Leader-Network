@@ -29,19 +29,29 @@ async function getLandingConfig(db: D1Database): Promise<Record<string, string>>
 }
 
 async function getServices(db: D1Database, includeInactive = false): Promise<any[]> {
+  // Déduplique par id (rowid MIN) pour éviter l'affichage en double
+  // si la table a été peuplée plusieurs fois (INSERT OR IGNORE réexécuté)
+  const dedup = (rows: any[]): any[] => {
+    const seen = new Set<number>()
+    return rows.filter(r => {
+      if (seen.has(r.id)) return false
+      seen.add(r.id)
+      return true
+    })
+  }
   try {
     // Essai direct sur landing_services
     const q = includeInactive
       ? 'SELECT * FROM landing_services ORDER BY display_order ASC, id ASC'
       : "SELECT * FROM landing_services WHERE status != 'inactive' ORDER BY display_order ASC, id ASC"
     const rows = await db.prepare(q).all()
-    if (rows.results && rows.results.length > 0) return rows.results as any[]
+    if (rows.results && rows.results.length > 0) return dedup(rows.results as any[])
     // Fallback : si landing_services vide, essayer services
     const q2 = includeInactive
       ? 'SELECT * FROM services ORDER BY display_order ASC, id ASC'
       : "SELECT * FROM services WHERE status != 'inactive' ORDER BY display_order ASC, id ASC"
     const rows2 = await db.prepare(q2).all()
-    return (rows2.results || []) as any[]
+    return dedup((rows2.results || []) as any[])
   } catch {
     try {
       // Dernier fallback direct sur services
@@ -49,31 +59,35 @@ async function getServices(db: D1Database, includeInactive = false): Promise<any
         ? 'SELECT * FROM services ORDER BY display_order ASC, id ASC'
         : "SELECT * FROM services WHERE status != 'inactive' ORDER BY display_order ASC, id ASC"
       const rows2 = await db.prepare(q2).all()
-      return (rows2.results || []) as any[]
+      return dedup((rows2.results || []) as any[])
     } catch { return [] }
   }
 }
 
 async function getTestimonials(db: D1Database, featuredOnly = false): Promise<any[]> {
+  const dedup = (rows: any[]): any[] => {
+    const seen = new Set<number>()
+    return rows.filter(r => { if (seen.has(r.id)) return false; seen.add(r.id); return true })
+  }
   try {
     const q = featuredOnly
       ? 'SELECT * FROM landing_testimonials WHERE is_active=1 AND is_featured=1 ORDER BY display_order ASC LIMIT 6'
       : 'SELECT * FROM landing_testimonials WHERE is_active=1 ORDER BY display_order ASC'
     const rows = await db.prepare(q).all()
-    if (rows.results && rows.results.length > 0) return rows.results as any[]
+    if (rows.results && rows.results.length > 0) return dedup(rows.results as any[])
     // Fallback sur testimonials
     const q2 = featuredOnly
       ? 'SELECT * FROM testimonials WHERE is_active=1 AND is_featured=1 ORDER BY display_order ASC LIMIT 6'
       : 'SELECT * FROM testimonials WHERE is_active=1 ORDER BY display_order ASC'
     const rows2 = await db.prepare(q2).all()
-    return (rows2.results || []) as any[]
+    return dedup((rows2.results || []) as any[])
   } catch {
     try {
       const q2 = featuredOnly
         ? 'SELECT * FROM testimonials WHERE is_active=1 AND is_featured=1 ORDER BY display_order ASC LIMIT 6'
         : 'SELECT * FROM testimonials WHERE is_active=1 ORDER BY display_order ASC'
       const rows2 = await db.prepare(q2).all()
-      return (rows2.results || []) as any[]
+      return dedup((rows2.results || []) as any[])
     } catch { return [] }
   }
 }
