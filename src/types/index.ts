@@ -144,4 +144,6 @@ export type Bindings = {
   CP_IPN_SECRET?: string       // CoinPayments IPN Secret (vérification webhook)
   OPENAI_API_KEY: string       // OpenAI API Key (GPT-4o Vision — vérification KYC automatique)
   KYC_DOCS: R2Bucket           // R2 Bucket pour stockage documents KYC (kyc/{member_id}/{app_id}/{doc_type}.jpg)
+  I18N_KV?: KVNamespace        // Cache KV traductions i18n (clé: i18n:{lang}:{hash})
+  DEEPSEEK_API_KEY?: string    // DeepSeek API Key pour traductions automatiques AI
 }

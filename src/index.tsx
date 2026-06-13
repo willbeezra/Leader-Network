@@ -2705,4 +2705,188 @@ export const scheduled = {
   }
 }
 
+// ============================================================
+// ─── i18n API — Cache KV + DeepSeek AI ─────────────────────
+// ============================================================
+
+/**
+ * Génère un hash djb2 32-bit pour une string.
+ * Utilisé comme clé KV : i18n:{lang}:{hash}
+ */
+function djb2Hash(str: string): string {
+  let h = 5381
+  for (let i = 0; i < str.length; i++) {
+    h = ((h << 5) + h) ^ str.charCodeAt(i)
+  }
+  return (h >>> 0).toString(36)
+}
+
+/**
+ * POST /api/i18n/translate
+ * Body : { texts: string[], lang: string }
+ * Response : { translations: Record<string, string> }
+ *
+ * Flux :
+ *   1. Pour chaque texte → cherche dans KV (i18n:{lang}:{hash})
+ *   2. Les manquants → batch DeepSeek (1 seul appel API)
+ *   3. Stocke les nouvelles traductions dans KV (TTL illimité)
+ *   4. Retourne le mapping { texte_fr: texte_traduit }
+ */
+app.post('/api/i18n/translate', async (c) => {
+  const env = c.env as any
+  const i18nKV: KVNamespace | undefined = env?.I18N_KV
+  const deepseekKey: string | undefined = env?.DEEPSEEK_API_KEY
+
+  try {
+    const body = await c.req.json()
+    const texts: string[] = Array.isArray(body?.texts) ? body.texts : []
+    const lang: string = typeof body?.lang === 'string' ? body.lang.toLowerCase() : 'en'
+
+    if (!texts.length || lang === 'fr') {
+      return c.json({ translations: {} })
+    }
+
+    // Dédupliquer + filtrer les textes vides
+    const unique = [...new Set(texts.filter(t => t && t.trim().length > 0))]
+
+    const result: Record<string, string> = {}
+    const toTranslate: string[] = []
+
+    // ── Étape 1 : chercher dans KV ──────────────────────────────────────────
+    if (i18nKV) {
+      await Promise.all(unique.map(async (text) => {
+        const key = `i18n:${lang}:${djb2Hash(text)}`
+        try {
+          const cached = await i18nKV.get(key)
+          if (cached !== null) {
+            result[text] = cached
+          } else {
+            toTranslate.push(text)
+          }
+        } catch {
+          toTranslate.push(text)
+        }
+      }))
+    } else {
+      toTranslate.push(...unique)
+    }
+
+    // ── Étape 2 : appel DeepSeek pour les manquants ─────────────────────────
+    if (toTranslate.length > 0 && deepseekKey) {
+      // Noms de langues pour le prompt
+      const langNames: Record<string, string> = {
+        en: 'English', es: 'Spanish', pt: 'Portuguese', de: 'German',
+        hi: 'Hindi', ar: 'Arabic', zh: 'Chinese', ja: 'Japanese',
+        ko: 'Korean', it: 'Italian', ru: 'Russian', nl: 'Dutch',
+        tr: 'Turkish', pl: 'Polish', vi: 'Vietnamese', th: 'Thai',
+        id: 'Indonesian', ms: 'Malay', ro: 'Romanian', uk: 'Ukrainian',
+      }
+      const langName = langNames[lang] || lang.toUpperCase()
+
+      // Construire le JSON des textes à traduire (index → texte)
+      const inputMap: Record<string, string> = {}
+      toTranslate.forEach((t, i) => { inputMap[String(i)] = t })
+      const inputJson = JSON.stringify(inputMap)
+
+      const systemPrompt = `You are a professional MLM platform translator.
+Translate French text to ${langName}. Rules:
+- NEVER translate proper nouns: BV, LEADER, Finstrategia, Leader Network, Pinnacle, Production, Fast Start, KYC, PayPal, Stripe, USDT
+- NEVER translate technical codes: rank names (Manager, Captain, Leader, Mentor, Superviseur, Executive, President, Director, Boss, Visionary), status codes
+- Preserve HTML tags exactly as-is
+- Return ONLY a valid JSON object with the same numeric keys and translated values
+- No explanations, no markdown, no extra text`
+
+      const userPrompt = `Translate these French texts to ${langName}:\n${inputJson}`
+
+      try {
+        const dsResp = await fetch('https://api.deepseek.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${deepseekKey}`,
+          },
+          body: JSON.stringify({
+            model: 'deepseek-chat',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt },
+            ],
+            temperature: 0.1,
+            max_tokens: 4096,
+          }),
+        })
+
+        if (dsResp.ok) {
+          const dsData = await dsResp.json() as any
+          const rawContent = dsData?.choices?.[0]?.message?.content || ''
+
+          // Parser le JSON retourné par DeepSeek
+          let translations: Record<string, string> = {}
+          try {
+            // Extraire le JSON même si DeepSeek ajoute du texte avant/après
+            const jsonMatch = rawContent.match(/\{[\s\S]*\}/)
+            if (jsonMatch) {
+              translations = JSON.parse(jsonMatch[0])
+            }
+          } catch {
+            console.error('[i18n] DeepSeek JSON parse error:', rawContent.substring(0, 200))
+          }
+
+          // Stocker dans KV + construire le résultat
+          const storePromises: Promise<void>[] = []
+          Object.entries(translations).forEach(([idx, translated]) => {
+            const original = toTranslate[Number(idx)]
+            if (original && typeof translated === 'string' && translated.trim()) {
+              result[original] = translated
+              if (i18nKV) {
+                const key = `i18n:${lang}:${djb2Hash(original)}`
+                storePromises.push(
+                  i18nKV.put(key, translated).catch(() => {})
+                )
+              }
+            }
+          })
+          await Promise.all(storePromises)
+        } else {
+          console.error('[i18n] DeepSeek error:', dsResp.status, await dsResp.text())
+        }
+      } catch (err) {
+        console.error('[i18n] DeepSeek fetch error:', err)
+      }
+    }
+
+    return c.json({ translations: result })
+  } catch (err) {
+    console.error('[i18n] translate endpoint error:', err)
+    return c.json({ translations: {} }, 500)
+  }
+})
+
+/**
+ * GET /api/i18n/stats
+ * Retourne des statistiques sur le cache KV i18n (admin)
+ */
+app.get('/api/i18n/stats', async (c) => {
+  const env = c.env as any
+  const i18nKV: KVNamespace | undefined = env?.I18N_KV
+
+  if (!i18nKV) return c.json({ error: 'I18N_KV not configured' }, 503)
+
+  try {
+    const list = await i18nKV.list({ prefix: 'i18n:' })
+    const byLang: Record<string, number> = {}
+    for (const key of list.keys) {
+      const parts = key.name.split(':')
+      if (parts[1]) byLang[parts[1]] = (byLang[parts[1]] || 0) + 1
+    }
+    return c.json({
+      total: list.keys.length,
+      by_lang: byLang,
+      list_complete: !list.list_complete ? false : true,
+    })
+  } catch (err) {
+    return c.json({ error: String(err) }, 500)
+  }
+})
+
 export default app
