@@ -288,13 +288,13 @@ function buildLandingHTML(cfg: Record<string, string>, services: any[], testimon
 
     <!-- Nav links desktop -->
     <div class="hidden md:flex items-center gap-8 text-sm font-medium" style="color:rgba(245,240,232,0.65)">
-      <a href="#services"     style="color:rgba(245,240,232,0.65);text-decoration:none" onmouseover="this.style.color='#FFFFFF'" onmouseout="this.style.color='rgba(245,240,232,0.65)'">Services</a>
-      <a href="#testimonials" style="color:rgba(245,240,232,0.65);text-decoration:none" onmouseover="this.style.color='#FFFFFF'" onmouseout="this.style.color='rgba(245,240,232,0.65)'">Témoignages</a>
-      <a href="#about"        style="color:rgba(245,240,232,0.65);text-decoration:none" onmouseover="this.style.color='#FFFFFF'" onmouseout="this.style.color='rgba(245,240,232,0.65)'">À propos</a>
+      <a href="#services"     data-i18n="Services" style="color:rgba(245,240,232,0.65);text-decoration:none" onmouseover="this.style.color='#FFFFFF'" onmouseout="this.style.color='rgba(245,240,232,0.65)'">Services</a>
+      <a href="#testimonials" data-i18n="Témoignages" style="color:rgba(245,240,232,0.65);text-decoration:none" onmouseover="this.style.color='#FFFFFF'" onmouseout="this.style.color='rgba(245,240,232,0.65)'">Témoignages</a>
+      <a href="#about"        data-i18n="À propos" style="color:rgba(245,240,232,0.65);text-decoration:none" onmouseover="this.style.color='#FFFFFF'" onmouseout="this.style.color='rgba(245,240,232,0.65)'">À propos</a>
     </div>
 
     <!-- CTA -->
-    <a href="${cfg.hero_cta_url || '/login'}" class="btn-rouge px-6 py-2.5 text-sm font-bold tracking-wide" style="text-decoration:none">
+    <a href="${cfg.hero_cta_url || '/login'}" data-i18n="${cfg.hero_cta_label || 'Mon espace'}" class="btn-rouge px-6 py-2.5 text-sm font-bold tracking-wide" style="text-decoration:none">
       ${cfg.hero_cta_label || 'Mon espace'}
     </a>
   </div>
@@ -325,30 +325,30 @@ ${heroActive ? `
 
     <!-- Slogan -->
     <h1 class="text-5xl md:text-7xl lg:text-8xl font-black tracking-tight leading-tight mb-6 fade-in-up" style="animation-delay:0.15s">
-      <span class="text-gradient">${(cfg.hero_title || 'Révéler. Prospérer. Inspirer.').replace(/\./g, '.<br class="hidden md:block">')}</span>
+      <span class="text-gradient" data-i18n-hero="${cfg.hero_title || 'Révéler. Prospérer. Inspirer.'}">${(cfg.hero_title || 'Révéler. Prospérer. Inspirer.').replace(/\./g, '.<br class="hidden md:block">')}</span>
     </h1>
 
     <!-- Sous-titre -->
     <p class="text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed fade-in-up" style="animation-delay:0.3s;color:rgba(245,240,232,0.65)">
-      ${cfg.hero_subtitle || 'Un écosystème unique de services pensé pour révéler votre potentiel.'}
+      <span data-i18n="${cfg.hero_subtitle || 'Un écosystème unique de services pensé pour révéler votre potentiel.'}">${cfg.hero_subtitle || 'Un écosystème unique de services pensé pour révéler votre potentiel.'}</span>
     </p>
 
     <!-- CTA buttons -->
     <div class="flex flex-col sm:flex-row gap-4 justify-center fade-in-up" style="animation-delay:0.45s">
       <a href="${cfg.hero_cta_url || '/login'}"
          class="btn-rouge px-10 py-4 text-base font-bold tracking-wide pulse-rouge" style="text-decoration:none">
-        <i class="fas fa-arrow-right mr-2"></i>${cfg.hero_cta_label || 'Accéder à mon espace'}
+        <i class="fas fa-arrow-right mr-2"></i><span data-i18n="${cfg.hero_cta_label || 'Accéder à mon espace'}">${cfg.hero_cta_label || 'Accéder à mon espace'}</span>
       </a>
       <a href="${cfg.hero_cta2_url || '#services'}"
          class="btn-outline px-10 py-4 text-base font-semibold" style="text-decoration:none">
-        <i class="fas fa-th-large mr-2"></i>${cfg.hero_cta2_label || 'Découvrir les services'}
+        <i class="fas fa-th-large mr-2"></i><span data-i18n="${cfg.hero_cta2_label || 'Découvrir les services'}">${cfg.hero_cta2_label || 'Découvrir les services'}</span>
       </a>
     </div>
 
     <!-- Scroll indicator -->
     <div class="mt-16 fade-in-up flex justify-center" style="animation-delay:0.6s">
       <a href="#stats" style="color:rgba(245,240,232,0.3);text-decoration:none;display:flex;flex-direction:column;align-items:center;gap:8px" onmouseover="this.style.color='rgba(121,30,21,0.9)'" onmouseout="this.style.color='rgba(245,240,232,0.3)'">
-        <span class="text-xs tracking-widest uppercase">Découvrir</span>
+        <span class="text-xs tracking-widest uppercase" data-i18n="Découvrir">Découvrir</span>
         <i class="fas fa-chevron-down animate-bounce text-sm"></i>
       </a>
     </div>
@@ -373,7 +373,7 @@ ${statsActive ? `
       <div class="glass-dark rounded-2xl p-6 text-center reveal" style="border:1px solid rgba(121,30,21,0.18)">
         <i class="fas fa-${s.icon} stat-icon"></i>
         <div class="stat-number stat-glow">${s.val}</div>
-        <div class="stat-label">${s.label}</div>
+        <div class="stat-label" data-i18n="${s.label}">${s.label}</div>
       </div>`).join('')}
     </div>
     <div class="section-divider mt-16"></div>
@@ -387,12 +387,12 @@ ${statsActive ? `
 ${aboutActive ? `
 <section id="about" class="relative z-10 py-20 px-6">
   <div class="max-w-4xl mx-auto text-center reveal">
-    <span class="accent-rouge"></span><span class="section-label mb-4 block">Notre vision</span>
+    <span class="accent-rouge"></span><span class="section-label mb-4 block" data-i18n="Notre vision">Notre vision</span>
     <h2 class="text-3xl md:text-5xl font-black mb-6 leading-tight" style="color:#FFFFFF">
-      ${cfg.about_title || 'Un écosystème pensé pour les ambitieux'}
+      <span data-i18n="${cfg.about_title || 'Un écosystème pensé pour les ambitieux'}">${cfg.about_title || 'Un écosystème pensé pour les ambitieux'}</span>
     </h2>
     <p class="text-lg leading-relaxed max-w-2xl mx-auto" style="color:rgba(245,240,232,0.6)">
-      ${cfg.about_text || 'LEADER réunit sous un même toit les meilleurs outils pour former, financer, développer et élever chaque membre.'}
+      <span data-i18n="${cfg.about_text || 'LEADER réunit sous un même toit les meilleurs outils pour former, financer, développer et élever chaque membre.'}">${cfg.about_text || 'LEADER réunit sous un même toit les meilleurs outils pour former, financer, développer et élever chaque membre.'}</span>
     </p>
 
     <!-- Valeurs LEADER -->
@@ -406,8 +406,8 @@ ${aboutActive ? `
         <div class="about-icon mb-4">
           <i class="fas fa-${v.icon}"></i>
         </div>
-        <h3 class="text-xl font-bold mb-2" style="color:#FFFFFF">${v.title}</h3>
-        <p class="text-sm leading-relaxed" style="color:rgba(245,240,232,0.6)">${v.text}</p>
+        <h3 class="text-xl font-bold mb-2" style="color:#FFFFFF" data-i18n="${v.title}">${v.title}</h3>
+        <p class="text-sm leading-relaxed" style="color:rgba(245,240,232,0.6)" data-i18n="${v.text}">${v.text}</p>
       </div>`).join('')}
     </div>
   </div>
@@ -422,9 +422,9 @@ ${servicesActive ? `
   <div class="max-w-7xl mx-auto">
 
     <div class="text-center mb-16 reveal">
-      <span class="section-label mb-4 block">Écosystème</span>
-      <span class="accent-rouge"></span><h2 class="text-3xl md:text-5xl font-black mb-4" style="color:#FFFFFF">${cfg.services_title || 'Nos Services'}</h2>
-      <p class="max-w-xl mx-auto" style="color:rgba(245,240,232,0.5)">${cfg.services_subtitle || 'Des solutions complètes pour chaque dimension de votre réussite'}</p>
+      <span class="section-label mb-4 block" data-i18n="Écosystème">Écosystème</span>
+      <span class="accent-rouge"></span><h2 class="text-3xl md:text-5xl font-black mb-4" style="color:#FFFFFF" data-i18n="${cfg.services_title || 'Nos Services'}">${cfg.services_title || 'Nos Services'}</h2>
+      <p class="max-w-xl mx-auto" style="color:rgba(245,240,232,0.5)" data-i18n="${cfg.services_subtitle || 'Des solutions complètes pour chaque dimension de votre réussite'}">${cfg.services_subtitle || 'Des solutions complètes pour chaque dimension de votre réussite'}</p>
     </div>
 
     <!-- Services actifs -->
@@ -447,7 +447,7 @@ ${servicesActive ? `
           <p class="text-xs leading-relaxed line-clamp-3" style="color:rgba(245,240,232,0.45)">${s.description}</p>
         </div>
         <div style="margin-top:auto;padding-top:8px;border-top:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;gap:6px;color:#791E15;font-size:0.75rem;font-weight:700">
-          <span>Accéder</span>
+          <span data-i18n="Accéder">Accéder</span>
           <i class="fas fa-arrow-right text-xs"></i>
         </div>
       </a>`).join('')}
@@ -458,7 +458,7 @@ ${servicesActive ? `
     <div class="mb-6">
       <div class="flex items-center gap-4 mb-6">
         <div class="flex-1 h-px" style="background:linear-gradient(to right,transparent,rgba(121,30,21,0.3),transparent)"></div>
-        <span class="text-xs tracking-widest uppercase" style="color:rgba(245,240,232,0.35)">Bientôt disponibles</span>
+        <span class="text-xs tracking-widest uppercase" data-i18n="Bientôt disponibles" style="color:rgba(245,240,232,0.35)">Bientôt disponibles</span>
         <div class="flex-1 h-px" style="background:linear-gradient(to right,transparent,rgba(121,30,21,0.3),transparent)"></div>
       </div>
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
@@ -472,7 +472,7 @@ ${servicesActive ? `
                    loading="lazy"
                    onerror="this.parentElement.innerHTML='<span style=\\'color:#791E15;font-size:1.2rem;font-weight:900\\'>${s.name.charAt(0)}</span>'">
             </div>
-            <span class="badge-soon">Bientôt</span>
+            <span class="badge-soon" data-i18n="Bientôt">Bientôt</span>
           </div>
           <div>
             <h3 class="font-bold text-base mb-1" style="color:rgba(245,240,232,0.65)">${s.name}</h3>
@@ -494,8 +494,8 @@ ${testimonialsActive && featuredTestimonials.length > 0 ? `
   <div class="max-w-7xl mx-auto">
 
     <div class="text-center mb-16 reveal">
-      <span class="section-label mb-4 block">Témoignages</span>
-      <h2 class="text-3xl md:text-5xl font-black mb-4">${cfg.testimonials_title || 'Ils ont transformé leur vie'}</h2>
+      <span class="section-label mb-4 block" data-i18n="Témoignages">Témoignages</span>
+      <h2 class="text-3xl md:text-5xl font-black mb-4" data-i18n="${cfg.testimonials_title || 'Ils ont transformé leur vie'}">${cfg.testimonials_title || 'Ils ont transformé leur vie'}</h2>
       <p class="text-cream/50 max-w-xl mx-auto">${cfg.testimonials_subtitle || ''}</p>
     </div>
 
@@ -543,22 +543,22 @@ ${ctaFinalActive ? `
       <div class="w-[600px] h-[400px] rounded-full blur-[80px]" style="background:rgba(121,30,21,0.08)"></div>
     </div>
 
-    <span class="section-label mb-4 block">Rejoignez-nous</span>
+    <span class="section-label mb-4 block" data-i18n="Rejoignez-nous">Rejoignez-nous</span>
     <h2 class="text-3xl md:text-5xl font-black mb-6 leading-tight">
-      ${cfg.cta_final_title || 'Prêt à rejoindre l\'aventure LEADER ?'}
+      <span data-i18n="${cfg.cta_final_title || 'Prêt à rejoindre l\'aventure LEADER ?'}">${cfg.cta_final_title || 'Prêt à rejoindre l\'aventure LEADER ?'}</span>
     </h2>
     <p class="text-cream/60 text-lg mb-10 max-w-xl mx-auto">
-      ${cfg.cta_final_subtitle || 'Rejoignez une communauté internationale d\'entrepreneurs ambitieux.'}
+      <span data-i18n="${cfg.cta_final_subtitle || 'Rejoignez une communauté internationale d\'entrepreneurs ambitieux.'}">${cfg.cta_final_subtitle || 'Rejoignez une communauté internationale d\'entrepreneurs ambitieux.'}</span>
     </p>
 
     <div class="flex flex-col sm:flex-row gap-4 justify-center">
       <a href="${cfg.cta_final_url || '/register'}"
          class="btn-rouge px-12 py-4 text-base font-bold tracking-wide pulse-rouge">
-        <i class="fas fa-rocket mr-2"></i>${cfg.cta_final_label || 'Rejoindre LEADER'}
+        <i class="fas fa-rocket mr-2"></i><span data-i18n="${cfg.cta_final_label || 'Rejoindre LEADER'}">${cfg.cta_final_label || 'Rejoindre LEADER'}</span>
       </a>
       <a href="${cfg.hero_cta_url || '/login'}"
          class="btn-outline px-12 py-4 text-base font-semibold">
-        <i class="fas fa-sign-in-alt mr-2"></i>J'ai déjà un compte
+        <i class="fas fa-sign-in-alt mr-2"></i><span data-i18n="J'ai déjà un compte">J'ai déjà un compte</span>
       </a>
     </div>
   </div>
@@ -577,20 +577,20 @@ ${ctaFinalActive ? `
         <img src="/static/logo-leader.png" alt="LEADER" style="height:2rem;object-fit:contain"
              onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
         <span style="display:none;font-size:1.6rem;letter-spacing:0.2em;font-weight:900;color:#FFFFFF">LEADER</span>
-        <p class="text-cream/30 text-sm italic">${cfg.footer_tagline || 'Révéler. Prospérer. Inspirer.'}</p>
+        <p class="text-cream/30 text-sm italic" data-i18n="${cfg.footer_tagline || 'Révéler. Prospérer. Inspirer.'}">${cfg.footer_tagline || 'Révéler. Prospérer. Inspirer.'}</p>
       </div>
 
       <!-- Links -->
       <div class="flex flex-wrap justify-center gap-6 text-cream/30 text-sm">
-        <a href="#services" style="color:rgba(245,240,232,0.35);text-decoration:none" onmouseover="this.style.color='#A02820'" onmouseout="this.style.color='rgba(245,240,232,0.35)'">Services</a>
-        <a href="#testimonials" style="color:rgba(245,240,232,0.35);text-decoration:none" onmouseover="this.style.color='#A02820'" onmouseout="this.style.color='rgba(245,240,232,0.35)'">Témoignages</a>
-        <a href="${cfg.hero_cta_url || '/login'}" style="color:rgba(245,240,232,0.35);text-decoration:none" onmouseover="this.style.color='#A02820'" onmouseout="this.style.color='rgba(245,240,232,0.35)'">Connexion</a>
-        <a href="${cfg.cta_final_url || '/register'}" style="color:rgba(245,240,232,0.35);text-decoration:none" onmouseover="this.style.color='#A02820'" onmouseout="this.style.color='rgba(245,240,232,0.35)'">Rejoindre</a>
+        <a href="#services" data-i18n="Services" style="color:rgba(245,240,232,0.35);text-decoration:none" onmouseover="this.style.color='#A02820'" onmouseout="this.style.color='rgba(245,240,232,0.35)'">Services</a>
+        <a href="#testimonials" data-i18n="Témoignages" style="color:rgba(245,240,232,0.35);text-decoration:none" onmouseover="this.style.color='#A02820'" onmouseout="this.style.color='rgba(245,240,232,0.35)'">Témoignages</a>
+        <a href="${cfg.hero_cta_url || '/login'}" data-i18n="Connexion" style="color:rgba(245,240,232,0.35);text-decoration:none" onmouseover="this.style.color='#A02820'" onmouseout="this.style.color='rgba(245,240,232,0.35)'">Connexion</a>
+        <a href="${cfg.cta_final_url || '/register'}" data-i18n="Rejoindre" style="color:rgba(245,240,232,0.35);text-decoration:none" onmouseover="this.style.color='#A02820'" onmouseout="this.style.color='rgba(245,240,232,0.35)'">Rejoindre</a>
       </div>
 
       <!-- Copyright -->
       <div class="text-xs text-center md:text-right" style="color:rgba(245,240,232,0.25)">
-        <div>© ${new Date().getFullYear()} LEADER. Tous droits réservés.</div>
+        <div><span data-i18n="Tous droits réservés.">© ${new Date().getFullYear()} LEADER. Tous droits réservés.</span></div>
       </div>
     </div>
   </div>
