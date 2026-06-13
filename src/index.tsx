@@ -2779,25 +2779,53 @@ app.post('/api/i18n/translate', async (c) => {
 
     // ── Étape 2 : appel DeepSeek pour les manquants ─────────────────────────
     if (toTranslate.length > 0 && deepseekKey) {
-      // Noms de langues pour le prompt
-      const langNames: Record<string, string> = {
-        en: 'English', es: 'Spanish', pt: 'Portuguese', de: 'German',
-        hi: 'Hindi', ar: 'Arabic', zh: 'Chinese', ja: 'Japanese',
-        ko: 'Korean', it: 'Italian', ru: 'Russian', nl: 'Dutch',
-        tr: 'Turkish', pl: 'Polish', vi: 'Vietnamese', th: 'Thai',
-        id: 'Indonesian', ms: 'Malay', ro: 'Romanian', uk: 'Ukrainian',
+      // Récupérer le nom complet de la langue depuis la DB
+      // Ex: 'rcf' → 'Créole Réunionnais', 'hat' → 'Créole Haïtien'
+      // Si absent, fallback sur un dictionnaire statique commun
+      const db = (c.env as any)?.DB as D1Database | undefined
+      let langName = lang.toUpperCase()
+      if (db) {
+        try {
+          const row = await db.prepare(
+            `SELECT name FROM i18n_languages WHERE code = ? LIMIT 1`
+          ).bind(lang).first() as any
+          if (row?.name) langName = row.name
+        } catch { /* ignore */ }
       }
-      const langName = langNames[lang] || lang.toUpperCase()
+      // Fallback statique pour les codes ISO standards (si DB non dispo)
+      if (langName === lang.toUpperCase()) {
+        const fallback: Record<string, string> = {
+          en: 'English', es: 'Spanish', pt: 'Portuguese', de: 'German',
+          hi: 'Hindi', ar: 'Arabic', zh: 'Chinese (Simplified)', ja: 'Japanese',
+          ko: 'Korean', it: 'Italian', ru: 'Russian', nl: 'Dutch',
+          tr: 'Turkish', pl: 'Polish', vi: 'Vietnamese', th: 'Thai',
+          id: 'Indonesian', ms: 'Malay', ro: 'Romanian', uk: 'Ukrainian',
+          sw: 'Swahili', tl: 'Filipino', bn: 'Bengali', ur: 'Urdu',
+        }
+        langName = fallback[lang] || langName
+      }
 
       // Construire le JSON des textes à traduire (index → texte)
       const inputMap: Record<string, string> = {}
       toTranslate.forEach((t, i) => { inputMap[String(i)] = t })
       const inputJson = JSON.stringify(inputMap)
 
+      // Contexte spécial créoles — aide DeepSeek à produire un vrai créole
+      const creoleHints: Record<string, string> = {
+        rcf:  'Réunion Island French Creole (Kréol Rényoné). Use authentic Réunion Creole vocabulary. Example: "Bonjour"→"Bonzour", "Merci"→"Mersi", "Oui"→"Wi", "Non"→"Non", "Tableau de bord"→"Tablo de bor".',
+        mfe:  'Mauritian Creole (Morisyen). Use authentic Mauritian Creole. Example: "Bonjour"→"Bonzour", "Comment allez-vous"→"Ki manyer ou ete?", "Merci"→"Mersi".',
+        hat:  'Haitian Creole (Kreyòl ayisyen). Use authentic Haitian Creole. Example: "Bonjour"→"Bonjou", "Merci"→"Mèsi", "Oui"→"Wi", "Dashboard"→"Tablo debò".',
+        gcf:  'Guadeloupean Creole (Gwadloup Kréyòl). Use authentic Guadeloupe Antillean Creole. Example: "Bonjour"→"Bonjou", "Comment vas-tu"→"Koman ou yé?".',
+        mart: 'Martinique Creole (Kréyòl Matinik). Use authentic Martinique Antillean Creole. Example: "Bonjour"→"Bonjou", "Merci"→"Mèsi", "Dashboard"→"Tablo de bò".',
+        mad:  'Malagasy (Malagasy). Use standard Malagasy (Merina dialect). Example: "Bonjour"→"Manao ahoana", "Merci"→"Misaotra", "Dashboard"→"Tabilao".',
+      }
+      const creoleHint = creoleHints[lang] ? `\nIMPORTANT — Target language details: ${creoleHints[lang]}` : ''
+
       const systemPrompt = `You are a professional MLM platform translator.
-Translate French text to ${langName}. Rules:
+Translate French text to ${langName}.${creoleHint}
+Rules:
 - NEVER translate proper nouns: BV, LEADER, Finstrategia, Leader Network, Pinnacle, Production, Fast Start, KYC, PayPal, Stripe, USDT
-- NEVER translate technical codes: rank names (Manager, Captain, Leader, Mentor, Superviseur, Executive, President, Director, Boss, Visionary), status codes
+- NEVER translate rank names: Manager, Captain, Leader, Mentor, Superviseur, Executive, President, Director, Boss, Visionary
 - Preserve HTML tags exactly as-is
 - Return ONLY a valid JSON object with the same numeric keys and translated values
 - No explanations, no markdown, no extra text`
