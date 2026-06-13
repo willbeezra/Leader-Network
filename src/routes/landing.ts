@@ -939,15 +939,15 @@ document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
     if (!dots.length) return;
     const cardW = track.querySelector('[style*="min-width"]')?.offsetWidth || 320;
     const idx = Math.round(track.scrollLeft / (cardW + 20));
-    dots.forEach((d, i) => {
-      (d as HTMLElement).style.background = i === idx ? '#791E15' : 'rgba(255,255,255,0.2)';
+    dots.forEach(function(d, i) {
+      d.style.background = i === idx ? '#791E15' : 'rgba(255,255,255,0.2)';
     });
   }
   track.addEventListener('scroll', updateDots, { passive: true });
 })();
 
 // Fonction globale pour les dots
-function scrollToTestimonial(idx: number) {
+function scrollToTestimonial(idx) {
   const track = document.getElementById('testimonials-track');
   if (!track) return;
   const cardW = track.querySelector('[style*="min-width"]')?.offsetWidth || 320;
