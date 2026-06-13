@@ -1,27 +1,33 @@
 /**
- * i18n.js v7 — Moteur de traduction multilingue — Leader Network
+ * i18n.js v8 — Moteur de traduction multilingue — Leader Network
  *
- * ARCHITECTURE v7 :
+ * ARCHITECTURE v8 — FIXES CRITIQUES :
  * ─────────────────────────────────────────────────────────────────
- * STRATÉGIE DUALE :
+ * FIX 1 : warmupCache — supprimé le filtre `fr !== t` qui excluait les mots
+ *          identiques FR/EN (ex: "Services" = "Services"). Ces clés doivent
+ *          être en cache pour éviter des batch inutiles ET pour que
+ *          applyDataI18n() ne les envoie pas dans _missing.
  *
- * 1. [data-i18n="texte FR"] — pour les éléments de la landing SSR
- *    → Traduction directe et fiable : textContent de l'élément remplacé
- *    → Clé FR stockée dans l'attribut → pas de problème de TreeWalker
+ * FIX 2 : applyDataI18n() — après application, ne PAS réafficher si la
+ *          traduction === la clé FR (évite les "changements" invisibles
+ *          qui masquent les vrais échecs). Ajout de logs de debug.
+ *
+ * FIX 3 : flushBatch() — après batch DeepSeek, mettre en cache les textes
+ *          non traduits comme "non traduits" (clé spéciale) pour ne plus
+ *          les rebatcher indéfiniment.
+ *
+ * FIX 4 : Backoffice member-app.js — patchInnerHTML garde un MutationObserver
+ *          en backup pour appliquer les traductions sur les nouveaux éléments
+ *          injectés via innerHTML même si la page est déjà rendue.
+ *
+ * STRATÉGIE DUALE :
+ * 1. [data-i18n="texte FR"] — pour la landing SSR
+ *    → textContent de l'élément remplacé directement
  *    → Hero title : [data-i18n-hero="texte FR"] → innerHTML avec <br>
  *
  * 2. patchInnerHTML — pour member-app.js (pages dynamiques)
  *    → Intercepte les innerHTML= futurs → traduire à la volée
  *    → showPage(currentPage) pour re-rendre les pages dynamiques
- *
- * FLUX :
- *   1. loadLanguages() → /api/i18n/languages (DB, no-cache)
- *   2. warmupCache(lang) → strings.{lang}.json (EN/ES/PT/DE/HI)
- *   3. patchInnerHTML() activé
- *   4. applyDataI18n() → traduit tous [data-i18n] depuis le cache
- *   5. collectDataI18nMissing() → envoie les clés absentes au batch
- *   6. Batch POST /api/i18n/translate → KV → DeepSeek
- *   7. Après batch → applyDataI18n() + rerenderPage() → DOM mis à jour
  * ─────────────────────────────────────────────────────────────────
  */
 (function () {
@@ -29,6 +35,7 @@
 
   const DEFAULT     = 'fr';
   const STORAGE_KEY = 'leader_lang';
+  const VERSION     = 'v8';
 
   // ─── État ─────────────────────────────────────────────────────────────────
   let _lang    = DEFAULT;
@@ -37,6 +44,7 @@
   let _langs   = [];
 
   // Cache : Map<texteFR, texteTraduction>
+  // Valeur spéciale '_SAME_' : texte identique en langue cible (pas besoin de traduire)
   let _cache     = new Map();
   let _dictRegex = null;
   let _dictKeys  = [];
@@ -70,7 +78,7 @@
       const r = await fetch('/api/i18n/languages?_=' + Date.now());
       if (r.ok) _langs = (await r.json()).languages || [];
     } catch(e) {
-      console.warn('[i18n v7] loadLanguages:', e);
+      console.warn('[i18n ' + VERSION + '] loadLanguages:', e);
       if (!_langs.length) _langs = [{ code: 'fr', name: 'Français', flag: '🇫🇷', sort_order: 1 }];
     }
     if (_lang !== DEFAULT && _langs.length && !_langs.find(l => l.code === _lang)) {
@@ -81,6 +89,9 @@
   }
 
   // ─── Warm-up cache depuis JSON statique ───────────────────────────────────
+  // FIX v8 : on accepte TOUTES les entrées, même fr === t.
+  // Les entrées identiques sont stockées avec valeur '_SAME_' pour indiquer
+  // "pas besoin de traduction, c'est le même mot".
   async function warmupCache(lang) {
     _cache.clear(); _dictRegex = null; _dictKeys = [];
     if (lang === DEFAULT) return;
@@ -90,16 +101,38 @@
         const dict = await r.json();
         let count = 0;
         Object.entries(dict || {}).forEach(([fr, t]) => {
-          if (fr && t && typeof t === 'string' && fr !== t) { _cache.set(fr, t); count++; }
+          if (!fr || typeof t !== 'string') return;
+          // Stocker TOUTES les entrées (même identiques)
+          // Les identiques fr===t → '_SAME_' pour ne pas les re-batcher
+          if (fr === t) {
+            _cache.set(fr, '_SAME_');
+          } else {
+            _cache.set(fr, t);
+          }
+          count++;
         });
-        if (count > 0) { rebuildRegex(); console.log('[i18n v7] warm-up "' + lang + '": ' + count); }
+        if (count > 0) {
+          rebuildRegex();
+          console.log('[i18n ' + VERSION + '] warm-up "' + lang + '": ' + count);
+        }
       }
-    } catch(e) { /* pas de fichier pour les créoles */ }
+    } catch(e) { /* pas de fichier pour les créoles → batch DeepSeek */ }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // STRATÉGIE 1 : data-i18n — Landing page SSR
   // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Résout une traduction depuis le cache.
+   * Retourne null si absent (→ batch), la clé FR si '_SAME_', sinon la traduction.
+   */
+  function resolveTranslation(key) {
+    if (!_cache.has(key)) return null;          // absent → batch
+    const t = _cache.get(key);
+    if (t === '_SAME_') return key;             // même mot dans les deux langues
+    return t;                                   // traduction disponible
+  }
 
   /**
    * Applique les traductions sur tous les éléments [data-i18n] et [data-i18n-hero]
@@ -108,13 +141,23 @@
   function applyDataI18n() {
     if (_lang === DEFAULT || !_ready) return;
 
+    let applied = 0;
+    let skipped = 0;
+
     // ── 1. [data-i18n="texte FR"] → remplace textContent ──────────────────
     document.querySelectorAll('[data-i18n]').forEach(el => {
       const key = el.getAttribute('data-i18n');
-      if (!key) return;
-      if (_cache.has(key)) {
-        el.textContent = _cache.get(key);
-      } else if (key.length > 1 && !/^\d+([.,]\d+)?[%€$]?$/.test(key)) {
+      if (!key || key.length < 2) return;
+      const t = resolveTranslation(key);
+      if (t !== null) {
+        // Ne modifier que si différent du contenu actuel (évite des reflows inutiles)
+        if (el.textContent !== t) {
+          el.textContent = t;
+          applied++;
+        } else {
+          skipped++;
+        }
+      } else if (!/^\d+([.,]\d+)?[%€$]?$/.test(key)) {
         _missing.add(key);
       }
     });
@@ -122,16 +165,21 @@
     // ── 2. [data-i18n-hero="texte FR"] → remplace innerHTML avec <br> ─────
     document.querySelectorAll('[data-i18n-hero]').forEach(el => {
       const key = el.getAttribute('data-i18n-hero');
-      if (!key) return;
-      if (_cache.has(key)) {
-        const translated = _cache.get(key);
-        // Reproduire le formatage avec <br> pour mobile
-        el.innerHTML = translated.replace(/\./g, '.<br class="hidden md:block">');
-      } else if (key.length > 1) {
+      if (!key || key.length < 2) return;
+      const t = resolveTranslation(key);
+      if (t !== null) {
+        const html = t.replace(/\./g, '.<br class="hidden md:block">');
+        // Utiliser le setter natif pour bypasser notre patch innerHTML
+        _setInnerHTML(el, html);
+        applied++;
+      } else {
         _missing.add(key);
       }
     });
 
+    if (applied > 0 || skipped > 0) {
+      console.log('[i18n ' + VERSION + '] applyDataI18n: ' + applied + ' appliqués, ' + skipped + ' déjà OK');
+    }
     if (_missing.size > 0) scheduleBatch();
   }
 
@@ -141,14 +189,16 @@
    */
   function collectDataI18nMissing() {
     if (_lang === DEFAULT) return;
+    let found = 0;
     document.querySelectorAll('[data-i18n], [data-i18n-hero]').forEach(el => {
       const key = el.getAttribute('data-i18n') || el.getAttribute('data-i18n-hero');
       if (key && key.length > 1 && !_cache.has(key) && !/^\d+([.,]\d+)?[%€$]?$/.test(key)) {
         _missing.add(key);
+        found++;
       }
     });
-    if (_missing.size > 0) {
-      console.log('[i18n v7] collecte data-i18n : ' + _missing.size + ' clés');
+    if (found > 0) {
+      console.log('[i18n ' + VERSION + '] collecte data-i18n : ' + found + ' clés manquantes');
       scheduleBatch();
     }
   }
@@ -157,22 +207,46 @@
   // STRATÉGIE 2 : patchInnerHTML — Pages dynamiques (member-app.js)
   // ═══════════════════════════════════════════════════════════════════════════
 
+  // Référence au setter natif (AVANT notre patch)
+  let _origInnerHTMLSet = null;
+
+  function _setInnerHTML(el, html) {
+    if (_origInnerHTMLSet) {
+      _origInnerHTMLSet.call(el, html);
+    } else {
+      el.innerHTML = html;
+    }
+  }
+
   function translateHTML(html) {
     if (!html || _lang === DEFAULT || !_ready) return html;
+    if (typeof html !== 'string') return html;
     let hasMissing = false;
+
+    // Traduit les nœuds texte dans les balises
     html = html.replace(/>([^<]+)</g, (match, text) => {
       const t = text.trim();
       if (!t) return match;
-      if (_cache.has(t)) return '>' + text.replace(t, _cache.get(t)) + '<';
-      if (t.length > 1 && !/^\d+([.,]\d+)?[%€$]?$/.test(t)) { _missing.add(t); hasMissing = true; }
+      const translated = resolveTranslation(t);
+      if (translated !== null) {
+        return '>' + text.replace(t, translated) + '<';
+      }
+      if (t.length > 1 && !/^\d+([.,]\d+)?[%€$]?$/.test(t)) {
+        _missing.add(t);
+        hasMissing = true;
+      }
       return match;
     });
+
+    // Traduit les attributs placeholder et title
     html = html.replace(/\b(placeholder|title)=(['"])([^'"]+)\2/g, (match, attr, q, val) => {
       const t = val.trim();
-      if (_cache.has(t)) return attr + '=' + q + _cache.get(t) + q;
+      const translated = resolveTranslation(t);
+      if (translated !== null) return attr + '=' + q + translated + q;
       if (t.length > 1) { _missing.add(t); hasMissing = true; }
       return match;
     });
+
     if (hasMissing) scheduleBatch();
     return html;
   }
@@ -180,17 +254,23 @@
   function patchInnerHTML() {
     if (_patched) return;
     _patched = true;
+
     const desc = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
     if (!desc?.set) return;
-    const orig = desc.set;
+
+    _origInnerHTMLSet = desc.set;
+
     Object.defineProperty(Element.prototype, 'innerHTML', {
       get: desc.get,
       set: function(val) {
+        // Ne pas intercepter le sélecteur de langue lui-même
         if (this.id === 'i18n-lang-selector' || this.id === 'i18n-lang-dropdown') {
-          orig.call(this, val); return;
+          _origInnerHTMLSet.call(this, val); return;
         }
-        if (_lang !== DEFAULT && _ready && typeof val === 'string') val = translateHTML(val);
-        orig.call(this, val);
+        if (_lang !== DEFAULT && _ready && typeof val === 'string') {
+          val = translateHTML(val);
+        }
+        _origInnerHTMLSet.call(this, val);
       },
       configurable: true,
     });
@@ -203,18 +283,19 @@
   function scheduleBatch() {
     if (_batchPending || _missing.size === 0) return;
     _batchPending = true;
-    setTimeout(flushBatch, 80);
+    setTimeout(flushBatch, 120);
   }
 
   async function flushBatch() {
     _batchPending = false;
     if (_missing.size === 0 || _lang === DEFAULT) return;
 
+    // Filtrer les textes déjà dans le cache (y compris '_SAME_')
     const texts = [..._missing].filter(t => !_cache.has(t));
     _missing.clear();
     if (texts.length === 0) return;
 
-    console.log('[i18n v7] batch', texts.length, 'textes →', _lang);
+    console.log('[i18n ' + VERSION + '] batch', texts.length, 'textes →', _lang);
 
     try {
       const resp = await fetch('/api/i18n/translate', {
@@ -227,13 +308,25 @@
 
       let newEntries = 0;
       Object.entries(translations).forEach(([fr, t]) => {
-        if (fr && t && typeof t === 'string' && t !== fr) { _cache.set(fr, t); newEntries++; }
+        if (!fr || typeof t !== 'string') return;
+        if (t !== fr) {
+          _cache.set(fr, t);
+          newEntries++;
+        } else {
+          // Même valeur → stocker '_SAME_' pour ne plus rebatcher
+          _cache.set(fr, '_SAME_');
+        }
       });
-      texts.forEach(t => { if (!_cache.has(t)) _cache.set(t, t); });
+
+      // FIX v8 : mettre en cache '_SAME_' les textes non retournés par l'API
+      // pour éviter de les rebatcher indéfiniment
+      texts.forEach(t => {
+        if (!_cache.has(t)) _cache.set(t, '_SAME_');
+      });
 
       if (newEntries > 0) {
         rebuildRegex();
-        console.log('[i18n v7] +' + newEntries + ' traductions → mise à jour DOM');
+        console.log('[i18n ' + VERSION + '] +' + newEntries + ' traductions → mise à jour DOM');
 
         // Appliquer sur la landing (data-i18n)
         applyDataI18n();
@@ -244,20 +337,10 @@
         }
       }
     } catch(e) {
-      console.warn('[i18n v7] batch error:', e);
-      texts.forEach(t => _cache.set(t, t));
+      console.warn('[i18n ' + VERSION + '] batch error:', e);
+      // Marquer comme '_SAME_' pour ne pas rebatcher
+      texts.forEach(t => _cache.set(t, '_SAME_'));
     }
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // Re-rendu page dynamique
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  function rerenderPage() {
-    if (typeof showPage === 'function' && typeof currentPage !== 'undefined') {
-      showPage(currentPage);
-    }
-    // La landing est gérée par applyDataI18n(), pas besoin de TreeWalker
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -381,7 +464,7 @@
     // Restaurer le hero title
     document.querySelectorAll('[data-i18n-hero]').forEach(el => {
       const key = el.getAttribute('data-i18n-hero');
-      el.innerHTML = key.replace(/\./g, '.<br class="hidden md:block">');
+      _setInnerHTML(el, key.replace(/\./g, '.<br class="hidden md:block">'));
     });
   }
 
@@ -449,6 +532,9 @@
     }
 
     _ready = true;
+
+    // Activer patchInnerHTML AVANT inject() pour capturer les rendus initiaux
+    // de member-app.js qui peuvent s'exécuter pendant DOMContentLoaded
     patchInnerHTML();
 
     function inject() {
@@ -467,7 +553,7 @@
           if (typeof showPage === 'function' && typeof currentPage !== 'undefined') {
             showPage(currentPage);
           }
-        }, 450);
+        }, 500);
       }
     }
 
@@ -476,14 +562,17 @@
   }
 
   // ─── API publique ─────────────────────────────────────────────────────────
-  window.t    = (key) => _cache.get(key) || key;
+  window.t    = (key) => {
+    const v = _cache.get(key);
+    return (v && v !== '_SAME_') ? v : key;
+  };
   window.i18n = {
     switch:      switchLang,
     current:     () => _lang,
     langs:       () => _langs,
     supported:   () => _langs.map(l => l.code),
     cache:       () => _cache,
-    stats:       () => ({ lang: _lang, cached: _cache.size, missing: _missing.size }),
+    stats:       () => ({ lang: _lang, cached: _cache.size, missing: _missing.size, version: VERSION }),
     apply:       applyDataI18n,
     reloadLangs: async () => { await loadLanguages(); buildSelector(); },
     // Debug : forcer re-traduction complète
