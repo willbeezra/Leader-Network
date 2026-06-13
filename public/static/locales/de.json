@@ -1,0 +1,136 @@
+{
+  "_meta": { "lang": "de", "name": "Deutsch", "flag": "🇩🇪", "dir": "ltr" },
+  "nav": { "dashboard":"Dashboard", "wallet":"Wallet", "commissions":"Provisionen", "network":"Mein Netzwerk", "shop":"Shop", "profile":"Mein Profil", "support":"Support", "logout":"Abmelden" },
+  "auth": {
+    "title_login":"Anmelden", "title_register":"Konto erstellen", "title_register_direct":"Registrierung — Direkte Platzierung", "title_register_link":"Registrierung — Via Empfehlungslink",
+    "email":"E-Mail", "email_placeholder":"deine@email.com", "password":"Passwort", "password_placeholder":"••••••••", "pin":"PIN-Code", "pin_placeholder":"4 Ziffern",
+    "remember_me":"Angemeldet bleiben", "forgot_password":"Passwort vergessen?", "btn_login":"Anmelden", "btn_register":"Konto erstellen", "btn_creating":"Konto wird erstellt...", "btn_logging_in":"Anmelden...",
+    "no_account":"Noch kein Konto?", "already_account":"Bereits ein Konto?", "register_link":"Registrieren", "login_link":"Anmelden", "welcome_back":"Willkommen zurück!",
+    "error_fields":"Bitte alle Pflichtfelder ausfüllen (*)", "error_password_short":"Das Passwort muss mindestens 8 Zeichen haben", "error_password_match":"Die Passwörter stimmen nicht überein",
+    "error_cgu":"Du musst die Nutzungsbedingungen akzeptieren", "error_invalid_slot":"Ungültiger Slot — Seite neu laden", "error_generic":"Fehler bei der Registrierung",
+    "cgu_accept":"Ich akzeptiere die", "cgu_link":"Nutzungsbedingungen", "sponsor_code":"Sponsor-Code (optional)", "sponsor_placeholder":"LDRxxxxxx"
+  },
+  "register": {
+    "step1_title":"Persönliche Informationen", "step2_title":"Kontaktdaten", "step3_title":"Zusammenfassung",
+    "firstname":"Vorname", "lastname":"Nachname", "birthdate":"Geburtsdatum", "phone":"Telefon", "country":"Land", "nationality":"Nationalität",
+    "address":"Adresse", "postal_code":"Postleitzahl", "city":"Stadt", "password_new":"Passwort", "password_confirm":"Passwort bestätigen",
+    "error_name":"Vor- und Nachname sind erforderlich.", "error_email":"Ungültige E-Mail-Adresse.", "error_birthdate":"Das Geburtsdatum ist erforderlich.",
+    "error_phone":"Die Telefonnummer ist erforderlich.", "error_country":"Das Land ist erforderlich.", "error_nationality":"Die Nationalität ist erforderlich.",
+    "error_address":"Die Adresse ist erforderlich.", "error_city":"Die Stadt ist erforderlich.", "error_postal":"Die Postleitzahl ist erforderlich.",
+    "error_field_required":"Das Feld «{field}» ist erforderlich.",
+    "pwd_too_weak":"Zu schwach", "pwd_weak":"Schwach", "pwd_ok":"Mittel", "pwd_strong":"Stark",
+    "select_country":"Land auswählen", "recap_name":"Name", "recap_email":"E-Mail", "recap_country":"Land", "recap_city":"Stadt",
+    "btn_next":"Weiter", "btn_back":"Zurück", "btn_confirm":"Registrierung bestätigen"
+  },
+  "pin_confirm": {
+    "title":"Registrierung erfolgreich!", "unique_id_label":"Deine einzigartige ID", "unique_id_hint":"Aufbewahren — kann nicht geändert werden",
+    "pin_label":"Sicherheits-PIN — Nur einmal sichtbar!", "pin_hint":"Dieser PIN wird für jede Auszahlung benötigt. Notiere ihn jetzt.",
+    "method_label":"Methode", "method_m1":"Freie Registrierung", "method_m2":"Direkte Platzierung", "method_m3":"Via Empfehlungslink",
+    "btn_dashboard":"Zum Dashboard", "sponsor_placed":"Gesponsert von {sponsor} — platziert unter {parent} ({uid}), {side} Bein",
+    "sponsor_side":"Du wirst auf der {side} Seite von {sponsor} ({uid}) platziert", "side_left":"LINKS", "side_right":"RECHTS"
+  },
+  "dashboard": {
+    "hello":"Hallo, {name}!", "subtitle":"Hier ist dein LEADER-Dashboard", "balance":"Guthaben", "available":"Verfügbar zur Auszahlung", "pending":"{amount} ausstehend",
+    "see_wallet":"Wallet anzeigen", "bv_left":"BV Links", "bv_right":"BV Rechts", "bv_lifetime":"Lebenszeit", "bv_month":"diesen Monat",
+    "rank":"Rang", "license":"Lizenz", "license_active":"Aktiv", "license_inactive":"Inaktiv", "license_expires":"Läuft ab am {date}",
+    "license_days_left":"{n} Tage verbleibend", "license_renew":"Erneuern", "license_activate":"Aktivieren",
+    "daily_prime":"Heute freigegebener Bonus", "per_day":"/Tag", "see_commissions":"Meine Provisionen anzeigen",
+    "fast_start_title":"Fast Start Bonus", "fast_start_days":"{n} Tage verbleibend", "fast_start_progress":"BV-Fortschritt",
+    "fast_start_next":"Nächste Stufe", "fast_start_at":"bei {bv} BV", "fast_start_reward":"Bonus {amount}", "fast_start_done":"Ziel erreicht!", "fast_start_expired":"Fast Start Periode beendet",
+    "next_eligible":"Nächste Zahlung in {n} Tag(en)", "my_sponsor":"Mein Sponsor", "no_sponsor":"Kein Sponsor",
+    "quick_actions":"Schnellaktionen", "action_deposit":"Einzahlen", "action_withdraw":"Auszahlen", "action_transfer":"Überweisen", "action_invite":"Einladen"
+  },
+  "wallet": {
+    "title":"Mein Wallet", "principal":"Haupt-Wallet", "pending":"Ausstehend-Wallet", "cc":"Wachstumskredit", "rs":"Strategische Reserve", "luxia":"Luxia-Wallet",
+    "balance":"Guthaben", "available":"Verfügbar", "total":"Gesamt", "no_transactions":"Keine Transaktionen für dieses Wallet.",
+    "see_history":"Verlauf anzeigen", "withdraw":"Auszahlen", "deposit":"Einzahlen", "transfer":"Überweisen",
+    "history_title":"Transaktionsverlauf", "date":"Datum", "type":"Typ", "amount":"Betrag", "status":"Status", "reference":"Referenz", "no_history":"Keine Transaktionen", "loading":"Lädt...",
+    "type_prime_leadership":"Führungsbonus", "type_bonus_influence":"Einflussbonus", "type_bonus_rayonnement":"Reichweitenbonus",
+    "type_valorisation_reco":"Empfehlungsbonus", "type_fast_start":"Fast Start Bonus", "type_credit_croissance":"Wachstumskredit",
+    "type_reserve_strategique":"Strategische Reserve", "type_admin_credit":"Admin-Gutschrift", "type_withdrawal":"Auszahlung", "type_deposit":"Einzahlung", "type_transfer":"Überweisung", "type_commission":"Provision",
+    "pending_detail_title":"Details zu bevorstehenden Zahlungen", "pending_eligible":"Förderfähig seit", "pending_per_day":"pro Tag",
+    "pending_days":"Tag(e) bezahlt von", "pending_remaining":"Verbleibend", "pending_completion":"Voraussichtliche Fertigstellung"
+  },
+  "withdraw": {
+    "title":"Auszahlungsantrag", "amount_label":"Betrag", "amount_placeholder":"0.00", "method_label":"Methode", "pin_label":"PIN-Code", "pin_placeholder":"••••",
+    "btn_submit":"Auszahlung bestätigen", "btn_submitting":"Wird bearbeitet...", "success":"Auszahlungsantrag erfolgreich gesendet",
+    "error_amount":"Ungültiger Betrag", "error_insufficient":"Guthaben nicht ausreichend", "error_pin":"Falscher PIN",
+    "min_amount":"Mindestbetrag: {amount}", "fee_info":"Gebühr: {fee}", "net_amount":"Du erhältst: {amount}", "available_balance":"Verfügbares Guthaben: {amount}", "withdrawal_pending":"Auszahlung wartet auf Genehmigung"
+  },
+  "transfer": {
+    "title":"Überweisung", "recipient_label":"Empfänger (Mitgliedscode)", "recipient_placeholder":"LDRxxxxxx", "amount_label":"Betrag", "pin_label":"PIN-Code",
+    "btn_submit":"Senden", "btn_submitting":"Wird gesendet...", "success":"Überweisung erfolgreich durchgeführt",
+    "error_recipient":"Mitglied nicht gefunden", "error_amount":"Ungültiger Betrag", "error_pin":"Falscher PIN", "confirm_to":"{amount} an {name} überweisen?"
+  },
+  "commissions": {
+    "title":"Meine Provisionen", "tab_commissions":"Provisionen", "tab_pending":"In Auszahlung",
+    "type":"Typ", "amount":"Betrag", "period":"Zeitraum", "status":"Status", "date":"Datum", "rank":"Rang",
+    "no_commissions":"Noch keine Provisionen", "total_month":"Gesamt diesen Monat", "total_lifetime":"Gesamtlebenszeit",
+    "status_pending":"Ausstehend", "status_approved":"Genehmigt", "status_paid":"Bezahlt", "status_cancelled":"Storniert",
+    "type_prime_leadership":"Führungsbonus", "type_bonus_influence":"Einflussbonus", "type_bonus_rayonnement":"Reichweitenbonus", "type_valorisation_reco":"Empfehlungsbonus", "type_fast_start":"Fast Start Bonus",
+    "pwe_title":"Tägliche Auszahlungen laufen", "pwe_eligible_since":"Förderfähig seit {date}", "pwe_per_day":"{amount}/Tag", "pwe_progress":"{paid} Tag(e) bezahlt von {total}", "pwe_remaining":"{amount} verbleibend",
+    "page_prev":"Zurück", "page_next":"Weiter", "page_info":"Seite {current} von {total}"
+  },
+  "network": {
+    "title":"Mein Netzwerk", "tab_binary":"Binärbaum", "tab_downline":"Downline", "tab_stats":"Statistiken",
+    "left_leg":"Linkes Bein", "right_leg":"Rechtes Bein", "total_members":"Mitglieder gesamt", "direct_members":"Direkte Empfehlungen",
+    "depth":"Tiefe", "bv_total":"BV Gesamt", "bv_left":"BV Links", "bv_right":"BV Rechts",
+    "no_network":"Dein Netzwerk ist noch leer", "invite_first":"Lade dein erstes Mitglied ein!",
+    "member_since":"Mitglied seit {date}", "rank_label":"Rang: {rank}", "license_label":"Lizenz: {status}",
+    "copy_link":"Meinen Link kopieren", "link_copied":"Link kopiert!", "share_link":"Teilen", "referral_link":"Empfehlungslink",
+    "search_member":"Mitglied suchen...", "filter_all":"Alle", "filter_active":"Aktiv", "filter_inactive":"Inaktiv",
+    "col_name":"Name", "col_code":"Code", "col_rank":"Rang", "col_bv":"BV", "col_date":"Beitrittsdatum", "col_status":"Status"
+  },
+  "shop": {
+    "title":"Shop", "license_title":"LEADER-Lizenz", "license_desc":"Vollständiger Zugriff auf Netzwerk und Provisionen",
+    "btn_buy":"Kaufen", "btn_renew":"Erneuern", "btn_processing":"Wird bearbeitet...", "price":"{amount}", "per_year":"/ Jahr",
+    "your_license":"Deine Lizenz", "expires":"Läuft ab am {date}", "active_until":"Aktiv bis {date}", "no_license":"Keine aktive Lizenz",
+    "payment_method":"Zahlungsmethode", "pay_wallet":"Mit meinem Guthaben bezahlen", "pay_card":"Kreditkarte", "pay_crypto":"Kryptowährung",
+    "order_success":"Bestellung bestätigt!", "order_error":"Zahlungsfehler", "insufficient_funds":"Guthaben nicht ausreichend"
+  },
+  "profile": {
+    "title":"Mein Profil", "tab_personal":"Persönliche Informationen", "tab_security":"Sicherheit", "tab_kyc":"KYC-Verifizierung", "tab_payment":"Zahlungsmethoden",
+    "firstname":"Vorname", "lastname":"Nachname", "email":"E-Mail", "phone":"Telefon", "birthdate":"Geburtsdatum",
+    "country":"Land", "nationality":"Nationalität", "address":"Adresse", "postal_code":"Postleitzahl", "city":"Stadt",
+    "member_code":"Mitgliedscode", "member_since":"Mitglied seit", "current_rank":"Aktueller Rang",
+    "btn_save":"Speichern", "btn_saving":"Wird gespeichert...", "save_success":"Profil erfolgreich aktualisiert", "save_error":"Fehler beim Speichern",
+    "avatar_change":"Foto ändern", "avatar_hint":"JPG oder PNG, max 5 MB",
+    "pwd_current":"Aktuelles Passwort", "pwd_new":"Neues Passwort", "pwd_confirm":"Neues Passwort bestätigen", "btn_change_pwd":"Passwort ändern", "pwd_success":"Passwort erfolgreich geändert", "pwd_error":"Fehler beim Ändern des Passworts",
+    "pin_current":"Aktueller PIN", "pin_new":"Neuer PIN (4 Ziffern)", "pin_confirm":"PIN bestätigen", "btn_change_pin":"PIN ändern", "pin_success":"PIN erfolgreich geändert", "pin_error":"Fehler beim Ändern des PINs",
+    "kyc_status_not_submitted":"Nicht eingereicht", "kyc_status_pending":"In Prüfung", "kyc_status_verified":"Verifiziert ✓", "kyc_status_rejected":"Abgelehnt",
+    "kyc_upload_label":"Ausweisdokument", "kyc_upload_hint":"Reisepass, Personalausweis oder Führerschein", "kyc_btn_submit":"Zur Verifizierung einreichen", "kyc_submitted":"Dokument erfolgreich eingereicht", "kyc_error":"Fehler beim Einreichen",
+    "paypal_email":"PayPal-E-Mail", "paypal_placeholder":"deine@paypal.com", "paypal_save":"PayPal speichern", "paypal_saved":"PayPal-E-Mail gespeichert",
+    "vdi_title":"VDI-Vereinbarung", "vdi_accepted":"Unterzeichnet am {date}", "vdi_not_accepted":"Nicht unterzeichnet", "vdi_btn_sign":"VDI-Vereinbarung unterzeichnen", "vdi_btn_view":"Vereinbarung anzeigen"
+  },
+  "support": {
+    "title":"Support", "tab_tickets":"Meine Tickets", "tab_new":"Neues Ticket", "tab_faq":"FAQ",
+    "subject_label":"Betreff", "subject_placeholder":"Beschreibe kurz dein Problem", "message_label":"Nachricht", "message_placeholder":"Beschreibe dein Problem im Detail...", "category_label":"Kategorie",
+    "btn_send":"Senden", "btn_sending":"Wird gesendet...", "send_success":"Ticket erfolgreich erstellt", "send_error":"Fehler beim Senden",
+    "no_tickets":"Noch keine Tickets", "status_open":"Offen", "status_pending":"Ausstehend", "status_resolved":"Gelöst", "status_closed":"Geschlossen",
+    "reply_label":"Antwort", "reply_placeholder":"Deine Antwort...", "btn_reply":"Antworten",
+    "ticket_number":"Ticket #{id}", "created_at":"Erstellt am {date}", "last_update":"Letzte Aktualisierung: {date}"
+  },
+  "kyc": {
+    "title":"Identitätsverifizierung", "status_label":"Status", "not_submitted":"Nicht eingereicht", "pending":"In Prüfung", "verified":"Verifiziert", "rejected":"Abgelehnt",
+    "rejected_reason":"Ablehnungsgrund: {reason}", "upload_title":"Dokument einreichen",
+    "upload_hint":"Akzeptierte Formate: JPG, PNG, PDF. Max. Größe: 10 MB", "upload_drop":"Dokument hier ablegen oder", "upload_browse":"durchsuchen",
+    "upload_btn":"Einreichen", "upload_success":"Dokument erfolgreich eingereicht", "upload_error":"Fehler beim Hochladen",
+    "verified_msg":"Deine Identität wurde erfolgreich verifiziert.", "pending_msg":"Dein Dokument wird geprüft. Dies kann 24-48h dauern.", "rejected_msg":"Dein Dokument wurde abgelehnt. Bitte reiche ein neues ein."
+  },
+  "notifications": {
+    "success":"Erfolg", "error":"Fehler", "warning":"Achtung", "info":"Information", "copied":"Kopiert!", "loading":"Lädt...",
+    "saved":"Gespeichert", "deleted":"Gelöscht", "sent":"Gesendet", "confirmed":"Bestätigt", "cancelled":"Storniert",
+    "session_expired":"Sitzung abgelaufen — bitte erneut anmelden", "network_error":"Netzwerkfehler — Verbindung prüfen"
+  },
+  "ranks": { "none":"Mitglied", "Bronze":"Bronze", "Silver":"Silber", "Gold":"Gold", "Platinum":"Platin", "Diamond":"Diamant", "Boss":"Boss", "Elite":"Elite", "Crown":"Krone" },
+  "common": {
+    "yes":"Ja", "no":"Nein", "ok":"OK", "cancel":"Abbrechen", "confirm":"Bestätigen", "close":"Schließen", "back":"Zurück", "next":"Weiter",
+    "save":"Speichern", "edit":"Bearbeiten", "delete":"Löschen", "search":"Suchen", "filter":"Filtern", "all":"Alle", "none":"Keine",
+    "loading":"Lädt...", "error":"Fehler", "retry":"Wiederholen", "copy":"Kopieren", "share":"Teilen", "download":"Herunterladen", "upload":"Hochladen",
+    "or":"oder", "and":"und", "of":"von", "per_page":"pro Seite", "total":"Gesamt", "date":"Datum", "amount":"Betrag", "status":"Status",
+    "actions":"Aktionen", "details":"Details", "see_more":"Mehr anzeigen", "see_less":"Weniger anzeigen",
+    "required":"erforderlich", "optional":"optional", "not_available":"Nicht verfügbar", "not_specified":"Nicht angegeben",
+    "member_code_prefix":"LDR", "currency":"$", "days":"Tage", "day":"Tag", "months":"Monate", "years":"Jahre"
+  },
+  "lang_selector": { "label": "Sprache" }
+}

@@ -2338,6 +2338,7 @@ document.addEventListener('DOMContentLoaded', function() { regMsInit() })
 </script>
 
 <script src="/static/member-app.js?v=${Date.now()}"></script>
+<script src="/static/i18n.js?v=${Date.now()}"></script>
 </body>
 </html>`
 }

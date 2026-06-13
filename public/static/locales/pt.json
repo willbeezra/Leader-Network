@@ -1,0 +1,136 @@
+{
+  "_meta": { "lang": "pt", "name": "Português", "flag": "🇧🇷", "dir": "ltr" },
+  "nav": { "dashboard":"Painel", "wallet":"Carteira", "commissions":"Comissões", "network":"Minha Rede", "shop":"Loja", "profile":"Meu Perfil", "support":"Suporte", "logout":"Sair" },
+  "auth": {
+    "title_login":"Entrar", "title_register":"Criar uma conta", "title_register_direct":"Cadastro — Colocação direta", "title_register_link":"Cadastro — Via link de indicação",
+    "email":"Email", "email_placeholder":"seu@email.com", "password":"Senha", "password_placeholder":"••••••••", "pin":"Código PIN", "pin_placeholder":"4 dígitos",
+    "remember_me":"Lembrar-me", "forgot_password":"Esqueceu a senha?", "btn_login":"Entrar", "btn_register":"Criar minha conta", "btn_creating":"Criando conta...", "btn_logging_in":"Entrando...",
+    "no_account":"Não tem conta?", "already_account":"Já tem conta?", "register_link":"Cadastrar-se", "login_link":"Entrar", "welcome_back":"Bem-vindo de volta!",
+    "error_fields":"Por favor, preencha todos os campos obrigatórios (*)", "error_password_short":"A senha deve ter pelo menos 8 caracteres", "error_password_match":"As senhas não coincidem",
+    "error_cgu":"Você deve aceitar os termos e condições", "error_invalid_slot":"Slot inválido — recarregue a página", "error_generic":"Erro no cadastro",
+    "cgu_accept":"Aceito os", "cgu_link":"termos e condições", "sponsor_code":"Código do patrocinador (opcional)", "sponsor_placeholder":"LDRxxxxxx"
+  },
+  "register": {
+    "step1_title":"Informações pessoais", "step2_title":"Dados de contato", "step3_title":"Resumo",
+    "firstname":"Nome", "lastname":"Sobrenome", "birthdate":"Data de nascimento", "phone":"Telefone", "country":"País", "nationality":"Nacionalidade",
+    "address":"Endereço", "postal_code":"CEP", "city":"Cidade", "password_new":"Senha", "password_confirm":"Confirmar senha",
+    "error_name":"Nome e sobrenome são obrigatórios.", "error_email":"Endereço de email inválido.", "error_birthdate":"A data de nascimento é obrigatória.",
+    "error_phone":"O telefone é obrigatório.", "error_country":"O país é obrigatório.", "error_nationality":"A nacionalidade é obrigatória.",
+    "error_address":"O endereço é obrigatório.", "error_city":"A cidade é obrigatória.", "error_postal":"O CEP é obrigatório.",
+    "error_field_required":"O campo «{field}» é obrigatório.",
+    "pwd_too_weak":"Muito fraca", "pwd_weak":"Fraca", "pwd_ok":"Razoável", "pwd_strong":"Forte",
+    "select_country":"Selecionar um país", "recap_name":"Nome", "recap_email":"Email", "recap_country":"País", "recap_city":"Cidade",
+    "btn_next":"Continuar", "btn_back":"Voltar", "btn_confirm":"Confirmar cadastro"
+  },
+  "pin_confirm": {
+    "title":"Cadastro realizado com sucesso!", "unique_id_label":"Seu identificador único", "unique_id_hint":"Guarde-o — não pode ser alterado",
+    "pin_label":"PIN de segurança — Visível apenas uma vez!", "pin_hint":"Este PIN será necessário para cada saque. Anote agora.",
+    "method_label":"Método", "method_m1":"Cadastro livre", "method_m2":"Colocação direta", "method_m3":"Via link de indicação",
+    "btn_dashboard":"Ir para meu painel", "sponsor_placed":"Indicado(a) por {sponsor} — colocado(a) sob {parent} ({uid}), perna {side}",
+    "sponsor_side":"Você será colocado(a) no lado {side} de {sponsor} ({uid})", "side_left":"ESQUERDA", "side_right":"DIREITA"
+  },
+  "dashboard": {
+    "hello":"Olá, {name}!", "subtitle":"Aqui está seu painel LEADER", "balance":"Saldo", "available":"Disponível para saque", "pending":"{amount} pendente",
+    "see_wallet":"Ver carteira", "bv_left":"BV Esquerda", "bv_right":"BV Direita", "bv_lifetime":"Vitalício", "bv_month":"este mês",
+    "rank":"Rank", "license":"Licença", "license_active":"Ativa", "license_inactive":"Inativa", "license_expires":"Expira em {date}",
+    "license_days_left":"{n} dias restantes", "license_renew":"Renovar", "license_activate":"Ativar",
+    "daily_prime":"Bônus liberado hoje", "per_day":"/dia", "see_commissions":"Ver minhas comissões",
+    "fast_start_title":"Fast Start Bonus", "fast_start_days":"{n} dias restantes", "fast_start_progress":"Progresso BV",
+    "fast_start_next":"Próxima meta", "fast_start_at":"a {bv} BV", "fast_start_reward":"Bônus {amount}", "fast_start_done":"Meta atingida!", "fast_start_expired":"Período Fast Start encerrado",
+    "next_eligible":"Próximo pagamento em {n} dia(s)", "my_sponsor":"Meu patrocinador", "no_sponsor":"Sem patrocinador",
+    "quick_actions":"Ações rápidas", "action_deposit":"Depositar", "action_withdraw":"Sacar", "action_transfer":"Transferir", "action_invite":"Convidar"
+  },
+  "wallet": {
+    "title":"Minha Carteira", "principal":"Carteira Principal", "pending":"Carteira Pendente", "cc":"Crédito de Crescimento", "rs":"Reserva Estratégica", "luxia":"Carteira Luxia",
+    "balance":"Saldo", "available":"Disponível", "total":"Total", "no_transactions":"Sem transações para esta carteira.",
+    "see_history":"Ver histórico", "withdraw":"Sacar", "deposit":"Depositar", "transfer":"Transferir",
+    "history_title":"Histórico de transações", "date":"Data", "type":"Tipo", "amount":"Valor", "status":"Status", "reference":"Referência", "no_history":"Sem transações", "loading":"Carregando...",
+    "type_prime_leadership":"Bônus de Liderança", "type_bonus_influence":"Bônus de Influência", "type_bonus_rayonnement":"Bônus de Alcance",
+    "type_valorisation_reco":"Bônus de Indicação", "type_fast_start":"Fast Start Bonus", "type_credit_croissance":"Crédito de Crescimento",
+    "type_reserve_strategique":"Reserva Estratégica", "type_admin_credit":"Crédito administrativo", "type_withdrawal":"Saque", "type_deposit":"Depósito", "type_transfer":"Transferência", "type_commission":"Comissão",
+    "pending_detail_title":"Detalhe dos próximos pagamentos", "pending_eligible":"Elegível desde", "pending_per_day":"por dia",
+    "pending_days":"dia(s) pago(s) de", "pending_remaining":"Restante", "pending_completion":"Conclusão estimada"
+  },
+  "withdraw": {
+    "title":"Solicitação de saque", "amount_label":"Valor", "amount_placeholder":"0.00", "method_label":"Método", "pin_label":"Código PIN", "pin_placeholder":"••••",
+    "btn_submit":"Confirmar saque", "btn_submitting":"Processando...", "success":"Solicitação de saque enviada com sucesso",
+    "error_amount":"Valor inválido", "error_insufficient":"Saldo insuficiente", "error_pin":"PIN incorreto",
+    "min_amount":"Valor mínimo: {amount}", "fee_info":"Taxa: {fee}", "net_amount":"Você receberá: {amount}", "available_balance":"Saldo disponível: {amount}", "withdrawal_pending":"Saque pendente de aprovação"
+  },
+  "transfer": {
+    "title":"Transferência", "recipient_label":"Destinatário (código de membro)", "recipient_placeholder":"LDRxxxxxx", "amount_label":"Valor", "pin_label":"Código PIN",
+    "btn_submit":"Enviar", "btn_submitting":"Enviando...", "success":"Transferência realizada com sucesso",
+    "error_recipient":"Membro não encontrado", "error_amount":"Valor inválido", "error_pin":"PIN incorreto", "confirm_to":"Transferir {amount} para {name}?"
+  },
+  "commissions": {
+    "title":"Minhas Comissões", "tab_commissions":"Comissões", "tab_pending":"Em processo de pagamento",
+    "type":"Tipo", "amount":"Valor", "period":"Período", "status":"Status", "date":"Data", "rank":"Rank",
+    "no_commissions":"Sem comissões por enquanto", "total_month":"Total este mês", "total_lifetime":"Total vitalício",
+    "status_pending":"Pendente", "status_approved":"Aprovada", "status_paid":"Paga", "status_cancelled":"Cancelada",
+    "type_prime_leadership":"Bônus de Liderança", "type_bonus_influence":"Bônus de Influência", "type_bonus_rayonnement":"Bônus de Alcance", "type_valorisation_reco":"Bônus de Indicação", "type_fast_start":"Fast Start Bonus",
+    "pwe_title":"Pagamentos diários em andamento", "pwe_eligible_since":"Elegível desde {date}", "pwe_per_day":"{amount}/dia", "pwe_progress":"{paid} dia(s) pago(s) de {total}", "pwe_remaining":"{amount} restante",
+    "page_prev":"Anterior", "page_next":"Próximo", "page_info":"Página {current} de {total}"
+  },
+  "network": {
+    "title":"Minha Rede", "tab_binary":"Árvore Binária", "tab_downline":"Downline", "tab_stats":"Estatísticas",
+    "left_leg":"Perna Esquerda", "right_leg":"Perna Direita", "total_members":"Total de membros", "direct_members":"Indicados diretos",
+    "depth":"Profundidade", "bv_total":"BV Total", "bv_left":"BV Esquerda", "bv_right":"BV Direita",
+    "no_network":"Sua rede está vazia por enquanto", "invite_first":"Convide seu primeiro indicado!",
+    "member_since":"Membro desde {date}", "rank_label":"Rank: {rank}", "license_label":"Licença: {status}",
+    "copy_link":"Copiar meu link", "link_copied":"Link copiado!", "share_link":"Compartilhar", "referral_link":"Link de indicação",
+    "search_member":"Buscar um membro...", "filter_all":"Todos", "filter_active":"Ativos", "filter_inactive":"Inativos",
+    "col_name":"Nome", "col_code":"Código", "col_rank":"Rank", "col_bv":"BV", "col_date":"Data de cadastro", "col_status":"Status"
+  },
+  "shop": {
+    "title":"Loja", "license_title":"Licença LEADER", "license_desc":"Acesso completo à rede e comissões",
+    "btn_buy":"Comprar", "btn_renew":"Renovar", "btn_processing":"Processando...", "price":"{amount}", "per_year":"/ ano",
+    "your_license":"Sua licença", "expires":"Expira em {date}", "active_until":"Ativa até {date}", "no_license":"Sem licença ativa",
+    "payment_method":"Método de pagamento", "pay_wallet":"Pagar com meu saldo", "pay_card":"Cartão de crédito", "pay_crypto":"Criptomoeda",
+    "order_success":"Pedido confirmado!", "order_error":"Erro no pagamento", "insufficient_funds":"Saldo insuficiente"
+  },
+  "profile": {
+    "title":"Meu Perfil", "tab_personal":"Informações pessoais", "tab_security":"Segurança", "tab_kyc":"Verificação KYC", "tab_payment":"Métodos de pagamento",
+    "firstname":"Nome", "lastname":"Sobrenome", "email":"Email", "phone":"Telefone", "birthdate":"Data de nascimento",
+    "country":"País", "nationality":"Nacionalidade", "address":"Endereço", "postal_code":"CEP", "city":"Cidade",
+    "member_code":"Código de membro", "member_since":"Membro desde", "current_rank":"Rank atual",
+    "btn_save":"Salvar", "btn_saving":"Salvando...", "save_success":"Perfil atualizado com sucesso", "save_error":"Erro ao salvar",
+    "avatar_change":"Alterar foto", "avatar_hint":"JPG ou PNG, máx 5 MB",
+    "pwd_current":"Senha atual", "pwd_new":"Nova senha", "pwd_confirm":"Confirmar nova senha", "btn_change_pwd":"Alterar senha", "pwd_success":"Senha alterada com sucesso", "pwd_error":"Erro ao alterar senha",
+    "pin_current":"PIN atual", "pin_new":"Novo PIN (4 dígitos)", "pin_confirm":"Confirmar PIN", "btn_change_pin":"Alterar PIN", "pin_success":"PIN alterado com sucesso", "pin_error":"Erro ao alterar PIN",
+    "kyc_status_not_submitted":"Não enviado", "kyc_status_pending":"Em análise", "kyc_status_verified":"Verificado ✓", "kyc_status_rejected":"Rejeitado",
+    "kyc_upload_label":"Documento de identidade", "kyc_upload_hint":"Passaporte, RG ou CNH", "kyc_btn_submit":"Enviar para verificação", "kyc_submitted":"Documento enviado com sucesso", "kyc_error":"Erro ao enviar",
+    "paypal_email":"Email PayPal", "paypal_placeholder":"seu@paypal.com", "paypal_save":"Salvar PayPal", "paypal_saved":"Email PayPal salvo",
+    "vdi_title":"Acordo VDI", "vdi_accepted":"Assinado em {date}", "vdi_not_accepted":"Não assinado", "vdi_btn_sign":"Assinar o acordo VDI", "vdi_btn_view":"Ver acordo"
+  },
+  "support": {
+    "title":"Suporte", "tab_tickets":"Meus tickets", "tab_new":"Novo ticket", "tab_faq":"FAQ",
+    "subject_label":"Assunto", "subject_placeholder":"Descreva brevemente seu problema", "message_label":"Mensagem", "message_placeholder":"Descreva seu problema em detalhes...", "category_label":"Categoria",
+    "btn_send":"Enviar", "btn_sending":"Enviando...", "send_success":"Ticket criado com sucesso", "send_error":"Erro ao enviar",
+    "no_tickets":"Sem tickets por enquanto", "status_open":"Aberto", "status_pending":"Pendente", "status_resolved":"Resolvido", "status_closed":"Fechado",
+    "reply_label":"Resposta", "reply_placeholder":"Sua resposta...", "btn_reply":"Responder",
+    "ticket_number":"Ticket #{id}", "created_at":"Criado em {date}", "last_update":"Última atualização: {date}"
+  },
+  "kyc": {
+    "title":"Verificação de identidade", "status_label":"Status", "not_submitted":"Não enviado", "pending":"Em análise", "verified":"Verificado", "rejected":"Rejeitado",
+    "rejected_reason":"Motivo de rejeição: {reason}", "upload_title":"Enviar um documento",
+    "upload_hint":"Formatos aceitos: JPG, PNG, PDF. Tamanho máx: 10 MB", "upload_drop":"Arraste seu documento aqui ou", "upload_browse":"selecionar",
+    "upload_btn":"Enviar", "upload_success":"Documento enviado com sucesso", "upload_error":"Erro ao enviar",
+    "verified_msg":"Sua identidade foi verificada com sucesso.", "pending_msg":"Seu documento está em análise. Pode levar 24-48h.", "rejected_msg":"Seu documento foi rejeitado. Envie um novo documento."
+  },
+  "notifications": {
+    "success":"Sucesso", "error":"Erro", "warning":"Atenção", "info":"Informação", "copied":"Copiado!", "loading":"Carregando...",
+    "saved":"Salvo", "deleted":"Excluído", "sent":"Enviado", "confirmed":"Confirmado", "cancelled":"Cancelado",
+    "session_expired":"Sessão expirada — faça login novamente", "network_error":"Erro de rede — verifique sua conexão"
+  },
+  "ranks": { "none":"Membro", "Bronze":"Bronze", "Silver":"Prata", "Gold":"Ouro", "Platinum":"Platina", "Diamond":"Diamante", "Boss":"Boss", "Elite":"Elite", "Crown":"Coroa" },
+  "common": {
+    "yes":"Sim", "no":"Não", "ok":"OK", "cancel":"Cancelar", "confirm":"Confirmar", "close":"Fechar", "back":"Voltar", "next":"Próximo",
+    "save":"Salvar", "edit":"Editar", "delete":"Excluir", "search":"Buscar", "filter":"Filtrar", "all":"Todos", "none":"Nenhum",
+    "loading":"Carregando...", "error":"Erro", "retry":"Tentar novamente", "copy":"Copiar", "share":"Compartilhar", "download":"Baixar", "upload":"Enviar",
+    "or":"ou", "and":"e", "of":"de", "per_page":"por página", "total":"Total", "date":"Data", "amount":"Valor", "status":"Status",
+    "actions":"Ações", "details":"Detalhes", "see_more":"Ver mais", "see_less":"Ver menos",
+    "required":"obrigatório", "optional":"opcional", "not_available":"Não disponível", "not_specified":"Não informado",
+    "member_code_prefix":"LDR", "currency":"$", "days":"dias", "day":"dia", "months":"meses", "years":"anos"
+  },
+  "lang_selector": { "label": "Idioma" }
+}
