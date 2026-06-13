@@ -448,9 +448,10 @@ ${servicesActive ? `
       <a href="/s/${s.slug}" class="service-card glass-dark rounded-2xl p-6 flex flex-col gap-4 no-underline reveal"
          style="border:1px solid rgba(255,255,255,0.06)">
         <div class="flex items-start justify-between">
-          <div class="w-14 h-14 rounded-xl overflow-hidden flex items-center justify-center" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1)">
+          <div class="w-14 h-14 rounded-xl overflow-hidden flex items-center justify-center" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.15)">
             <img src="${s.logo_data_uri || s.logo_url}" alt="${s.name}"
                  class="w-full h-full object-contain p-1"
+                 style="mix-blend-mode:screen;filter:brightness(1.15) contrast(1.05)"
                  loading="lazy"
                  onerror="this.parentElement.innerHTML='<span style=\\'color:#791E15;font-size:1.2rem;font-weight:900\\'>${s.name.charAt(0)}</span>'">
           </div>
@@ -480,9 +481,10 @@ ${servicesActive ? `
         <div class="service-card coming-soon glass-dark rounded-2xl p-6 flex flex-col gap-4 reveal"
              style="border:1px solid rgba(255,255,255,0.04)">
           <div class="flex items-start justify-between">
-            <div class="w-14 h-14 rounded-xl overflow-hidden flex items-center justify-center opacity-60" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08)">
+            <div class="w-14 h-14 rounded-xl overflow-hidden flex items-center justify-center opacity-70" style="background:rgba(255,255,255,0.10);border:1px solid rgba(255,255,255,0.12)">
               <img src="${s.logo_data_uri || s.logo_url}" alt="${s.name}"
                    class="w-full h-full object-contain p-1"
+                   style="mix-blend-mode:screen;filter:brightness(1.1) contrast(1.05)"
                    loading="lazy"
                    onerror="this.parentElement.innerHTML='<span style=\\'color:#791E15;font-size:1.2rem;font-weight:900\\'>${s.name.charAt(0)}</span>'">
             </div>
