@@ -382,7 +382,7 @@ ${heroActive ? `
       </div>
       <div class="flex items-center gap-2 px-4 py-2 rounded-full" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12)">
         <span style="color:#F5A623;font-size:0.75rem">★★★★★</span>
-        <span style="color:rgba(245,240,232,0.85);font-size:0.8rem;font-weight:600">4.9/5 · 237 avis</span>
+        <span style="color:rgba(245,240,232,0.85);font-size:0.8rem;font-weight:600">${cfg.stats_rating || '4.9'}/5 · ${cfg.stats_reviews || '237'} avis</span>
       </div>
       <div class="flex items-center gap-2 px-4 py-2 rounded-full" style="background:rgba(121,30,21,0.15);border:1px solid rgba(121,30,21,0.35)">
         <i class="fas fa-lock" style="color:#791E15;font-size:0.8rem"></i>
@@ -392,7 +392,7 @@ ${heroActive ? `
 
     <!-- Slogan viral -->
     <div class="mt-8 mb-4 fade-in-up" style="animation-delay:0.65s">
-      <p class="text-base md:text-lg font-semibold tracking-widest uppercase" style="color:rgba(121,30,21,0.9);letter-spacing:0.2em">✦ Ensemble, faisons une différence ✦</p>
+      <p class="text-base md:text-lg font-semibold tracking-widest uppercase" style="color:rgba(121,30,21,0.9);letter-spacing:0.2em">✦ ${cfg.slogan || 'Ensemble, faisons une différence'} ✦</p>
     </div>
 
     <!-- Scroll indicator -->
@@ -415,10 +415,10 @@ ${statsActive ? `
     <div class="section-divider mb-16"></div>
     <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
       ${[
-        { val: cfg.stats_members || '12 000+',  label: cfg.stats_members_label || 'Membres actifs',     icon: 'users',        sub: '+300 ce mois' },
-        { val: cfg.stats_countries || '47',      label: cfg.stats_countries_label || 'Pays représentés', icon: 'globe-europe', sub: 'sur 6 continents' },
-        { val: cfg.stats_services || '14',       label: cfg.stats_services_label || 'Services exclusifs', icon: 'th-large',    sub: 'dès le 1er jour' },
-        { val: cfg.stats_years || '5+',          label: cfg.stats_years_label || 'Années d\'excellence',  icon: 'star',        sub: 'de résultats prouvés' },
+        { val: cfg.stats_members || '12 000+',  label: cfg.stats_members_label || 'Membres actifs',     icon: 'users',        sub: cfg.stats_members_sub || '+300 ce mois' },
+        { val: cfg.stats_countries || '47',      label: cfg.stats_countries_label || 'Pays représentés', icon: 'globe-europe', sub: cfg.stats_countries_sub || 'sur 6 continents' },
+        { val: cfg.stats_services || '14',       label: cfg.stats_services_label || 'Services exclusifs', icon: 'th-large',    sub: cfg.stats_services_sub || 'dès le 1er jour' },
+        { val: cfg.stats_years || '5+',          label: cfg.stats_years_label || 'Années d\'excellence',  icon: 'star',        sub: cfg.stats_years_sub || 'de résultats prouvés' },
       ].map(s => `
       <div class="glass-dark rounded-2xl p-6 text-center reveal" style="border:1px solid rgba(121,30,21,0.18)">
         <i class="fas fa-${s.icon} stat-icon"></i>
@@ -652,9 +652,9 @@ ${testimonialsActive && featuredTestimonials.length > 0 ? `
       <!-- Compteur avis -->
       <div class="flex items-center justify-center gap-2 mt-4">
         <span style="color:#F5A623;font-size:1rem;letter-spacing:0.05em">★★★★★</span>
-        <span style="color:#FFFFFF;font-weight:700;font-size:0.95rem">4.9/5</span>
+        <span style="color:#FFFFFF;font-weight:700;font-size:0.95rem">${cfg.stats_rating || '4.9'}/5</span>
         <span style="color:rgba(245,240,232,0.4);font-size:0.85rem">·</span>
-        <span style="color:rgba(245,240,232,0.55);font-size:0.85rem">237 avis vérifiés</span>
+        <span style="color:rgba(245,240,232,0.55);font-size:0.85rem">${cfg.stats_reviews || '237'} avis vérifiés</span>
       </div>
     </div>
 
@@ -747,12 +747,12 @@ ${ctaFinalActive ? `
              onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
         <span style="display:none;font-size:1.6rem;letter-spacing:0.2em;font-weight:900;color:#FFFFFF">LEADER</span>
         <p class="text-sm italic" style="color:rgba(245,240,232,0.35)" data-i18n="${cfg.footer_tagline || 'Révéler. Prospérer. Inspirer.'}">${cfg.footer_tagline || 'Révéler. Prospérer. Inspirer.'}</p>
-        <p class="text-xs font-bold tracking-widest uppercase" style="color:rgba(121,30,21,0.8)">✦ Ensemble, faisons une différence ✦</p>
+        <p class="text-xs font-bold tracking-widest uppercase" style="color:rgba(121,30,21,0.8)">✦ ${cfg.slogan || 'Ensemble, faisons une différence'} ✦</p>
         <!-- Badges confiance -->
         <div class="flex flex-wrap gap-2 mt-2">
           <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:4px 9px;font-size:0.68rem;color:rgba(245,240,232,0.45)"><i class="fas fa-lock" style="color:#791E15;font-size:0.65rem"></i>RGPD conforme</span>
           <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:4px 9px;font-size:0.68rem;color:rgba(245,240,232,0.45)"><i class="fas fa-shield-alt" style="color:#791E15;font-size:0.65rem"></i>SSL sécurisé</span>
-          <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:4px 9px;font-size:0.68rem;color:rgba(245,240,232,0.45)"><i class="fas fa-globe" style="color:#791E15;font-size:0.65rem"></i>47 pays</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:4px 9px;font-size:0.68rem;color:rgba(245,240,232,0.45)"><i class="fas fa-globe" style="color:#791E15;font-size:0.65rem"></i>${cfg.stats_countries || '47'} pays</span>
         </div>
       </div>
 
@@ -810,8 +810,8 @@ ${ctaFinalActive ? `
     <div class="section-divider mb-6"></div>
     <div class="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs" style="color:rgba(245,240,232,0.22)">
       <span>© ${new Date().getFullYear()} LEADER. Tous droits réservés.</span>
-      <span class="italic">✦ Ensemble, faisons une différence ✦</span>
-      <span>Club privé d'éducation financière · 47 pays</span>
+      <span class="italic">✦ ${cfg.slogan || 'Ensemble, faisons une différence'} ✦</span>
+      <span>Club privé d'éducation financière · ${cfg.stats_countries || '47'} pays</span>
     </div>
   </div>
 </footer>
