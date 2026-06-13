@@ -77,20 +77,20 @@ async function getTestimonials(db: D1Database, featuredOnly = false): Promise<an
   }
   try {
     const q = featuredOnly
-      ? 'SELECT * FROM landing_testimonials WHERE is_active=1 AND is_featured=1 ORDER BY display_order ASC LIMIT 6'
+      ? 'SELECT * FROM landing_testimonials WHERE is_active=1 AND is_featured=1 ORDER BY display_order ASC LIMIT 20'
       : 'SELECT * FROM landing_testimonials WHERE is_active=1 ORDER BY display_order ASC'
     const rows = await db.prepare(q).all()
     if (rows.results && rows.results.length > 0) return dedup(rows.results as any[])
     // Fallback sur testimonials
     const q2 = featuredOnly
-      ? 'SELECT * FROM testimonials WHERE is_active=1 AND is_featured=1 ORDER BY display_order ASC LIMIT 6'
+      ? 'SELECT * FROM testimonials WHERE is_active=1 AND is_featured=1 ORDER BY display_order ASC LIMIT 20'
       : 'SELECT * FROM testimonials WHERE is_active=1 ORDER BY display_order ASC'
     const rows2 = await db.prepare(q2).all()
     return dedup((rows2.results || []) as any[])
   } catch {
     try {
       const q2 = featuredOnly
-        ? 'SELECT * FROM testimonials WHERE is_active=1 AND is_featured=1 ORDER BY display_order ASC LIMIT 6'
+        ? 'SELECT * FROM testimonials WHERE is_active=1 AND is_featured=1 ORDER BY display_order ASC LIMIT 20'
         : 'SELECT * FROM testimonials WHERE is_active=1 ORDER BY display_order ASC'
       const rows2 = await db.prepare(q2).all()
       return dedup((rows2.results || []) as any[])
