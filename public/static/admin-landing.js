@@ -247,7 +247,7 @@ function buildLandingServicesTab(services) {
             <th class="w-8">#</th>
             <th>Service</th>
             <th>Logo</th>
-            <th>URL</th>
+            <th>URL / API</th>
             <th>Statut</th>
             <th>Catégorie</th>
             <th>Actions</th>
@@ -271,6 +271,10 @@ function buildLandingServicesTab(services) {
               ${s.url
                 ? `<a href="${s.url}" target="_blank" class="text-blue-400 text-xs hover:underline truncate max-w-[180px] block">${s.url}</a>`
                 : '<span class="text-gray-600 text-xs">—</span>'
+              }
+              ${s.api_url
+                ? `<span class="text-purple-400 text-xs flex items-center gap-1 mt-0.5"><i class="fas fa-plug text-[10px]"></i>${s.api_url.replace(/^https?:\/\//, '').substring(0, 30)}…</span>`
+                : ''
               }
             </td>
             <td>${statusBadgeLocal(s.status)}</td>
@@ -359,6 +363,29 @@ function showServiceModal(service) {
       </div>
     </div>
 
+    <!-- Section API -->
+    <div class="bg-dark-900 border border-purple-500/20 rounded-xl p-4 space-y-3">
+      <h4 class="text-sm font-semibold text-purple-300 flex items-center gap-2">
+        <i class="fas fa-plug text-purple-400 text-xs"></i>
+        Connexion API (optionnel)
+      </h4>
+      <p class="text-xs text-gray-500">Configure la connexion API de ce service. Laissez vide si non applicable.</p>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div class="space-y-1.5 md:col-span-2">
+          <label class="text-xs text-gray-400 uppercase tracking-wide">URL de base de l'API</label>
+          <input id="svc-api-url" type="url" value="${isEdit ? (service.api_url || '') : ''}" class="form-input w-full font-mono text-sm" placeholder="https://api.monservice.com">
+        </div>
+        <div class="space-y-1.5">
+          <label class="text-xs text-gray-400 uppercase tracking-wide">Clé / Token API</label>
+          <input id="svc-api-key" type="password" value="${isEdit ? (service.api_key || '') : ''}" class="form-input w-full font-mono text-sm" placeholder="sk-... ou token..." autocomplete="off">
+        </div>
+        <div class="space-y-1.5">
+          <label class="text-xs text-gray-400 uppercase tracking-wide">Config JSON (paramètres avancés)</label>
+          <input id="svc-api-config" type="text" value="${isEdit ? (service.api_config || '') : ''}" class="form-input w-full font-mono text-sm" placeholder='{"plan_id":"...","webhook_secret":"..."}'>
+        </div>
+      </div>
+    </div>
+
     <div class="flex justify-end gap-3 pt-2">
       <button onclick="closeModal()" class="px-5 py-2.5 bg-dark-700 border border-dark-500 text-gray-300 rounded-xl text-sm hover:bg-dark-600 transition">
         Annuler
@@ -397,7 +424,10 @@ async function saveService(id, btn) {
     category:      document.getElementById('svc-category').value.trim(),
     display_order: parseInt(document.getElementById('svc-order').value) || 0,
     bg_color:      document.getElementById('svc-bgcolor').value.trim(),
-    text_color:    '#FFFFFF'
+    text_color:    '#FFFFFF',
+    api_url:       document.getElementById('svc-api-url').value.trim() || null,
+    api_key:       document.getElementById('svc-api-key').value.trim() || null,
+    api_config:    document.getElementById('svc-api-config').value.trim() || null,
   }
   if (!payload.name || !payload.slug) { restore(); return showToast('Nom et slug requis', 'error') }
   try {

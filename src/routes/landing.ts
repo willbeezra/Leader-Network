@@ -824,10 +824,11 @@ landingAdmin.post('/landing/services', async (c) => {
   try {
     const b = await c.req.json() as any
     const r = await c.env.DB.prepare(
-      `INSERT INTO landing_services (name, slug, description, url, logo_url, logo_data_uri, status, display_order, category, bg_color, text_color)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO landing_services (name, slug, description, url, logo_url, logo_data_uri, status, display_order, category, bg_color, text_color, api_url, api_key, api_config)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(b.name, b.slug, b.description||'', b.url||'', b.logo_url||'', b.logo_data_uri||'',
-           b.status||'active', b.display_order||0, b.category||'general', b.bg_color||'#1A1A26', b.text_color||'#FFFFFF').run()
+           b.status||'active', b.display_order||0, b.category||'general', b.bg_color||'#1A1A26', b.text_color||'#FFFFFF',
+           b.api_url||null, b.api_key||null, b.api_config||null).run()
     return c.json({ success: true, id: r.meta.last_row_id })
   } catch (e: any) {
     return c.json({ error: e.message }, 500)
@@ -841,11 +842,14 @@ landingAdmin.put('/landing/services/:id', async (c) => {
     const b  = await c.req.json() as any
     await c.env.DB.prepare(
       `UPDATE landing_services SET name=?, slug=?, description=?, url=?, logo_url=?, logo_data_uri=?,
-       status=?, display_order=?, category=?, bg_color=?, text_color=?, updated_at=datetime('now')
+       status=?, display_order=?, category=?, bg_color=?, text_color=?,
+       api_url=?, api_key=?, api_config=?, updated_at=datetime('now')
        WHERE id=?`
     ).bind(b.name, b.slug, b.description||'', b.url||'', b.logo_url||'', b.logo_data_uri||'',
            b.status||'active', b.display_order||0, b.category||'general', b.bg_color||'#1A1A26',
-           b.text_color||'#FFFFFF', id).run()
+           b.text_color||'#FFFFFF',
+           b.api_url||null, b.api_key||null, b.api_config||null,
+           id).run()
     return c.json({ success: true })
   } catch (e: any) {
     return c.json({ error: e.message }, 500)
