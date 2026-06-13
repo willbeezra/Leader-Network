@@ -329,12 +329,19 @@
     if (_observer) _observer.disconnect();
 
     _observer = new MutationObserver(function (mutations) {
+      // Watchdog : réinjecter le sélecteur s'il a été supprimé
+      if (!document.getElementById('i18n-lang-selector')) {
+        buildSelector();
+      }
+
       if (_currentLang === DEFAULT_LANG) return;
 
       mutations.forEach(function (mutation) {
         if (mutation.type === 'childList') {
           mutation.addedNodes.forEach(function (added) {
             if (added.nodeType === Node.ELEMENT_NODE) {
+              // Ignorer les mutations du sélecteur lui-même
+              if (added.id === 'i18n-lang-selector') return;
               // Délai court pour laisser member-app.js finir de rendre
               setTimeout(function () { translateDOM(added); }, 30);
             }
@@ -347,6 +354,17 @@
       childList: true,
       subtree:   true
     });
+  }
+
+  // ─── Watchdog timer — garantit la présence du sélecteur ─────────────────
+
+  function startWatchdog() {
+    // Vérifie toutes les 2s que le sélecteur est toujours dans le DOM
+    setInterval(function () {
+      if (!document.getElementById('i18n-lang-selector') && document.body) {
+        buildSelector();
+      }
+    }, 2000);
   }
 
   // ─── Sélecteur de langue ───────────────────────────────────────────────────
@@ -550,11 +568,15 @@
       // l'utilisateur changerait de langue plus tard
       _currentLang = DEFAULT_LANG;
       document.documentElement.setAttribute('lang', DEFAULT_LANG);
-      // Démarrer l'observer pour les changements futurs
+      // Démarrer l'observer + watchdog pour les changements futurs
       if (document.body) {
         startObserver();
+        startWatchdog();
       } else {
-        document.addEventListener('DOMContentLoaded', startObserver);
+        document.addEventListener('DOMContentLoaded', function () {
+          startObserver();
+          startWatchdog();
+        });
       }
       return;
     }
@@ -589,6 +611,9 @@
     }
 
     applyWhenReady();
+
+    // Watchdog pour garantir la persistance du sélecteur
+    startWatchdog();
   }
 
   // ─── API publique ─────────────────────────────────────────────────────────
