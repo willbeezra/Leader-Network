@@ -24,10 +24,12 @@
   };
 
   // ─── État ──────────────────────────────────────────────────────────────────
-  let _lang    = DEFAULT;
-  let _dict    = {};   // { "texte fr": "texte traduit" }
-  let _ready   = false;
-  let _patched = false;
+  let _lang     = DEFAULT;
+  let _dict     = {};   // { "texte fr": "texte traduit" }
+  let _dictKeys = [];   // clés triées par longueur décroissante
+  let _dictRegex = null; // RegExp unique pour remplacement sans corruption en cascade
+  let _ready    = false;
+  let _patched  = false;
 
   // ─── Détection langue ──────────────────────────────────────────────────────
   function detectLang() {
@@ -57,7 +59,7 @@
   //   2. strings.{lang}.json    (mapping direct FR→cible des strings exactes de member-app.js)
   // Les strings.{lang}.json ont priorité (écrasent les entrées structurées si conflit).
   async function buildDict(lang) {
-    if (lang === DEFAULT) { _dict = {}; return; }
+    if (lang === DEFAULT) { _dict = {}; _dictKeys = []; _dictRegex = null; return; }
 
     const ts = Date.now();
     const [fr, target, stringsMap] = await Promise.all([
@@ -88,16 +90,34 @@
       Object.assign(_dict, stringsMap);
     }
 
-    console.log('[i18n] dict chargé pour "' + lang + '" — ' + Object.keys(_dict).length + ' entrées');
+    // Trier les clés par longueur DÉCROISSANTE et construire une regex unique.
+    // Un seul passage regex garantit :
+    //   1. Les strings longues sont matchées en priorité (ordre alternatif dans la regex)
+    //   2. Zéro corruption en cascade (chaque position du texte n'est remplacée qu'UNE fois)
+    _dictKeys = Object.keys(_dict).sort((a, b) => b.length - a.length);
+
+    // Construire la regex de remplacement unique (toutes les clés en alternance)
+    _dictRegex = _dictKeys.length > 0
+      ? new RegExp(_dictKeys.map(escapeRegex).join('|'), 'g')
+      : null;
+
+    console.log('[i18n] dict chargé pour "' + lang + '" — ' + _dictKeys.length + ' entrées');
+  }
+
+  // Échappe les caractères spéciaux pour l'utilisation dans une RegExp
+  function escapeRegex(s) {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
   // ─── Remplacement d'un segment texte via le dict ─────────────────────────
+  // UN SEUL PASSAGE regex : toutes les clés FR sont en alternance (longues d'abord).
+  // Garantit : (1) priorité aux strings longues, (2) zéro corruption en cascade
+  // (chaque position du texte n'est remplacée qu'une seule fois).
   function applyDict(text) {
-    let result = text;
-    for (const fr in _dict) {
-      if (result.includes(fr)) result = result.split(fr).join(_dict[fr]);
-    }
-    return result;
+    if (!_dictRegex || !text) return text;
+    return text.replace(_dictRegex, function(match) {
+      return _dict[match] !== undefined ? _dict[match] : match;
+    });
   }
 
   // ─── Remplacement dans une string HTML ────────────────────────────────────
@@ -353,8 +373,10 @@
     document.documentElement.setAttribute('lang', lang);
 
     if (lang === DEFAULT) {
-      _dict  = {};
-      _ready = true;
+      _dict      = {};
+      _dictKeys  = [];
+      _dictRegex = null;
+      _ready     = true;
       updateSelectorBtn();
       // Recharger pour restaurer les textes FR originaux
       location.reload();
