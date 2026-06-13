@@ -652,7 +652,7 @@ ${testimonialsActive && featuredTestimonials.length > 0 ? `
 <section id="testimonials" class="relative z-10 py-20 px-6">
   <div class="max-w-7xl mx-auto">
 
-    <div class="text-center mb-10 reveal">
+    <div class="text-center mb-10">
       <span class="section-label mb-4 block" data-i18n="Témoignages">Témoignages</span>
       <h2 class="text-3xl md:text-5xl font-black mb-6" data-i18n="${cfg.testimonials_title || 'Ils ont transformé leur vie'}">${cfg.testimonials_title || 'Ils ont transformé leur vie'}</h2>
 
@@ -675,7 +675,7 @@ ${testimonialsActive && featuredTestimonials.length > 0 ? `
               ${Array.from({length: 5}, (_, i) => `<span style="display:inline-block;width:20px;height:20px;background:${i < 4 ? '#00B67A' : '#FF8622'};border-radius:2px;display:flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></span>`).join('')}
             </div>
             <div style="display:flex;align-items:center;gap:6px">
-              <span style="font-size:0.8rem;font-weight:700;color:#191919">${cfg.stats_rating || '4.7'} / 5</span>
+              <span style="font-size:0.8rem;font-weight:700;color:#191919">${cfg.stats_rating || '4.9'} / 5</span>
               <span style="font-size:0.72rem;color:#555;border-left:1px solid #ddd;padding-left:6px">${cfg.stats_reviews || '38'} avis</span>
             </div>
           </div>
@@ -694,8 +694,8 @@ ${testimonialsActive && featuredTestimonials.length > 0 ? `
     <!-- Carrousel desktop : grille 3 colonnes / mobile : scroll horizontal -->
     <div id="testimonials-track" style="display:flex;gap:1.25rem;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:8px;cursor:grab">
       ${featuredTestimonials.map(t => `
-      <div class="testimonial-card glass-dark rounded-2xl p-7 flex flex-col gap-4 reveal"
-           style="border:1px solid rgba(121,30,21,0.2);min-width:clamp(280px,80vw,360px);flex-shrink:0;scroll-snap-align:start">
+      <div class="testimonial-card glass-dark rounded-2xl p-7 flex flex-col gap-4"
+           style="border:1px solid rgba(121,30,21,0.2);min-width:clamp(280px,80vw,360px);flex-shrink:0;scroll-snap-align:start;opacity:1;transform:none">
         <!-- Stars -->
         <div class="flex gap-0.5 text-base">${renderStars(t.rating)}</div>
 
