@@ -678,6 +678,7 @@ const observer = new IntersectionObserver((entries) => {
 document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 </script>
 
+<script src="/static/i18n.js?v=${Date.now()}"></script>
 </body>
 </html>`
 }
