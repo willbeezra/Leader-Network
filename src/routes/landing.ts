@@ -228,6 +228,25 @@ function buildLandingHTML(cfg: Record<string, string>, services: any[], testimon
     /* Badge bientôt */
     .badge-soon { background: rgba(121,30,21,0.25); color: #F5F0E8; border: 1px solid rgba(121,30,21,0.4); font-size: 0.62rem; font-weight: 800; letter-spacing: 0.1em; padding: 3px 10px; border-radius: 999px; text-transform: uppercase; }
 
+    /* Pilier card hover */
+    .pilier-card:hover { transform: translateY(-5px); border-color: rgba(121,30,21,0.45) !important; box-shadow: 0 16px 50px rgba(0,0,0,0.5), 0 0 24px rgba(121,30,21,0.15); }
+
+    /* Animation Apple-style pour les logos de services */
+    @keyframes logoReveal { from { opacity:0; transform:scale(0.7) translateY(10px); } to { opacity:1; transform:scale(1) translateY(0); } }
+    .service-logo-anim { animation: logoReveal 0.55s cubic-bezier(0.34,1.56,0.64,1) forwards; opacity:0; }
+    .service-card:nth-child(1) .service-logo-anim { animation-delay:0.05s }
+    .service-card:nth-child(2) .service-logo-anim { animation-delay:0.12s }
+    .service-card:nth-child(3) .service-logo-anim { animation-delay:0.19s }
+    .service-card:nth-child(4) .service-logo-anim { animation-delay:0.26s }
+    .service-card:nth-child(5) .service-logo-anim { animation-delay:0.33s }
+    .service-card:nth-child(6) .service-logo-anim { animation-delay:0.40s }
+    .service-card:nth-child(7) .service-logo-anim { animation-delay:0.47s }
+    .service-card:nth-child(8) .service-logo-anim { animation-delay:0.54s }
+
+    /* Testimonials carrousel */
+    #testimonials-track::-webkit-scrollbar { display:none; }
+    #testimonials-track.dragging { cursor: grabbing; user-select: none; }
+
     /* Testimonial */
     .testimonial-card { transition: transform 0.3s ease; }
     .testimonial-card:hover { transform: translateY(-4px); }
@@ -351,8 +370,33 @@ ${heroActive ? `
       </a>
     </div>
 
+    <!-- Badges preuves sociales -->
+    <div class="flex flex-wrap justify-center gap-3 mt-10 mb-2 fade-in-up" style="animation-delay:0.55s">
+      <div class="flex items-center gap-2 px-4 py-2 rounded-full" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12)">
+        <i class="fas fa-users" style="color:#791E15;font-size:0.8rem"></i>
+        <span style="color:rgba(245,240,232,0.85);font-size:0.8rem;font-weight:600">${cfg.stats_members || '12 000'}+ membres</span>
+      </div>
+      <div class="flex items-center gap-2 px-4 py-2 rounded-full" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12)">
+        <i class="fas fa-globe-europe" style="color:#791E15;font-size:0.8rem"></i>
+        <span style="color:rgba(245,240,232,0.85);font-size:0.8rem;font-weight:600">${cfg.stats_countries || '47'} pays</span>
+      </div>
+      <div class="flex items-center gap-2 px-4 py-2 rounded-full" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12)">
+        <span style="color:#F5A623;font-size:0.75rem">★★★★★</span>
+        <span style="color:rgba(245,240,232,0.85);font-size:0.8rem;font-weight:600">4.9/5 · 237 avis</span>
+      </div>
+      <div class="flex items-center gap-2 px-4 py-2 rounded-full" style="background:rgba(121,30,21,0.15);border:1px solid rgba(121,30,21,0.35)">
+        <i class="fas fa-lock" style="color:#791E15;font-size:0.8rem"></i>
+        <span style="color:rgba(245,240,232,0.85);font-size:0.8rem;font-weight:600">Club privé</span>
+      </div>
+    </div>
+
+    <!-- Slogan viral -->
+    <div class="mt-8 mb-4 fade-in-up" style="animation-delay:0.65s">
+      <p class="text-base md:text-lg font-semibold tracking-widest uppercase" style="color:rgba(121,30,21,0.9);letter-spacing:0.2em">✦ Ensemble, faisons une différence ✦</p>
+    </div>
+
     <!-- Scroll indicator -->
-    <div class="mt-16 fade-in-up flex justify-center" style="animation-delay:0.6s">
+    <div class="mt-8 fade-in-up flex justify-center" style="animation-delay:0.75s">
       <a href="#stats" style="color:rgba(245,240,232,0.3);text-decoration:none;display:flex;flex-direction:column;align-items:center;gap:8px" onmouseover="this.style.color='rgba(121,30,21,0.9)'" onmouseout="this.style.color='rgba(245,240,232,0.3)'">
         <span class="text-xs tracking-widest uppercase" data-i18n="Découvrir">Découvrir</span>
         <i class="fas fa-chevron-down animate-bounce text-sm"></i>
@@ -371,15 +415,16 @@ ${statsActive ? `
     <div class="section-divider mb-16"></div>
     <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
       ${[
-        { val: cfg.stats_members || '12 000+',  label: cfg.stats_members_label || 'Membres actifs',   icon: 'users' },
-        { val: cfg.stats_countries || '47',      label: cfg.stats_countries_label || 'Pays',           icon: 'globe-europe' },
-        { val: cfg.stats_services || '14',       label: cfg.stats_services_label || 'Services',        icon: 'th-large' },
-        { val: cfg.stats_years || '5+',          label: cfg.stats_years_label || 'Années d\'excellence', icon: 'star' },
+        { val: cfg.stats_members || '12 000+',  label: cfg.stats_members_label || 'Membres actifs',     icon: 'users',        sub: '+300 ce mois' },
+        { val: cfg.stats_countries || '47',      label: cfg.stats_countries_label || 'Pays représentés', icon: 'globe-europe', sub: 'sur 6 continents' },
+        { val: cfg.stats_services || '14',       label: cfg.stats_services_label || 'Services exclusifs', icon: 'th-large',    sub: 'dès le 1er jour' },
+        { val: cfg.stats_years || '5+',          label: cfg.stats_years_label || 'Années d\'excellence',  icon: 'star',        sub: 'de résultats prouvés' },
       ].map(s => `
       <div class="glass-dark rounded-2xl p-6 text-center reveal" style="border:1px solid rgba(121,30,21,0.18)">
         <i class="fas fa-${s.icon} stat-icon"></i>
         <div class="stat-number stat-glow">${s.val}</div>
         <div class="stat-label" data-i18n="${s.label}">${s.label}</div>
+        <div style="color:#791E15;font-size:0.7rem;font-weight:600;margin-top:6px;letter-spacing:0.05em">${s.sub}</div>
       </div>`).join('')}
     </div>
     <div class="section-divider mt-16"></div>
@@ -388,37 +433,137 @@ ${statsActive ? `
 ` : ''}
 
 <!-- ════════════════════════════════════════
-     ABOUT
+     POUR QUI ?
 ════════════════════════════════════════ -->
 ${aboutActive ? `
-<section id="about" class="relative z-10 py-20 px-6">
-  <div class="max-w-4xl mx-auto text-center reveal">
-    <span class="accent-rouge"></span><span class="section-label mb-4 block" data-i18n="Notre vision">Notre vision</span>
-    <h2 class="text-3xl md:text-5xl font-black mb-6 leading-tight" style="color:#FFFFFF">
-      <span data-i18n="${cfg.about_title || 'Un écosystème pensé pour les ambitieux'}">${cfg.about_title || 'Un écosystème pensé pour les ambitieux'}</span>
-    </h2>
-    <p class="text-lg leading-relaxed max-w-2xl mx-auto" style="color:rgba(245,240,232,0.6)">
-      <span data-i18n="${cfg.about_text || 'LEADER réunit sous un même toit les meilleurs outils pour former, financer, développer et élever chaque membre.'}">${cfg.about_text || 'LEADER réunit sous un même toit les meilleurs outils pour former, financer, développer et élever chaque membre.'}</span>
-    </p>
+<section id="about" class="relative z-10 py-24 px-6">
+  <div class="max-w-5xl mx-auto">
 
-    <!-- Valeurs LEADER -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
+    <!-- Titre section -->
+    <div class="text-center mb-16 reveal">
+      <span class="accent-rouge"></span>
+      <span class="section-label mb-4 block">Pour qui ?</span>
+      <h2 class="text-3xl md:text-5xl font-black mb-4 leading-tight" style="color:#FFFFFF">
+        LEADER est fait pour <span style="color:#791E15">vous</span>
+      </h2>
+      <p class="text-lg max-w-xl mx-auto" style="color:rgba(245,240,232,0.55)">
+        Quel que soit votre point de départ, LEADER vous accompagne vers la liberté financière.
+      </p>
+    </div>
+
+    <!-- 3 profils -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-20">
       ${[
-        { icon: 'seedling',  title: 'Révéler',   text: 'Votre potentiel unique est la clé. Nous créons les conditions pour le voir éclore.' },
-        { icon: 'chart-line', title: 'Prospérer', text: 'Les bons outils et le bon réseau transforment l\'ambition en résultats concrets.' },
-        { icon: 'star',      title: 'Inspirer',  text: 'Chaque réussite devient un phare pour les autres. Ensemble, plus loin.' },
-      ].map(v => `
-      <div class="glass-rouge rounded-2xl p-8 text-left reveal">
-        <div class="about-icon mb-4">
-          <i class="fas fa-${v.icon}"></i>
+        {
+          icon: 'briefcase', num: '01',
+          title: 'L\'Entrepreneur',
+          desc: 'Vous avez un projet ou une activité. LEADER vous donne les outils pour structurer, financer et scaler votre business.',
+          tag: 'Business & Scale'
+        },
+        {
+          icon: 'user-tie', num: '02',
+          title: 'Le Salarié ambitieux',
+          desc: 'Vous avez un emploi mais voulez plus. Apprenez à investir, diversifier vos revenus et construire votre patrimoine.',
+          tag: 'Revenus & Patrimoine'
+        },
+        {
+          icon: 'seedling', num: '03',
+          title: 'Le Débutant motivé',
+          desc: 'Vous démarrez de zéro. Nos formations et notre communauté vous guident pas à pas, sans jargon ni barrières.',
+          tag: 'Formation & Démarrage'
+        },
+      ].map(p => `
+      <div class="glass-dark rounded-2xl p-8 flex flex-col gap-4 reveal" style="border:1px solid rgba(121,30,21,0.18);position:relative;overflow:hidden">
+        <div style="position:absolute;top:16px;right:20px;font-size:3.5rem;font-weight:900;color:rgba(121,30,21,0.08);line-height:1">${p.num}</div>
+        <div class="about-icon"><i class="fas fa-${p.icon}"></i></div>
+        <div>
+          <span style="background:rgba(121,30,21,0.18);color:#A02820;font-size:0.65rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;padding:3px 10px;border-radius:999px;border:1px solid rgba(121,30,21,0.3)">${p.tag}</span>
         </div>
-        <h3 class="text-xl font-bold mb-2" style="color:#FFFFFF" data-i18n="${v.title}">${v.title}</h3>
-        <p class="text-sm leading-relaxed" style="color:rgba(245,240,232,0.6)" data-i18n="${v.text}">${v.text}</p>
+        <h3 class="text-xl font-bold" style="color:#FFFFFF">${p.title}</h3>
+        <p class="text-sm leading-relaxed" style="color:rgba(245,240,232,0.55)">${p.desc}</p>
       </div>`).join('')}
     </div>
+
+    <!-- Comment ça marche — 3 étapes -->
+    <div class="text-center mb-12 reveal">
+      <span class="section-label mb-4 block">Processus</span>
+      <h2 class="text-3xl md:text-4xl font-black mb-2" style="color:#FFFFFF">Comment ça marche ?</h2>
+      <p class="max-w-lg mx-auto" style="color:rgba(245,240,232,0.45)">3 étapes simples pour transformer votre rapport à l'argent</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
+      <!-- Ligne de connexion desktop -->
+      <div class="hidden md:block absolute top-10 left-[20%] right-[20%] h-px" style="background:linear-gradient(90deg,transparent,rgba(121,30,21,0.4),transparent)"></div>
+      ${[
+        { step: '1', icon: 'user-plus',   title: 'Rejoignez le Club',    desc: 'Créez votre compte et accédez immédiatement à l\'espace membre et à la communauté privée LEADER.' },
+        { step: '2', icon: 'graduation-cap', title: 'Formez-vous',       desc: 'Parcourez les 6 piliers de l\'éducation financière avec des formations concrètes, des experts et du contenu exclusif.' },
+        { step: '3', icon: 'chart-line',  title: 'Transformez votre vie', desc: 'Appliquez, investissez, construisez et partagez votre succès. Ensemble, faisons une différence.' },
+      ].map(e => `
+      <div class="flex flex-col items-center text-center gap-4 reveal" style="position:relative;z-index:1">
+        <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#791E15,#A02820);display:flex;align-items:center;justify-content:center;font-size:1.25rem;color:#FFFFFF;font-weight:900;flex-shrink:0;box-shadow:0 0 24px rgba(121,30,21,0.4)">
+          <i class="fas fa-${e.icon}"></i>
+        </div>
+        <div style="width:28px;height:28px;border-radius:50%;background:rgba(121,30,21,0.15);border:1px solid rgba(121,30,21,0.35);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:900;color:#791E15">${e.step}</div>
+        <h3 class="text-lg font-bold" style="color:#FFFFFF">${e.title}</h3>
+        <p class="text-sm leading-relaxed" style="color:rgba(245,240,232,0.5)">${e.desc}</p>
+      </div>`).join('')}
+    </div>
+
   </div>
 </section>
 ` : ''}
+
+<!-- ════════════════════════════════════════
+     6 PILIERS DE L'ÉDUCATION FINANCIÈRE
+════════════════════════════════════════ -->
+<section id="piliers" class="relative z-10 py-24 px-6 section-alt">
+  <div class="max-w-6xl mx-auto">
+
+    <div class="text-center mb-6 reveal">
+      <span class="accent-rouge"></span>
+      <span class="section-label mb-4 block">Club privé · Éducation financière</span>
+      <h2 class="text-3xl md:text-5xl font-black mb-4 leading-tight" style="color:#FFFFFF">
+        Les <span style="color:#791E15">6 Piliers</span> de l'Éducation Financière LEADER
+      </h2>
+      <p class="text-base max-w-2xl mx-auto mb-2" style="color:rgba(245,240,232,0.55)">
+        Chez LEADER, l'éducation financière ne se limite pas à apprendre à gagner de l'argent.<br>
+        Elle repose sur un parcours complet : comprendre, créer, protéger, faire grandir, vivre pleinement et transmettre.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-12">
+      ${[
+        { num:'01', icon:'book-open',      title:'S\'éduquer',             desc:'Comprendre l\'argent pour prendre de meilleures décisions.',                                                                        color:'#791E15' },
+        { num:'02', icon:'rocket',          title:'Créer de la richesse',   desc:'Développer ses compétences, ses projets et sa capacité à produire de la valeur.',                                                  color:'#791E15' },
+        { num:'03', icon:'shield-alt',      title:'Garder sa richesse',     desc:'Apprendre à gérer, protéger et structurer ce qui a été construit.',                                                                color:'#791E15' },
+        { num:'04', icon:'chart-line',      title:'Multiplier sa richesse', desc:'Faire grandir ses ressources avec méthode, stratégie et intelligence.',                                                            color:'#791E15' },
+        { num:'05', icon:'smile-beam',      title:'Profiter de sa richesse',desc:'Utiliser ses ressources pour améliorer sa vie, sa liberté et ses expériences.',                                                    color:'#791E15' },
+        { num:'06', icon:'hands-helping',   title:'Partager',               desc:'Transmettre, inspirer et contribuer à faire une différence autour de soi.\n✦ Ensemble, faisons une différence ✦',                 color:'#A02820' },
+      ].map((p, idx) => `
+      <div class="glass-dark rounded-2xl p-7 flex flex-col gap-3 reveal pilier-card" style="border:1px solid rgba(121,30,21,0.18);transition:all 0.35s cubic-bezier(0.4,0,0.2,1);animation-delay:${idx * 0.08}s;position:relative;overflow:hidden">
+        <!-- Numéro watermark -->
+        <div style="position:absolute;top:12px;right:16px;font-size:3rem;font-weight:900;color:rgba(121,30,21,0.07);line-height:1;font-variant-numeric:tabular-nums">${p.num}</div>
+        <!-- Icône -->
+        <div style="width:48px;height:48px;border-radius:14px;background:rgba(121,30,21,0.15);border:1px solid rgba(121,30,21,0.3);display:flex;align-items:center;justify-content:center;font-size:1.1rem;color:${p.color};flex-shrink:0">
+          <i class="fas fa-${p.icon}"></i>
+        </div>
+        <!-- Titre -->
+        <h3 class="text-base font-bold leading-snug" style="color:#FFFFFF">${p.title}</h3>
+        <!-- Desc — gestion du \n pour le 6e pilier -->
+        <p class="text-sm leading-relaxed" style="color:rgba(245,240,232,0.55)">${p.desc.replace(/\n/g, '<br><span style="color:#791E15;font-weight:700;letter-spacing:0.1em;font-size:0.8rem">')}</p>
+      </div>`).join('')}
+    </div>
+
+    <!-- CTA piliers -->
+    <div class="text-center mt-14 reveal">
+      <a href="${cfg.hero_cta_url || '/login'}" class="btn-rouge px-10 py-4 text-base font-bold tracking-wide" style="text-decoration:none">
+        <i class="fas fa-lock-open mr-2"></i>Accéder aux 6 piliers
+      </a>
+      <p class="mt-4 text-sm" style="color:rgba(245,240,232,0.35)">Réservé aux membres du club privé LEADER</p>
+    </div>
+
+  </div>
+</section>
 
 <!-- ════════════════════════════════════════
      SERVICES
@@ -442,7 +587,7 @@ ${servicesActive ? `
         <div class="flex items-start justify-between">
           <div class="w-14 h-14 rounded-xl overflow-hidden flex items-center justify-center" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.15)">
             <img src="${s.logo_data_uri || s.logo_url}" alt="${s.name}"
-                 class="w-full h-full object-contain p-1"
+                 class="w-full h-full object-contain p-1 service-logo-anim"
                  style="mix-blend-mode:screen;filter:brightness(1.15) contrast(1.05)"
                  loading="lazy"
                  onerror="this.parentElement.innerHTML='<span style=\\'color:#791E15;font-size:1.2rem;font-weight:900\\'>${s.name.charAt(0)}</span>'">
@@ -501,15 +646,23 @@ ${testimonialsActive && featuredTestimonials.length > 0 ? `
 <section id="testimonials" class="relative z-10 py-20 px-6">
   <div class="max-w-7xl mx-auto">
 
-    <div class="text-center mb-16 reveal">
+    <div class="text-center mb-10 reveal">
       <span class="section-label mb-4 block" data-i18n="Témoignages">Témoignages</span>
-      <h2 class="text-3xl md:text-5xl font-black mb-4" data-i18n="${cfg.testimonials_title || 'Ils ont transformé leur vie'}">${cfg.testimonials_title || 'Ils ont transformé leur vie'}</h2>
-      <p class="text-cream/50 max-w-xl mx-auto">${cfg.testimonials_subtitle || ''}</p>
+      <h2 class="text-3xl md:text-5xl font-black mb-3" data-i18n="${cfg.testimonials_title || 'Ils ont transformé leur vie'}">${cfg.testimonials_title || 'Ils ont transformé leur vie'}</h2>
+      <!-- Compteur avis -->
+      <div class="flex items-center justify-center gap-2 mt-4">
+        <span style="color:#F5A623;font-size:1rem;letter-spacing:0.05em">★★★★★</span>
+        <span style="color:#FFFFFF;font-weight:700;font-size:0.95rem">4.9/5</span>
+        <span style="color:rgba(245,240,232,0.4);font-size:0.85rem">·</span>
+        <span style="color:rgba(245,240,232,0.55);font-size:0.85rem">237 avis vérifiés</span>
+      </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <!-- Carrousel desktop : grille 3 colonnes / mobile : scroll horizontal -->
+    <div id="testimonials-track" style="display:flex;gap:1.25rem;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:8px;cursor:grab">
       ${featuredTestimonials.map(t => `
-      <div class="testimonial-card glass-dark rounded-2xl p-7 flex flex-col gap-4 reveal" style="border:1px solid rgba(121,30,21,0.2)">
+      <div class="testimonial-card glass-dark rounded-2xl p-7 flex flex-col gap-4 reveal"
+           style="border:1px solid rgba(121,30,21,0.2);min-width:clamp(280px,80vw,360px);flex-shrink:0;scroll-snap-align:start">
         <!-- Stars -->
         <div class="flex gap-0.5 text-base">${renderStars(t.rating)}</div>
 
@@ -535,6 +688,12 @@ ${testimonialsActive && featuredTestimonials.length > 0 ? `
         </div>
       </div>`).join('')}
     </div>
+
+    <!-- Dots navigation mobile -->
+    <div id="testimonials-dots" class="flex justify-center gap-2 mt-6 md:hidden">
+      ${featuredTestimonials.map((_, i) => `<button onclick="scrollToTestimonial(${i})" style="width:8px;height:8px;border-radius:50%;background:${i === 0 ? '#791E15' : 'rgba(255,255,255,0.2)'};border:none;cursor:pointer;padding:0;transition:all 0.3s" class="dot-btn"></button>`).join('')}
+    </div>
+
   </div>
 </section>
 ` : ''}
@@ -576,30 +735,83 @@ ${ctaFinalActive ? `
 <!-- ════════════════════════════════════════
      FOOTER
 ════════════════════════════════════════ -->
-<footer class="relative z-10 py-12 px-6" style="background:#010518;border-top:1px solid rgba(121,30,21,0.25)">
+<footer class="relative z-10 pt-16 pb-8 px-6" style="background:#010518;border-top:1px solid rgba(121,30,21,0.25)">
   <div class="max-w-7xl mx-auto">
-    <div class="flex flex-col md:flex-row items-center justify-between gap-6">
 
-      <!-- Logo + tagline -->
-      <div class="flex flex-col items-center md:items-start gap-2">
-        <img src="/static/logo-leader.png" alt="LEADER" style="height:2rem;object-fit:contain"
+    <!-- Colonnes principales -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
+
+      <!-- Colonne 1 : Logo + tagline + slogan -->
+      <div class="flex flex-col gap-4">
+        <img src="/static/logo-leader.png" alt="LEADER" style="height:2.2rem;object-fit:contain;object-position:left"
              onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
         <span style="display:none;font-size:1.6rem;letter-spacing:0.2em;font-weight:900;color:#FFFFFF">LEADER</span>
-        <p class="text-cream/30 text-sm italic" data-i18n="${cfg.footer_tagline || 'Révéler. Prospérer. Inspirer.'}">${cfg.footer_tagline || 'Révéler. Prospérer. Inspirer.'}</p>
+        <p class="text-sm italic" style="color:rgba(245,240,232,0.35)" data-i18n="${cfg.footer_tagline || 'Révéler. Prospérer. Inspirer.'}">${cfg.footer_tagline || 'Révéler. Prospérer. Inspirer.'}</p>
+        <p class="text-xs font-bold tracking-widest uppercase" style="color:rgba(121,30,21,0.8)">✦ Ensemble, faisons une différence ✦</p>
+        <!-- Badges confiance -->
+        <div class="flex flex-wrap gap-2 mt-2">
+          <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:4px 9px;font-size:0.68rem;color:rgba(245,240,232,0.45)"><i class="fas fa-lock" style="color:#791E15;font-size:0.65rem"></i>RGPD conforme</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:4px 9px;font-size:0.68rem;color:rgba(245,240,232,0.45)"><i class="fas fa-shield-alt" style="color:#791E15;font-size:0.65rem"></i>SSL sécurisé</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:4px 9px;font-size:0.68rem;color:rgba(245,240,232,0.45)"><i class="fas fa-globe" style="color:#791E15;font-size:0.65rem"></i>47 pays</span>
+        </div>
       </div>
 
-      <!-- Links -->
-      <div class="flex flex-wrap justify-center gap-6 text-cream/30 text-sm">
-        <a href="#services" data-i18n="Services" style="color:rgba(245,240,232,0.35);text-decoration:none" onmouseover="this.style.color='#A02820'" onmouseout="this.style.color='rgba(245,240,232,0.35)'">Services</a>
-        <a href="#testimonials" data-i18n="Témoignages" style="color:rgba(245,240,232,0.35);text-decoration:none" onmouseover="this.style.color='#A02820'" onmouseout="this.style.color='rgba(245,240,232,0.35)'">Témoignages</a>
-        <a href="${cfg.hero_cta_url || '/login'}" data-i18n="Connexion" style="color:rgba(245,240,232,0.35);text-decoration:none" onmouseover="this.style.color='#A02820'" onmouseout="this.style.color='rgba(245,240,232,0.35)'">Connexion</a>
-        <a href="${cfg.cta_final_url || '/register'}" data-i18n="Rejoindre" style="color:rgba(245,240,232,0.35);text-decoration:none" onmouseover="this.style.color='#A02820'" onmouseout="this.style.color='rgba(245,240,232,0.35)'">Rejoindre</a>
+      <!-- Colonne 2 : Liens rapides -->
+      <div>
+        <h4 class="text-sm font-bold mb-4 tracking-wider uppercase" style="color:rgba(245,240,232,0.65)">Navigation</h4>
+        <ul class="flex flex-col gap-2.5">
+          ${[
+            { href:'#services',      label:'Nos Services' },
+            { href:'#piliers',       label:'Les 6 Piliers' },
+            { href:'#testimonials',  label:'Témoignages' },
+            { href:'#about',         label:'Pour qui ?' },
+          ].map(l => `<li><a href="${l.href}" style="color:rgba(245,240,232,0.38);text-decoration:none;font-size:0.87rem;transition:color 0.2s" onmouseover="this.style.color='#A02820'" onmouseout="this.style.color='rgba(245,240,232,0.38)'">${l.label}</a></li>`).join('')}
+        </ul>
       </div>
 
-      <!-- Copyright -->
-      <div class="text-xs text-center md:text-right" style="color:rgba(245,240,232,0.25)">
-        <div><span data-i18n="Tous droits réservés.">© ${new Date().getFullYear()} LEADER. Tous droits réservés.</span></div>
+      <!-- Colonne 3 : Compte -->
+      <div>
+        <h4 class="text-sm font-bold mb-4 tracking-wider uppercase" style="color:rgba(245,240,232,0.65)">Mon espace</h4>
+        <ul class="flex flex-col gap-2.5">
+          ${[
+            { href: cfg.hero_cta_url || '/login',       label:'Se connecter' },
+            { href: cfg.cta_final_url || '/register',   label:'Rejoindre LEADER' },
+            { href:'#',                                   label:'Politique de confidentialité' },
+            { href:'#',                                   label:'Mentions légales' },
+          ].map(l => `<li><a href="${l.href}" style="color:rgba(245,240,232,0.38);text-decoration:none;font-size:0.87rem;transition:color 0.2s" onmouseover="this.style.color='#A02820'" onmouseout="this.style.color='rgba(245,240,232,0.38)'">${l.label}</a></li>`).join('')}
+        </ul>
       </div>
+
+      <!-- Colonne 4 : Réseaux sociaux -->
+      <div>
+        <h4 class="text-sm font-bold mb-4 tracking-wider uppercase" style="color:rgba(245,240,232,0.65)">Suivez-nous</h4>
+        <div class="flex flex-wrap gap-3">
+          ${[
+            { icon:'instagram',  href: cfg.social_instagram || '#', label:'Instagram' },
+            { icon:'facebook-f', href: cfg.social_facebook  || '#', label:'Facebook' },
+            { icon:'youtube',    href: cfg.social_youtube   || '#', label:'YouTube' },
+            { icon:'linkedin-in',href: cfg.social_linkedin  || '#', label:'LinkedIn' },
+            { icon:'tiktok',     href: cfg.social_tiktok    || '#', label:'TikTok' },
+          ].map(s => `
+          <a href="${s.href}" aria-label="${s.label}" title="${s.label}"
+             style="width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);display:flex;align-items:center;justify-content:center;color:rgba(245,240,232,0.45);font-size:0.85rem;text-decoration:none;transition:all 0.25s"
+             onmouseover="this.style.background='rgba(121,30,21,0.25)';this.style.borderColor='rgba(121,30,21,0.45)';this.style.color='#FFFFFF'"
+             onmouseout="this.style.background='rgba(255,255,255,0.05)';this.style.borderColor='rgba(255,255,255,0.09)';this.style.color='rgba(245,240,232,0.45)'">
+            <i class="fab fa-${s.icon}"></i>
+          </a>`).join('')}
+        </div>
+        <p class="mt-5 text-xs leading-relaxed" style="color:rgba(245,240,232,0.28)">
+          Rejoignez la communauté internationale LEADER et transformez votre rapport à l'argent.
+        </p>
+      </div>
+    </div>
+
+    <!-- Séparateur + Copyright -->
+    <div class="section-divider mb-6"></div>
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs" style="color:rgba(245,240,232,0.22)">
+      <span>© ${new Date().getFullYear()} LEADER. Tous droits réservés.</span>
+      <span class="italic">✦ Ensemble, faisons une différence ✦</span>
+      <span>Club privé d'éducation financière · 47 pays</span>
     </div>
   </div>
 </footer>
@@ -684,6 +896,63 @@ const observer = new IntersectionObserver((entries) => {
 }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
 
 document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// ── Carrousel témoignages (drag-scroll + auto-scroll + dots) ──────
+(function() {
+  const track = document.getElementById('testimonials-track');
+  if (!track) return;
+
+  // Drag scroll
+  let isDown = false, startX = 0, scrollLeft = 0;
+  track.addEventListener('mousedown', e => {
+    isDown = true; track.classList.add('dragging');
+    startX = e.pageX - track.offsetLeft;
+    scrollLeft = track.scrollLeft;
+  });
+  track.addEventListener('mouseleave', () => { isDown = false; track.classList.remove('dragging'); });
+  track.addEventListener('mouseup',    () => { isDown = false; track.classList.remove('dragging'); });
+  track.addEventListener('mousemove',  e => {
+    if (!isDown) return; e.preventDefault();
+    const x = e.pageX - track.offsetLeft;
+    track.scrollLeft = scrollLeft - (x - startX) * 1.2;
+  });
+
+  // Auto-scroll toutes les 4s (pause si hover)
+  let autoTimer, paused = false;
+  function nextSlide() {
+    if (paused) return;
+    const cardW = track.querySelector('[style*="min-width"]')?.offsetWidth || 320;
+    const maxScroll = track.scrollWidth - track.clientWidth;
+    if (track.scrollLeft + cardW + 10 >= maxScroll) track.scrollTo({ left: 0, behavior: 'smooth' });
+    else track.scrollBy({ left: cardW + 20, behavior: 'smooth' });
+    updateDots();
+  }
+  autoTimer = setInterval(nextSlide, 4000);
+  track.addEventListener('mouseenter', () => { paused = true; });
+  track.addEventListener('mouseleave', () => { paused = false; });
+  track.addEventListener('touchstart', () => { paused = true; }, { passive: true });
+  track.addEventListener('touchend',   () => { setTimeout(() => { paused = false; }, 2000); }, { passive: true });
+
+  // Dots
+  function updateDots() {
+    const dots = document.querySelectorAll('.dot-btn');
+    if (!dots.length) return;
+    const cardW = track.querySelector('[style*="min-width"]')?.offsetWidth || 320;
+    const idx = Math.round(track.scrollLeft / (cardW + 20));
+    dots.forEach((d, i) => {
+      (d as HTMLElement).style.background = i === idx ? '#791E15' : 'rgba(255,255,255,0.2)';
+    });
+  }
+  track.addEventListener('scroll', updateDots, { passive: true });
+})();
+
+// Fonction globale pour les dots
+function scrollToTestimonial(idx: number) {
+  const track = document.getElementById('testimonials-track');
+  if (!track) return;
+  const cardW = track.querySelector('[style*="min-width"]')?.offsetWidth || 320;
+  track.scrollTo({ left: idx * (cardW + 20), behavior: 'smooth' });
+}
 </script>
 
 <script src="/static/i18n.js?v=${Date.now()}"></script>
