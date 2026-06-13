@@ -61,7 +61,7 @@ async function loadBrandingConfig(){
   }catch(e){
     console.warn('loadBrandingConfig error:', e);
   }
-}async function loadAdminBadges(){try{const e=(await apiAdmin("GET","/dashboard")).stats;setBadge("admin-ht-badge",e.holdingTankCount),setBadge("admin-act-badge",e.pendingOrders),setBadge("admin-wd-badge",e.pendingWithdrawals),setBadge("admin-kyc-badge",e.pendingKYC),setBadge("admin-support-badge",e.openTickets||0),setBadge("admin-cc-badge",e.pendingCCWithdrawals||0),document.getElementById("admin-header-info").textContent=`${e.totalMembers} membres · ${e.activeAMI} AMI actifs · BV Queue: ${e.pendingBVQueue||0}`}catch{}}function setBadge(e,t){const n=document.getElementById(e);n&&(t>0?(n.textContent=t,n.classList.remove("hidden")):n.classList.add("hidden"))}function showAdminPage(e){document.querySelectorAll(".admin-nav-btn").forEach(t=>t.classList.toggle("active",t.dataset.page===e)),document.getElementById("admin-page-title").textContent={dashboard:"Dashboard",members:"Membres","binary-tree":"Arbre Binaire","holding-tank":"Holding Tank",activations:"Activations",withdrawals:"Retraits",kyc:"Vérification KYC",commissions:"Commissions & Compensation",wallets:"Wallets",bv:"Volumes BV",licenses:"Licences","admin-fee":"Frais d'administration",config:"Configuration MLM",packages:"Gestion des Packages","payment-gateway":"Passerelle de Paiement",topups:"Recharges Wallet",reports:"Rapports",marketing:"Assets Marketing",admins:"Administrateurs","audit-log":"Journal d'Audit","cc-withdrawals":"Crédit de Croissance — Remboursements",support:"Support Client",team:"Équipe & Rôles","ai-agent":"Leader IA",administration:"Administration","earnings-docs":"Earnings & Documents","member-cards":"Cartes de Membre",emails:"Emails",broker:"Broker Triomarkets",landing:"Landing Page"}[e]||e;const t=document.getElementById("admin-page-content");t.className="p-4 md:p-6 fade-in";const n={dashboard:adminDashboard,members:adminMembers,"binary-tree":adminBinaryTree,"holding-tank":adminHoldingTank,activations:adminActivations,withdrawals:adminWithdrawals,kyc:adminKycPage,commissions:adminCommissions,wallets:adminWallets,bv:adminBV,licenses:adminLicenses,"admin-fee":adminAdminFee,config:adminConfig,packages:adminPackages,"payment-gateway":adminPaymentGateway,topups:adminTopups,reports:adminReports,marketing:adminMarketing,admins:adminAdmins,"audit-log":adminAuditLog,"cc-withdrawals":adminCCWithdrawals,support:adminSupportPage,team:adminTeamPage,"ai-agent":adminAiAgentPage,administration:adminAdministration,"earnings-docs":adminEarningsDocs,"member-cards":adminMemberCards,emails:adminEmailsPage,broker:adminBrokerPage,landing:adminLandingPage};return n[e]?Promise.resolve(n[e](t)).then(r=>{setTimeout(_applyMobileFixes,300);return r;}):(t.innerHTML='<p class="text-gray-400">Page en construction</p>',setTimeout(_applyMobileFixes,300),Promise.resolve())}
+}async function loadAdminBadges(){try{const e=(await apiAdmin("GET","/dashboard")).stats;setBadge("admin-ht-badge",e.holdingTankCount),setBadge("admin-act-badge",e.pendingOrders),setBadge("admin-wd-badge",e.pendingWithdrawals),setBadge("admin-kyc-badge",e.pendingKYC),setBadge("admin-support-badge",e.openTickets||0),setBadge("admin-cc-badge",e.pendingCCWithdrawals||0),document.getElementById("admin-header-info").textContent=`${e.totalMembers} membres · ${e.activeAMI} AMI actifs · BV Queue: ${e.pendingBVQueue||0}`}catch{}}function setBadge(e,t){const n=document.getElementById(e);n&&(t>0?(n.textContent=t,n.classList.remove("hidden")):n.classList.add("hidden"))}function showAdminPage(e){document.querySelectorAll(".admin-nav-btn").forEach(t=>t.classList.toggle("active",t.dataset.page===e)),document.getElementById("admin-page-title").textContent={dashboard:"Dashboard",members:"Membres","binary-tree":"Arbre Binaire","holding-tank":"Holding Tank",activations:"Activations",withdrawals:"Retraits",kyc:"Vérification KYC",commissions:"Commissions & Compensation",wallets:"Wallets",bv:"Volumes BV",licenses:"Licences","admin-fee":"Frais d'administration",config:"Configuration MLM",packages:"Gestion des Packages","payment-gateway":"Passerelle de Paiement",topups:"Recharges Wallet",reports:"Rapports",marketing:"Assets Marketing",admins:"Administrateurs","audit-log":"Journal d'Audit","cc-withdrawals":"Crédit de Croissance — Remboursements",support:"Support Client",team:"Équipe & Rôles","ai-agent":"Leader IA",administration:"Administration","earnings-docs":"Earnings & Documents","member-cards":"Cartes de Membre",emails:"Emails",broker:"Broker Triomarkets",landing:"Landing Page","i18n-languages":"Langues & Traductions"}[e]||e;const t=document.getElementById("admin-page-content");t.className="p-4 md:p-6 fade-in";const n={dashboard:adminDashboard,members:adminMembers,"binary-tree":adminBinaryTree,"holding-tank":adminHoldingTank,activations:adminActivations,withdrawals:adminWithdrawals,kyc:adminKycPage,commissions:adminCommissions,wallets:adminWallets,bv:adminBV,licenses:adminLicenses,"admin-fee":adminAdminFee,config:adminConfig,packages:adminPackages,"payment-gateway":adminPaymentGateway,topups:adminTopups,reports:adminReports,marketing:adminMarketing,admins:adminAdmins,"audit-log":adminAuditLog,"cc-withdrawals":adminCCWithdrawals,support:adminSupportPage,team:adminTeamPage,"ai-agent":adminAiAgentPage,administration:adminAdministration,"earnings-docs":adminEarningsDocs,"member-cards":adminMemberCards,emails:adminEmailsPage,broker:adminBrokerPage,landing:adminLandingPage,"i18n-languages":adminI18nLanguages};return n[e]?Promise.resolve(n[e](t)).then(r=>{setTimeout(_applyMobileFixes,300);return r;}):(t.innerHTML='<p class="text-gray-400">Page en construction</p>',setTimeout(_applyMobileFixes,300),Promise.resolve())}
 // ── Auto-refresh système ─────────────────────────────────────────────────
 function _currentPage(){var a=document.querySelector('.admin-nav-btn.active');return a?a.dataset.page:'dashboard';}
 async function _refreshCurrentPage(){try{await showAdminPage(_currentPage());}catch(e){}try{loadAdminBadges();}catch(e){}}
@@ -10999,5 +10999,328 @@ async function brokerSaveConfig() {
   } catch(e) {
     restore();
     showToast(e.error || 'Erreur lors de la sauvegarde', 'error');
+  }
+}
+
+// ============================================================
+// adminI18nLanguages — Gestion des langues & traductions
+// ============================================================
+async function adminI18nLanguages(el) {
+  el.innerHTML = '<div class="flex justify-center py-16"><div class="loader"></div></div>';
+  try {
+    const [langsRes, statsRes] = await Promise.allSettled([
+      apiAdmin('GET', '/i18n/languages'),
+      apiAdmin('GET', '/i18n/cache-stats'),
+    ]);
+    const languages = langsRes.status === 'fulfilled' ? (langsRes.value.languages || []) : [];
+    const stats = statsRes.status === 'fulfilled' ? statsRes.value : { total: 0, by_lang: {} };
+
+    el.innerHTML = `
+<div class="space-y-6">
+  <!-- En-tête -->
+  <div class="flex items-center justify-between flex-wrap gap-3">
+    <div>
+      <h2 class="text-xl font-bold text-white flex items-center gap-2">
+        <i class="fas fa-language text-sky-400"></i> Langues & Traductions
+      </h2>
+      <p class="text-sm text-gray-400 mt-1">
+        Gérez les langues disponibles pour les membres. Les traductions sont générées automatiquement par DeepSeek AI et mises en cache.
+      </p>
+    </div>
+    <button onclick="adminI18nAddModal()" class="bg-sky-600 hover:bg-sky-500 text-white font-bold px-4 py-2.5 rounded-xl transition text-sm flex items-center gap-2">
+      <i class="fas fa-plus"></i> Ajouter une langue
+    </button>
+  </div>
+
+  <!-- Stats cache KV -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="stat-card">
+      <div class="text-xs text-gray-400 mb-1">Langues actives</div>
+      <div class="text-2xl font-bold text-sky-400">${languages.filter(l => l.is_active).length}</div>
+    </div>
+    <div class="stat-card">
+      <div class="text-xs text-gray-400 mb-1">Total langues</div>
+      <div class="text-2xl font-bold text-white">${languages.length}</div>
+    </div>
+    <div class="stat-card">
+      <div class="text-xs text-gray-400 mb-1">Traductions en cache</div>
+      <div class="text-2xl font-bold text-green-400">${(stats.total || 0).toLocaleString()}</div>
+    </div>
+    <div class="stat-card">
+      <div class="text-xs text-gray-400 mb-1">Langues cachées</div>
+      <div class="text-2xl font-bold text-purple-400">${Object.keys(stats.by_lang || {}).length}</div>
+    </div>
+  </div>
+
+  <!-- Tableau langues -->
+  <div class="bg-dark-800 rounded-2xl border border-dark-600 overflow-hidden">
+    <div class="px-6 py-4 border-b border-dark-600 flex items-center justify-between">
+      <h3 class="font-semibold flex items-center gap-2">
+        <i class="fas fa-list text-sky-400"></i> Toutes les langues
+      </h3>
+      <span class="text-xs text-gray-400">${languages.length} langues configurées</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Ordre</th>
+            <th>Code</th>
+            <th>Langue</th>
+            <th>Drapeau</th>
+            <th>Statut</th>
+            <th>Cache KV</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="i18n-lang-tbody">
+          ${languages.map(lang => `
+          <tr id="i18n-row-${lang.id}">
+            <td class="text-gray-400 text-xs w-16">
+              <input type="number" value="${lang.sort_order}" min="1" max="999"
+                class="form-input text-xs w-16 py-1 px-2"
+                onchange="adminI18nUpdateOrder(${lang.id}, this.value)">
+            </td>
+            <td>
+              <code class="text-sky-300 bg-sky-900/20 px-2 py-0.5 rounded text-xs font-mono">${lang.code}</code>
+            </td>
+            <td>
+              <div class="font-medium text-sm">${lang.name}</div>
+            </td>
+            <td class="text-2xl">${lang.flag}</td>
+            <td>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <div class="relative">
+                  <input type="checkbox" class="sr-only" ${lang.is_active ? 'checked' : ''}
+                    onchange="adminI18nToggle(${lang.id}, this)">
+                  <div class="w-10 h-5 rounded-full transition ${lang.is_active ? 'bg-sky-600' : 'bg-dark-600'} border ${lang.is_active ? 'border-sky-500' : 'border-dark-500'}"></div>
+                  <div class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${lang.is_active ? 'translate-x-5' : ''}"></div>
+                </div>
+                <span class="text-xs ${lang.is_active ? 'text-green-400' : 'text-gray-500'}">${lang.is_active ? 'Actif' : 'Inactif'}</span>
+              </label>
+            </td>
+            <td>
+              <span class="text-xs text-purple-300 bg-purple-900/20 px-2 py-0.5 rounded font-mono">
+                ${(stats.by_lang || {})[lang.code] || 0} entrées
+              </span>
+            </td>
+            <td>
+              <div class="flex gap-1">
+                <button onclick="adminI18nEditModal(${lang.id},'${lang.code}','${lang.name.replace(/'/g,"\\'")}','${lang.flag}',${lang.sort_order})"
+                  class="text-blue-400 hover:text-blue-300 text-xs px-2 py-1 rounded bg-blue-900/20 hover:bg-blue-900/30 transition" title="Modifier">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button onclick="adminI18nClearCache('${lang.code}')"
+                  class="text-yellow-400 hover:text-yellow-300 text-xs px-2 py-1 rounded bg-yellow-900/20 hover:bg-yellow-900/30 transition" title="Vider le cache KV">
+                  <i class="fas fa-broom"></i>
+                </button>
+                ${lang.code !== 'fr' ? `
+                <button onclick="adminI18nDelete(${lang.id},'${lang.name.replace(/'/g,"\\'")}')"
+                  class="text-red-400 hover:text-red-300 text-xs px-2 py-1 rounded bg-red-900/20 hover:bg-red-900/30 transition" title="Supprimer">
+                  <i class="fas fa-trash"></i>
+                </button>` : '<span class="text-xs text-gray-600 px-2">Source</span>'}
+              </div>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Info DeepSeek -->
+  <div class="bg-dark-800 rounded-2xl border border-dark-600 p-5">
+    <h3 class="font-semibold mb-3 flex items-center gap-2">
+      <i class="fas fa-robot text-purple-400"></i> Moteur de traduction — DeepSeek AI
+    </h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-400">
+      <div>
+        <p class="mb-2"><i class="fas fa-check-circle text-green-400 mr-2"></i>Traduction automatique vers <strong class="text-white">toutes les langues</strong> ci-dessus</p>
+        <p class="mb-2"><i class="fas fa-check-circle text-green-400 mr-2"></i>Cache KV Cloudflare — zéro appel API pour les textes déjà traduits</p>
+        <p class="mb-2"><i class="fas fa-check-circle text-green-400 mr-2"></i>Termes protégés : BV, LEADER, Finstrategia, noms de rangs</p>
+      </div>
+      <div>
+        <p class="mb-2"><i class="fas fa-info-circle text-sky-400 mr-2"></i>Les nouvelles langues sont traduites automatiquement lors du premier accès</p>
+        <p class="mb-2"><i class="fas fa-info-circle text-sky-400 mr-2"></i>Vider le cache force la re-traduction par DeepSeek</p>
+        <p class="mb-2"><i class="fas fa-info-circle text-sky-400 mr-2"></i>Les créoles utilisent un code ISO 639-3 (rcf, mfe, hat, gcf, mart)</p>
+      </div>
+    </div>
+  </div>
+</div>`;
+  } catch(err) {
+    if (!err._accessDenied) el.innerHTML = `<div class="text-red-400 p-6">Erreur: ${err.error || err.message || 'inconnue'}</div>`;
+  }
+}
+
+async function adminI18nToggle(id, checkbox) {
+  const row = document.getElementById('i18n-row-' + id);
+  try {
+    const res = await apiAdmin('PATCH', '/i18n/languages/' + id + '/toggle');
+    const active = res.is_active;
+    // Mettre à jour le toggle visuellement
+    const toggleBg = checkbox.parentElement.querySelector('div.w-10');
+    const toggleDot = checkbox.parentElement.querySelector('div.w-4');
+    const label = checkbox.parentElement.parentElement.querySelector('span');
+    if (toggleBg) {
+      toggleBg.className = `w-10 h-5 rounded-full transition ${active ? 'bg-sky-600' : 'bg-dark-600'} border ${active ? 'border-sky-500' : 'border-dark-500'}`;
+    }
+    if (toggleDot) {
+      toggleDot.className = `absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${active ? 'translate-x-5' : ''}`;
+    }
+    if (label) {
+      label.className = `text-xs ${active ? 'text-green-400' : 'text-gray-500'}`;
+      label.textContent = active ? 'Actif' : 'Inactif';
+    }
+    showToast(`Langue ${active ? 'activée' : 'désactivée'}`, 'success');
+  } catch(e) {
+    checkbox.checked = !checkbox.checked; // revert
+    showToast(e.error || 'Erreur', 'error');
+  }
+}
+
+async function adminI18nUpdateOrder(id, value) {
+  try {
+    await apiAdmin('PUT', '/i18n/languages/' + id, { sort_order: parseInt(value) });
+    showToast('Ordre mis à jour', 'success');
+  } catch(e) {
+    showToast(e.error || 'Erreur', 'error');
+  }
+}
+
+async function adminI18nClearCache(langCode) {
+  if (!confirm(`Vider le cache KV pour "${langCode}" ?\nLes textes seront re-traduits par DeepSeek au prochain accès.`)) return;
+  try {
+    const res = await apiAdmin('DELETE', '/i18n/cache/' + langCode);
+    showToast(`Cache vidé : ${res.deleted || 0} entrées supprimées`, 'success');
+    showAdminPage('i18n-languages');
+  } catch(e) {
+    showToast(e.error || 'Erreur', 'error');
+  }
+}
+
+async function adminI18nDelete(id, name) {
+  if (!confirm(`Supprimer la langue "${name}" ?\nCela ne supprime pas les entrées KV.`)) return;
+  try {
+    await apiAdmin('DELETE', '/i18n/languages/' + id);
+    showToast('Langue supprimée', 'success');
+    showAdminPage('i18n-languages');
+  } catch(e) {
+    showToast(e.error || 'Erreur', 'error');
+  }
+}
+
+function adminI18nAddModal() {
+  showModal(`
+    <div class="space-y-4">
+      <h3 class="text-lg font-bold text-white flex items-center gap-2">
+        <i class="fas fa-plus-circle text-sky-400"></i> Ajouter une langue
+      </h3>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Code langue <span class="text-red-400">*</span></label>
+          <input id="i18n-add-code" type="text" placeholder="ex: fr, en, rcf, hat" maxlength="10"
+            class="form-input w-full text-sm font-mono" />
+          <p class="text-xs text-gray-500 mt-1">Code ISO 639-1/3 ou code custom (lettres, chiffres, - uniquement)</p>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Nom affiché <span class="text-red-400">*</span></label>
+          <input id="i18n-add-name" type="text" placeholder="ex: Créole Réunionnais"
+            class="form-input w-full text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Emoji drapeau</label>
+          <input id="i18n-add-flag" type="text" placeholder="🌐" maxlength="4"
+            class="form-input w-full text-sm" value="🌐" />
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Ordre d'affichage</label>
+          <input id="i18n-add-order" type="number" placeholder="100" min="1" max="999"
+            class="form-input w-full text-sm" value="100" />
+        </div>
+      </div>
+      <div class="bg-dark-700 rounded-xl p-3 text-xs text-gray-400">
+        <p class="font-medium text-white mb-1">💡 Exemples de codes créoles :</p>
+        <div class="grid grid-cols-3 gap-1 font-mono">
+          <span>rcf → Réunionnais</span>
+          <span>mfe → Mauricien</span>
+          <span>hat → Haïtien</span>
+          <span>gcf → Guadeloupéen</span>
+          <span>mart → Martiniquais</span>
+          <span>mad → Malgache</span>
+        </div>
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button onclick="closeModal()" class="flex-1 bg-dark-700 hover:bg-dark-600 text-gray-300 py-2.5 rounded-xl border border-dark-500 text-sm transition">
+          Annuler
+        </button>
+        <button onclick="adminI18nDoAdd(this)" class="flex-1 bg-sky-600 hover:bg-sky-500 text-white font-bold py-2.5 rounded-xl text-sm transition">
+          <i class="fas fa-plus mr-2"></i>Ajouter
+        </button>
+      </div>
+    </div>`);
+}
+
+async function adminI18nDoAdd(btn) {
+  const restore = btnSaving(btn);
+  const code = document.getElementById('i18n-add-code').value.trim();
+  const name = document.getElementById('i18n-add-name').value.trim();
+  const flag = document.getElementById('i18n-add-flag').value.trim() || '🌐';
+  const sort_order = parseInt(document.getElementById('i18n-add-order').value) || 100;
+  if (!code || !name) { showToast('Code et nom sont requis', 'error'); restore(); return; }
+  try {
+    await apiAdmin('POST', '/i18n/languages', { code, name, flag, sort_order, is_active: 1 });
+    showToast(`Langue "${name}" ajoutée ✓`, 'success');
+    closeModal();
+    showAdminPage('i18n-languages');
+  } catch(e) {
+    showToast(e.error || 'Erreur ajout', 'error');
+    restore();
+  }
+}
+
+function adminI18nEditModal(id, code, name, flag, sort_order) {
+  showModal(`
+    <div class="space-y-4">
+      <h3 class="text-lg font-bold text-white flex items-center gap-2">
+        <i class="fas fa-edit text-blue-400"></i> Modifier — <code class="text-sky-300 text-base">${code}</code>
+      </h3>
+      <div class="grid grid-cols-2 gap-4">
+        <div class="col-span-2">
+          <label class="block text-xs text-gray-400 mb-1">Nom affiché</label>
+          <input id="i18n-edit-name" type="text" value="${name}" class="form-input w-full text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Emoji drapeau</label>
+          <input id="i18n-edit-flag" type="text" value="${flag}" maxlength="4" class="form-input w-full text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Ordre d'affichage</label>
+          <input id="i18n-edit-order" type="number" value="${sort_order}" min="1" max="999" class="form-input w-full text-sm" />
+        </div>
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button onclick="closeModal()" class="flex-1 bg-dark-700 hover:bg-dark-600 text-gray-300 py-2.5 rounded-xl border border-dark-500 text-sm transition">
+          Annuler
+        </button>
+        <button onclick="adminI18nDoEdit(${id}, this)" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-sm transition">
+          <i class="fas fa-save mr-2"></i>Sauvegarder
+        </button>
+      </div>
+    </div>`);
+}
+
+async function adminI18nDoEdit(id, btn) {
+  const restore = btnSaving(btn);
+  const name = document.getElementById('i18n-edit-name').value.trim();
+  const flag = document.getElementById('i18n-edit-flag').value.trim() || '🌐';
+  const sort_order = parseInt(document.getElementById('i18n-edit-order').value) || 100;
+  if (!name) { showToast('Nom requis', 'error'); restore(); return; }
+  try {
+    await apiAdmin('PUT', '/i18n/languages/' + id, { name, flag, sort_order });
+    showToast('Langue mise à jour ✓', 'success');
+    closeModal();
+    showAdminPage('i18n-languages');
+  } catch(e) {
+    showToast(e.error || 'Erreur', 'error');
+    restore();
   }
 }

@@ -1,58 +1,48 @@
 /**
- * i18n.js v3.1 — Moteur de traduction multilingue — Leader Network
+ * i18n.js v4 — Moteur de traduction multilingue — Leader Network
  *
+ * ZERO hardcode : les langues disponibles sont chargées depuis /api/i18n/languages
  * Architecture : memCache (RAM) → KV Cloudflare → DeepSeek AI
  *
- * FIX v3.1 : innerHTML est SYNCHRONE — on ne peut pas faire d'async dedans.
- * Solution correcte :
- *   1. warmupCache() charge strings.{lang}.json EN ENTIER dans _memCache AVANT tout rendu
- *   2. patchInnerHTML() traduit depuis _memCache (synchrone, 0ms)
- *   3. Pour les textes manquants en cache : flushBatch() appelle /api/i18n/translate
- *      puis RE-DÉCLENCHE showPage(currentPage) pour re-rendre avec les nouvelles trad
- *   4. Cycle converge rapidement : page 1→ warm-up hit, page 2→ tout en cache
+ * Flow :
+ *   1. init() → fetch /api/i18n/languages → liste des langues actives en DB
+ *   2. warmupCache() → charge strings.{lang}.json (fallback statique si existe)
+ *   3. patchInnerHTML() → actif après warm-up, synchrone, regex unique
+ *   4. Textes manquants → batch /api/i18n/translate → DeepSeek → KV
+ *   5. rerenderPage() après chaque batch pour appliquer les nouvelles trad
  */
 (function () {
   'use strict';
 
-  // ─── Config ─────────────────────────────────────────────────────────────────
   const DEFAULT     = 'fr';
   const STORAGE_KEY = 'leader_lang';
 
-  const META = {
-    fr: { name: 'Français',    flag: '🇫🇷' },
-    en: { name: 'English',     flag: '🇬🇧' },
-    es: { name: 'Español',     flag: '🇪🇸' },
-    pt: { name: 'Português',   flag: '🇧🇷' },
-    hi: { name: 'हिंदी',        flag: '🇮🇳' },
-    de: { name: 'Deutsch',     flag: '🇩🇪' },
-    ar: { name: 'العربية',     flag: '🇸🇦' },
-    zh: { name: '中文',         flag: '🇨🇳' },
-    it: { name: 'Italiano',    flag: '🇮🇹' },
-    ru: { name: 'Русский',     flag: '🇷🇺' },
-    tr: { name: 'Türkçe',      flag: '🇹🇷' },
-    nl: { name: 'Nederlands',  flag: '🇳🇱' },
-    ko: { name: '한국어',        flag: '🇰🇷' },
-    ja: { name: '日本語',        flag: '🇯🇵' },
-    vi: { name: 'Tiếng Việt',  flag: '🇻🇳' },
-    id: { name: 'Bahasa',      flag: '🇮🇩' },
-    pl: { name: 'Polski',      flag: '🇵🇱' },
-    uk: { name: 'Українська',  flag: '🇺🇦' },
-    ro: { name: 'Română',      flag: '🇷🇴' },
-    th: { name: 'ภาษาไทย',     flag: '🇹🇭' },
-  };
-
   // ─── État ────────────────────────────────────────────────────────────────────
-  let _lang    = DEFAULT;
-  let _ready   = false;  // true = warmup terminé, on peut traduire
-  let _patched = false;
+  let _lang      = DEFAULT;
+  let _ready     = false;
+  let _patched   = false;
+  let _languages = []; // [{ code, name, flag, sort_order }] — chargé depuis l'API
 
   // Cache mémoire : Map<texteFR, texteTraduction> pour la langue courante
-  // Un seul niveau — on change de langue = on vide + recharge
-  let _cache = new Map();
-
-  // Textes vus mais non encore traduits (en attente de batch)
-  let _missing     = new Set();
+  let _cache     = new Map();
+  let _missing   = new Set();
   let _batchPending = false;
+
+  // Regex unique (rebuilt à chaque fois que _cache grossit)
+  let _dictRegex = null;
+  let _dictKeys  = [];
+
+  // ─── Escape RegExp ───────────────────────────────────────────────────────────
+  function escapeRegex(s) {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  function rebuildRegex() {
+    _dictKeys  = [..._cache.keys()].sort((a, b) => b.length - a.length);
+    _dictRegex = _dictKeys.length > 0
+      ? new RegExp(_dictKeys.map(escapeRegex).join('|'), 'g')
+      : null;
+  }
 
   // ─── Détection langue ────────────────────────────────────────────────────────
   function detectLang() {
@@ -62,21 +52,21 @@
     return n || DEFAULT;
   }
 
-  // ─── Escape RegExp ───────────────────────────────────────────────────────────
-  function escapeRegex(s) {
-    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  }
-
-  // ─── Regex de remplacement (synchrone, depuis _cache) ───────────────────────
-  // Reconstruit à chaque fois que _cache grossit
-  let _dictRegex = null;
-  let _dictKeys  = [];
-
-  function rebuildRegex() {
-    _dictKeys  = [..._cache.keys()].sort((a, b) => b.length - a.length);
-    _dictRegex = _dictKeys.length > 0
-      ? new RegExp(_dictKeys.map(escapeRegex).join('|'), 'g')
-      : null;
+  // ─── Chargement des langues depuis l'API ─────────────────────────────────────
+  async function loadLanguages() {
+    try {
+      const r = await fetch('/api/i18n/languages');
+      if (r.ok) {
+        const d = await r.json();
+        _languages = d.languages || [];
+      }
+    } catch(e) {
+      console.warn('[i18n v4] loadLanguages error:', e);
+    }
+    // Toujours avoir au moins FR comme fallback
+    if (!_languages.length) {
+      _languages = [{ code: 'fr', name: 'Français', flag: '🇫🇷', sort_order: 1 }];
+    }
   }
 
   // ─── Remplacement synchrone depuis _cache ────────────────────────────────────
@@ -89,7 +79,6 @@
   function translateHTML(html) {
     if (!html || _lang === DEFAULT || !_ready) return html;
 
-    // Collecter les textes manquants au passage (pour batch ultérieur)
     let hasMissing = false;
 
     // 1. Textes visibles entre balises
@@ -99,12 +88,11 @@
       if (_cache.has(trimmed)) {
         return '>' + text.replace(trimmed, _cache.get(trimmed)) + '<';
       }
-      // Texte non en cache → l'enregistrer pour batch
       if (trimmed.length > 1 && !/^\d+([.,]\d+)?[%€$]?$/.test(trimmed)) {
         _missing.add(trimmed);
         hasMissing = true;
       }
-      return match; // retourner FR pour l'instant
+      return match;
     });
 
     // 2. Attributs placeholder / title / value
@@ -114,10 +102,7 @@
         if (_cache.has(trimmed)) {
           return attr + '=' + q + _cache.get(trimmed) + q;
         }
-        if (trimmed.length > 1) {
-          _missing.add(trimmed);
-          hasMissing = true;
-        }
+        if (trimmed.length > 1) { _missing.add(trimmed); hasMissing = true; }
         return match;
       }
     );
@@ -126,11 +111,11 @@
     return html;
   }
 
-  // ─── Batch : envoie les textes manquants à /api/i18n/translate ───────────────
+  // ─── Batch ───────────────────────────────────────────────────────────────────
   function scheduleBatch() {
     if (_batchPending || _missing.size === 0) return;
     _batchPending = true;
-    setTimeout(flushBatch, 80); // petit délai pour accumuler
+    setTimeout(flushBatch, 80);
   }
 
   async function flushBatch() {
@@ -139,10 +124,9 @@
 
     const texts = [..._missing].filter(t => !_cache.has(t));
     _missing.clear();
-    if (texts.length === 0) return;
+    if (!texts.length) return;
 
-    console.log('[i18n v3] batch translate', texts.length, 'textes →', _lang);
-
+    console.log('[i18n v4] batch', texts.length, '→', _lang);
     try {
       const resp = await fetch('/api/i18n/translate', {
         method: 'POST',
@@ -151,37 +135,23 @@
       });
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       const data = await resp.json();
-      const translations = data?.translations || {};
-
       let newEntries = 0;
-      Object.entries(translations).forEach(([fr, translated]) => {
-        if (fr && translated && typeof translated === 'string') {
-          _cache.set(fr, translated);
-          newEntries++;
-        }
+      Object.entries(data.translations || {}).forEach(([fr, t]) => {
+        if (fr && t && typeof t === 'string') { _cache.set(fr, t); newEntries++; }
       });
-      // Textes que DeepSeek n'a pas traduits → stocker l'original pour éviter re-batchs
       texts.forEach(t => { if (!_cache.has(t)) _cache.set(t, t); });
-
-      if (newEntries > 0) {
-        rebuildRegex();
-        console.log('[i18n v3] +' + newEntries + ' traductions en cache → re-rendu');
-        // RE-DÉCLENCHER le rendu de la page courante avec les nouvelles traductions
-        rerenderPage();
-      }
-    } catch (e) {
-      console.warn('[i18n v3] batch error:', e);
-      texts.forEach(t => _cache.set(t, t)); // fallback : ne plus re-tenter ces textes
+      if (newEntries > 0) { rebuildRegex(); rerenderPage(); }
+    } catch(e) {
+      console.warn('[i18n v4] batch error:', e);
+      texts.forEach(t => _cache.set(t, t));
     }
   }
 
-  // ─── Re-rendu de la page courante ────────────────────────────────────────────
   function rerenderPage() {
     if (typeof showPage === 'function' && typeof currentPage !== 'undefined') {
       showPage(currentPage);
       return;
     }
-    // Fallback : re-traduire le DOM manuellement
     translateExistingDOM();
     translateSidebar();
   }
@@ -190,31 +160,25 @@
   function patchInnerHTML() {
     if (_patched) return;
     _patched = true;
-
     const descriptor = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
     if (!descriptor || !descriptor.set) return;
     const originalSet = descriptor.set;
-
     Object.defineProperty(Element.prototype, 'innerHTML', {
       get: descriptor.get,
       set: function(val) {
         if (this.id === 'i18n-lang-selector' || this.id === 'i18n-lang-dropdown') {
-          originalSet.call(this, val);
-          return;
+          originalSet.call(this, val); return;
         }
-        if (_lang !== DEFAULT && _ready && typeof val === 'string') {
-          val = translateHTML(val);
-        }
+        if (_lang !== DEFAULT && _ready && typeof val === 'string') val = translateHTML(val);
         originalSet.call(this, val);
       },
       configurable: true,
     });
   }
 
-  // ─── Traduit le DOM existant (nœuds texte) ───────────────────────────────────
+  // ─── Traduit le DOM existant ─────────────────────────────────────────────────
   function translateExistingDOM_el(root) {
     if (_lang === DEFAULT || !_ready || !root) return;
-
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
       acceptNode(node) {
         const p = node.parentElement;
@@ -224,14 +188,11 @@
         return NodeFilter.FILTER_ACCEPT;
       }
     });
-
     const nodes = [];
     let n;
     while ((n = walker.nextNode())) nodes.push(n);
-
     nodes.forEach(node => {
-      const raw = node.textContent;
-      const trimmed = raw && raw.trim();
+      const raw = node.textContent, trimmed = raw && raw.trim();
       if (!trimmed) return;
       if (_cache.has(trimmed)) {
         const t = _cache.get(trimmed);
@@ -240,24 +201,18 @@
         _missing.add(trimmed);
       }
     });
-
     root.querySelectorAll('[placeholder],[title]').forEach(el => {
       ['placeholder','title'].forEach(attr => {
         const v = el.getAttribute(attr);
         if (!v) return;
-        if (_cache.has(v)) {
-          const t = _cache.get(v);
-          if (t !== v) el.setAttribute(attr, t);
-        } else if (v.length > 1) {
-          _missing.add(v);
-        }
+        if (_cache.has(v)) { const t = _cache.get(v); if (t !== v) el.setAttribute(attr, t); }
+        else if (v.length > 1) _missing.add(v);
       });
     });
-
     if (_missing.size > 0) scheduleBatch();
   }
 
-  function translateExistingDOM() { translateExistingDOM_el(document.body); }
+  function translateExistingDOM() { if (document.body) translateExistingDOM_el(document.body); }
 
   function translateSidebar() {
     if (_lang === DEFAULT || !_ready) return;
@@ -271,48 +226,30 @@
         const raw = cn.textContent.trim();
         if (!raw) return;
         if (_cache.has(raw)) {
-          const t = _cache.get(raw);
-          if (t !== raw) cn.textContent = ' ' + t;
-        } else {
-          _missing.add(raw);
-          scheduleBatch();
-        }
+          const t = _cache.get(raw); if (t !== raw) cn.textContent = ' ' + t;
+        } else { _missing.add(raw); scheduleBatch(); }
       });
     });
   }
 
-  // ─── Warm-up : charge strings.{lang}.json ENTIER dans _cache ─────────────────
-  // Critique : doit être terminé AVANT que patchInnerHTML soit actif
+  // ─── Warm-up cache ───────────────────────────────────────────────────────────
   async function warmupCache(lang) {
     if (lang === DEFAULT) return;
-    _cache.clear();
-    _dictRegex = null;
-    _dictKeys  = [];
-
-    // Fichiers statiques existants (fallback rapide)
-    const sources = [
-      '/static/locales/strings.' + lang + '.json',
-    ];
-
-    let totalLoaded = 0;
-    for (const url of sources) {
-      try {
-        const r = await fetch(url + '?_=' + Date.now());
-        if (!r.ok) continue;
+    _cache.clear(); _dictRegex = null; _dictKeys = [];
+    try {
+      const r = await fetch('/static/locales/strings.' + lang + '.json?_=' + Date.now());
+      if (r.ok) {
         const dict = await r.json();
         if (dict && typeof dict === 'object') {
-          Object.entries(dict).forEach(([fr, translated]) => {
-            if (fr && translated && typeof translated === 'string' && fr !== translated) {
-              _cache.set(fr, translated);
-              totalLoaded++;
-            }
+          let n = 0;
+          Object.entries(dict).forEach(([fr, t]) => {
+            if (fr && t && typeof t === 'string' && fr !== t) { _cache.set(fr, t); n++; }
           });
+          console.log('[i18n v4] warm-up "' + lang + '" : ' + n + ' entrées');
         }
-      } catch(e) { /* pas de fichier statique = normal */ }
-    }
-
+      }
+    } catch(e) { /* pas de fichier statique */ }
     rebuildRegex();
-    console.log('[i18n v3] warm-up "' + lang + '" : ' + totalLoaded + ' entrées en cache');
   }
 
   // ─── Sélecteur de langue ─────────────────────────────────────────────────────
@@ -345,17 +282,14 @@
     Object.assign(searchWrap.style, { padding: '8px 10px', borderBottom: '1px solid rgba(255,255,255,0.07)' });
     const searchInput = document.createElement('input');
     searchInput.type = 'text';
-    searchInput.placeholder = '🔍 Search language…';
+    searchInput.placeholder = '🔍 Rechercher…';
     Object.assign(searchInput.style, {
       width: '100%', background: 'rgba(255,255,255,0.07)',
       border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px',
-      color: '#f1f5f9', padding: '5px 8px', fontSize: '12px', boxSizing: 'border-box',
-      outline: 'none',
+      color: '#f1f5f9', padding: '5px 8px', fontSize: '12px',
+      boxSizing: 'border-box', outline: 'none',
     });
-    // Empêcher le patch innerHTML sur l'input
-    searchInput.addEventListener('input', (e) => {
-      renderList(searchInput.value.trim().toLowerCase());
-    });
+    searchInput.addEventListener('input', () => renderList(searchInput.value.trim().toLowerCase()));
     searchWrap.appendChild(searchInput);
     drop.appendChild(searchWrap);
 
@@ -364,32 +298,29 @@
     drop.appendChild(listEl);
 
     function renderList(filter) {
-      // Vider sans innerHTML pour éviter le patch
       while (listEl.firstChild) listEl.removeChild(listEl.firstChild);
-
-      const entries = Object.entries(META).filter(([code, m]) =>
-        !filter || m.name.toLowerCase().includes(filter) || code.startsWith(filter)
+      const entries = _languages.filter(l =>
+        !filter || l.name.toLowerCase().includes(filter) || l.code.startsWith(filter)
       );
-
-      entries.forEach(([code, m]) => {
+      entries.forEach(l => {
         const item = document.createElement('button');
-        item.setAttribute('data-lang', code);
-        item.textContent = m.flag + '  ' + m.name;
+        item.setAttribute('data-lang', l.code);
+        item.textContent = l.flag + '  ' + l.name;
         Object.assign(item.style, {
           display: 'block', width: '100%', padding: '9px 16px',
-          background: code === _lang ? 'rgba(99,102,241,0.28)' : 'transparent',
+          background: l.code === _lang ? 'rgba(99,102,241,0.28)' : 'transparent',
           color: '#f1f5f9', border: 'none',
           borderBottom: '1px solid rgba(255,255,255,0.04)',
           cursor: 'pointer', textAlign: 'left', fontSize: '13px',
-          fontWeight: code === _lang ? '700' : '400',
+          fontWeight: l.code === _lang ? '700' : '400',
         });
         item.addEventListener('mouseenter', () => {
-          if (code !== _lang) item.style.background = 'rgba(255,255,255,0.08)';
+          if (l.code !== _lang) item.style.background = 'rgba(255,255,255,0.08)';
         });
         item.addEventListener('mouseleave', () => {
-          item.style.background = code === _lang ? 'rgba(99,102,241,0.28)' : 'transparent';
+          item.style.background = l.code === _lang ? 'rgba(99,102,241,0.28)' : 'transparent';
         });
-        item.addEventListener('click', () => { switchLang(code); closeDrop(); });
+        item.addEventListener('click', () => { switchLang(l.code); closeDrop(); });
         listEl.appendChild(item);
       });
     }
@@ -398,20 +329,24 @@
     // Bouton principal
     const btn = document.createElement('button');
     btn.id = 'i18n-lang-btn';
-    const cm = META[_lang] || { flag: '🌐', name: _lang.toUpperCase() };
-    btn.textContent = cm.flag + ' ' + cm.name;
+    const cur = _languages.find(l => l.code === _lang) || { flag: '🌐', name: _lang.toUpperCase() };
+    btn.textContent = cur.flag + ' ' + cur.name;
     Object.assign(btn.style, {
       padding: '8px 14px', borderRadius: '24px',
-      background: 'rgba(10,15,30,0.92)',
-      color: '#f1f5f9', border: '1px solid rgba(255,255,255,0.15)',
+      background: 'rgba(10,15,30,0.92)', color: '#f1f5f9',
+      border: '1px solid rgba(255,255,255,0.15)',
       cursor: 'pointer', whiteSpace: 'nowrap',
       boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
       fontSize: '13px', fontWeight: '500',
     });
 
     let open = false;
-    function openDrop()  { drop.style.display = 'block'; open = true; searchInput.value = ''; renderList(''); setTimeout(() => searchInput.focus(), 40); }
-    function closeDrop() { drop.style.display = 'none';  open = false; }
+    function openDrop() {
+      drop.style.display = 'block'; open = true;
+      searchInput.value = ''; renderList('');
+      setTimeout(() => searchInput.focus(), 40);
+    }
+    function closeDrop() { drop.style.display = 'none'; open = false; }
 
     btn.addEventListener('click', e => { e.stopPropagation(); open ? closeDrop() : openDrop(); });
     document.addEventListener('click', () => { if (open) closeDrop(); });
@@ -424,8 +359,8 @@
   function updateSelectorBtn() {
     const btn = document.getElementById('i18n-lang-btn');
     if (!btn) { buildSelector(); return; }
-    const m = META[_lang] || { flag: '🌐', name: _lang.toUpperCase() };
-    btn.textContent = m.flag + ' ' + m.name;
+    const cur = _languages.find(l => l.code === _lang) || { flag: '🌐', name: _lang.toUpperCase() };
+    btn.textContent = cur.flag + ' ' + cur.name;
   }
 
   // ─── Watchdog ────────────────────────────────────────────────────────────────
@@ -439,37 +374,29 @@
   async function switchLang(lang) {
     if (lang === _lang) return;
 
-    // Spinner sur le bouton pendant le chargement
     const btn = document.getElementById('i18n-lang-btn');
-    if (btn) btn.textContent = '⏳ Loading…';
+    if (btn) btn.textContent = '⏳ Chargement…';
 
-    _lang    = lang;
-    _ready   = false;
+    _lang = lang;
+    _ready = false;
     _missing.clear();
     _batchPending = false;
     localStorage.setItem(STORAGE_KEY, lang);
     document.documentElement.setAttribute('lang', lang);
 
     if (lang === DEFAULT) {
-      _cache.clear();
-      _dictRegex = null;
-      _dictKeys  = [];
-      _ready     = true;
+      _cache.clear(); _dictRegex = null; _dictKeys = [];
+      _ready = true;
       updateSelectorBtn();
       location.reload();
       return;
     }
 
-    // 1. Charger le warm-up COMPLET avant d'activer les traductions
     await warmupCache(lang);
     _ready = true;
     updateSelectorBtn();
-
-    // 2. Appliquer au DOM statique (sidebar, header)
     translateSidebar();
     translateExistingDOM();
-
-    // 3. Re-rendre la page dynamique (member-app.js)
     rerenderPage();
   }
 
@@ -478,14 +405,17 @@
     _lang = detectLang();
     document.documentElement.setAttribute('lang', _lang);
 
-    if (_lang !== DEFAULT) {
-      // Warm-up AVANT patchInnerHTML → le premier rendu de member-app.js
-      // sera déjà traduit depuis le cache statique
-      await warmupCache(_lang);
-    }
+    // 1. Charger la liste des langues depuis l'API (async, non bloquant pour le rendu)
+    const langPromise = loadLanguages();
+
+    // 2. Warm-up cache AVANT patchInnerHTML
+    if (_lang !== DEFAULT) await warmupCache(_lang);
 
     _ready = true;
-    patchInnerHTML(); // Activer le patch seulement après warm-up
+    patchInnerHTML();
+
+    // 3. Attendre que les langues soient chargées pour le sélecteur
+    await langPromise;
 
     function inject() {
       buildSelector();
@@ -508,10 +438,9 @@
   window.i18n = {
     switch:    switchLang,
     current:   () => _lang,
-    supported: Object.keys(META),
-    meta:      META,
+    languages: () => _languages,
     cache:     () => _cache,
-    stats:     () => ({ size: _cache.size, missing: _missing.size, lang: _lang }),
+    stats:     () => ({ size: _cache.size, missing: _missing.size, lang: _lang, langs: _languages.length }),
   };
 
   init();

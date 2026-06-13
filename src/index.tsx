@@ -17,6 +17,7 @@ import { pspRouter, pspAdminRouter } from './routes/psp.js'
 import { emailAdmin } from './routes/email-admin.js'
 import brokerRouter, { brokerAdmin as brokerAdminRouter } from './routes/broker.js'
 import { landingPublic, landingAdmin, buildLandingPage } from './routes/landing.js'
+import { i18nRouter } from './routes/i18n-admin.js'
 import type { Bindings } from './types/index.js'
 import { processDailyPayments, getMauritiusDateStr, processBVQueue, processRankQueue, activateAndReward, createNotification, orchestrateur } from './lib/mlm.js'
 import { sendEmail } from './lib/mailer.js'
@@ -203,6 +204,8 @@ app.route('/api/admin/broker', brokerAdminRouter)
 // ── Landing page routes ────────────────────────────────────────
 app.route('/', landingPublic)
 app.route('/api/admin', landingAdmin)
+app.route('/api/i18n', i18nRouter)
+app.route('/api/admin', i18nRouter)
 
 // ── Route cron externe (cron-job.org) ─────────────────────────
 // Répond immédiatement 200 puis exécute l'orchestrateur en arrière-plan
@@ -2524,6 +2527,9 @@ function adminHTML(branding: BrandingPublic = { logoUri: '', networkName: 'LEADE
       </button>
       <button onclick="showAdminPage('landing');closeAdminSidebar()" class="admin-nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="landing">
         <i class="fas fa-rocket w-5 text-center" style="color:#A02820"></i> Landing Page
+      </button>
+      <button onclick="showAdminPage('i18n-languages');closeAdminSidebar()" class="admin-nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="i18n-languages">
+        <i class="fas fa-language w-5 text-center text-sky-400"></i> Langues & Traductions
       </button>
       <button onclick="showAdminPage('administration');closeAdminSidebar()" class="admin-nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="administration">
         <i class="fas fa-shield-halved w-5 text-center"></i> Administration
