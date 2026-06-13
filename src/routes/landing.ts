@@ -706,7 +706,7 @@ ${testimonialsActive && featuredTestimonials.length > 0 ? `
         </div>` : ''}
 
         <!-- Contenu -->
-        <blockquote class="text-cream/70 text-sm leading-relaxed flex-1 italic">"${t.content}"</blockquote>
+        <blockquote class="text-cream/70 text-sm leading-relaxed italic" style="overflow-wrap:break-word;word-break:break-word;white-space:normal;overflow:visible;flex-shrink:0">"${t.content}"</blockquote>
 
         <!-- Auteur -->
         <div class="flex items-center gap-3 pt-3 border-t border-white/5">
