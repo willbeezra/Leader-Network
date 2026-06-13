@@ -329,14 +329,6 @@ ${heroActive ? `
 
   <div class="relative z-10 max-w-5xl mx-auto px-6 text-center">
 
-    <!-- Logo grand format -->
-    <div class="mb-10 fade-in-up float-anim flex justify-center">
-      <img src="/static/logo-leader.png" alt="LEADER"
-           style="height:clamp(70px,10vw,140px);object-fit:contain"
-           onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-      <span class="logo-hero" style="display:none;align-items:center">LEADER</span>
-    </div>
-
     <!-- Slogan -->
     <h1 class="text-5xl md:text-7xl lg:text-8xl font-black tracking-tight leading-tight mb-6 fade-in-up" style="animation-delay:0.15s">
       <span class="text-gradient" data-i18n-hero="${cfg.hero_title || 'Révéler. Prospérer. Inspirer.'}">${(cfg.hero_title || 'Révéler. Prospérer. Inspirer.').replace(/\./g, '.<br class="hidden md:block">')}</span>
