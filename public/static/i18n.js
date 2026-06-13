@@ -1,23 +1,25 @@
 /**
- * i18n.js v5 — Moteur de traduction multilingue — Leader Network
+ * i18n.js v6 — Moteur de traduction multilingue — Leader Network
  *
- * FIXES v5 :
- *  - Langues : JAMAIS de cache localStorage → toujours depuis /api/i18n/languages
- *    Désactiver une langue côté admin → disparaît immédiatement côté membre
- *  - Créoles : warm-up échoue (pas de fichier .json) → on passe directement
- *    au batch DeepSeek avec les textes visibles à l'écran
- *  - Premier rendu : on attend que _langs soit chargé AVANT tout, puis on active
- *    patchInnerHTML, puis on force rerenderPage() pour que member-app.js
- *    re-rende avec les traductions
+ * FIXES v6 :
+ *  - Landing page SSR : les nœuds texte FR existants sont traduits directement
+ *    via translateDOM_el() dans switchLang() ET après chaque batch DeepSeek
+ *  - Stockage du texte original FR sur chaque nœud (dataset i18nOrig) pour
+ *    permettre la re-application propre à chaque changement de langue
+ *  - switchLang() appelle toujours translateDOM_el(document.body) après warm-up,
+ *    que ce soit une page SSR ou une page dynamique (member-app.js)
+ *  - _collectVisibleTexts() appelé systématiquement si des textes manquent
+ *  - Retour FR : reload page (comportement préservé)
  *
  * Flux :
  *   1. loadLanguages() → GET /api/i18n/languages (DB, aucun cache)
  *   2. warmupCache(lang) → strings.{lang}.json si dispo (EN/ES/PT…)
- *      Pour les créoles : cache vide, mais _ready = true
- *   3. patchInnerHTML() activé
- *   4. rerenderPage() → showPage(currentPage) → innerHTML patché → traduction
- *   5. Textes manquants → batch POST /api/i18n/translate → KV → DeepSeek
- *   6. Après batch → rebuildRegex() → rerenderPage() → DOM mis à jour
+ *   3. patchInnerHTML() activé (pour member-app.js pages dynamiques)
+ *   4. translateDOM_el(body) → applique cache + collecte manquants dans _missing
+ *   5. translateSidebar() → header/nav
+ *   6. rerenderPage() → showPage() si member-app.js dispo
+ *   7. batch POST /api/i18n/translate → KV → DeepSeek
+ *   8. Après batch → rebuildRegex() → translateDOM_el(body) avec nouveaux caches
  */
 (function () {
   'use strict';
@@ -66,8 +68,6 @@
   }
 
   // ─── Chargement des langues ACTIVES depuis l'API — aucun cache ──────────
-  // Appel réseau à chaque init et à chaque switchLang.
-  // Garantit qu'une langue désactivée dans l'admin disparaît immédiatement.
   async function loadLanguages() {
     try {
       const r = await fetch('/api/i18n/languages?_=' + Date.now());
@@ -76,24 +76,20 @@
         _langs = data.languages || [];
       }
     } catch(e) {
-      console.warn('[i18n v5] loadLanguages error:', e);
-      // Fallback minimal — juste FR
+      console.warn('[i18n v6] loadLanguages error:', e);
       if (!_langs.length) _langs = [{ code: 'fr', name: 'Français', flag: '🇫🇷', sort_order: 1 }];
     }
 
     // Si la langue courante a été désactivée → revenir au FR
     if (_lang !== DEFAULT && _langs.length && !_langs.find(l => l.code === _lang)) {
-      console.warn('[i18n v5] langue "' + _lang + '" désactivée → retour FR');
+      console.warn('[i18n v6] langue "' + _lang + '" désactivée → retour FR');
       _lang = DEFAULT;
       localStorage.setItem(STORAGE_KEY, DEFAULT);
       document.documentElement.setAttribute('lang', DEFAULT);
     }
   }
 
-  // ─── Warm-up : charge strings.{lang}.json dans _cache (si disponible) ───
-  // Pour les créoles (rcf, mfe, hat, gcf, mart, mad) : pas de fichier statique
-  // → _cache reste vide mais _ready = true
-  // → Le premier rendu passe en batch DeepSeek immédiatement
+  // ─── Warm-up : charge strings.{lang}.json dans _cache ───────────────────
   async function warmupCache(lang) {
     _cache.clear();
     _dictRegex = null;
@@ -115,7 +111,7 @@
           });
           if (count > 0) {
             rebuildRegex();
-            console.log('[i18n v5] warm-up "' + lang + '" : ' + count + ' entrées');
+            console.log('[i18n v6] warm-up "' + lang + '" : ' + count + ' entrées');
           }
         }
       }
@@ -136,7 +132,6 @@
       if (_cache.has(trimmed)) {
         return '>' + text.replace(trimmed, _cache.get(trimmed)) + '<';
       }
-      // Texte non en cache : l'ajouter à la file sauf si c'est un nombre/montant pur
       if (trimmed.length > 1 && !/^\d+([.,]\d+)?[%€$]?$/.test(trimmed)) {
         _missing.add(trimmed);
         hasMissing = true;
@@ -193,7 +188,7 @@
     _missing.clear();
     if (texts.length === 0) return;
 
-    console.log('[i18n v5] batch', texts.length, 'textes →', _lang);
+    console.log('[i18n v6] batch', texts.length, 'textes →', _lang);
 
     try {
       const resp = await fetch('/api/i18n/translate', {
@@ -217,30 +212,31 @@
 
       if (newEntries > 0) {
         rebuildRegex();
-        console.log('[i18n v5] +' + newEntries + ' nouvelles traductions → re-rendu');
-        rerenderPage();
+        console.log('[i18n v6] +' + newEntries + ' nouvelles traductions → re-rendu DOM');
+        // Re-appliquer sur le DOM complet (SSR + dynamique)
+        applyTranslationsToDOM();
+        translateSidebar();
+        // Re-rendre les pages dynamiques (member-app.js) si disponible
+        if (typeof showPage === 'function' && typeof currentPage !== 'undefined') {
+          showPage(currentPage);
+        }
       }
     } catch(e) {
-      console.warn('[i18n v5] batch error:', e);
+      console.warn('[i18n v6] batch error:', e);
       texts.forEach(t => _cache.set(t, t));
     }
   }
 
-  // ─── Re-rendu de la page ──────────────────────────────────────────────────
-  function rerenderPage() {
-    // member-app.js expose showPage() + currentPage
-    if (typeof showPage === 'function' && typeof currentPage !== 'undefined') {
-      showPage(currentPage);
-      return;
-    }
-    // Fallback : re-traduire le DOM directement
-    translateDOM_el(document.body);
-    translateSidebar();
+  // ─── Appliquer les traductions sur le DOM entier ─────────────────────────
+  // Version optimisée : utilise les originaux FR stockés sur chaque nœud
+  // pour re-appliquer proprement sans boucle infinie
+  function applyTranslationsToDOM() {
+    if (_lang === DEFAULT || !_ready || !document.body) return;
+    _applyToElement(document.body);
   }
 
-  // ─── Traduire les nœuds texte d'un élément ───────────────────────────────
-  function translateDOM_el(root) {
-    if (_lang === DEFAULT || !_ready || !root) return;
+  function _applyToElement(root) {
+    if (!root) return;
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
       acceptNode(node) {
         const p = node.parentElement;
@@ -253,38 +249,87 @@
     const nodes = [];
     let n;
     while ((n = walker.nextNode())) nodes.push(n);
+
     nodes.forEach(node => {
-      const raw = node.textContent;
-      const trimmed = raw && raw.trim();
+      // Récupérer le texte original FR (stocké au 1er passage)
+      // Si absent, c'est le premier passage : le texte actuel EST le FR
+      let origFR = node._i18nOrig;
+      if (origFR === undefined) {
+        origFR = node.textContent;
+        node._i18nOrig = origFR; // stocker pour les passages suivants
+      }
+
+      const trimmed = origFR && origFR.trim();
       if (!trimmed) return;
+
       if (_cache.has(trimmed)) {
         const t = _cache.get(trimmed);
-        if (t !== trimmed) node.textContent = raw.replace(trimmed, t);
+        if (t !== trimmed) {
+          node.textContent = origFR.replace(trimmed, t);
+        }
       } else if (trimmed.length > 1 && !/^\d+([.,]\d+)?[%€$]?$/.test(trimmed)) {
         _missing.add(trimmed);
       }
     });
+
+    // Attributs placeholder / title
     root.querySelectorAll('[placeholder],[title]').forEach(el => {
       ['placeholder','title'].forEach(attr => {
-        const v = el.getAttribute(attr);
-        if (!v) return;
-        if (_cache.has(v)) { const t = _cache.get(v); if (t !== v) el.setAttribute(attr, t); }
-        else if (v.length > 1) _missing.add(v);
+        // Stocker l'attribut FR original au 1er passage
+        const origKey = '_i18nOrig_' + attr;
+        let origVal = el[origKey];
+        if (origVal === undefined) {
+          origVal = el.getAttribute(attr) || '';
+          el[origKey] = origVal;
+        }
+        if (!origVal) return;
+        if (_cache.has(origVal)) {
+          const t = _cache.get(origVal);
+          if (t !== origVal) el.setAttribute(attr, t);
+        } else if (origVal.length > 1) {
+          _missing.add(origVal);
+        }
       });
     });
+
     if (_missing.size > 0) scheduleBatch();
+  }
+
+  // ─── Re-rendu de la page ──────────────────────────────────────────────────
+  function rerenderPage() {
+    // member-app.js expose showPage() + currentPage
+    if (typeof showPage === 'function' && typeof currentPage !== 'undefined') {
+      showPage(currentPage);
+      return;
+    }
+    // Fallback SSR (landing page) : re-appliquer sur le DOM existant
+    applyTranslationsToDOM();
+    translateSidebar();
+  }
+
+  // ─── Traduire les nœuds texte d'un élément (alias pour compatibilité) ────
+  function translateDOM_el(root) {
+    _applyToElement(root);
   }
 
   function translateSidebar() {
     if (_lang === DEFAULT || !_ready) return;
     const sidebar = document.getElementById('sidebar');
-    if (sidebar) translateDOM_el(sidebar);
+    if (sidebar) _applyToElement(sidebar);
     const header = document.querySelector('header') || document.querySelector('.header');
-    if (header) translateDOM_el(header);
+    if (header) _applyToElement(header);
+    // Nav principale (landing)
+    const nav = document.querySelector('nav');
+    if (nav) _applyToElement(nav);
     document.querySelectorAll('.nav-btn').forEach(btn => {
       [...btn.childNodes].forEach(cn => {
         if (cn.nodeType !== Node.TEXT_NODE) return;
-        const raw = cn.textContent.trim();
+        let origFR = cn._i18nOrig;
+        if (origFR === undefined) {
+          origFR = cn.textContent;
+          cn._i18nOrig = origFR;
+        }
+        const raw = origFR && origFR.trim();
         if (!raw) return;
         if (_cache.has(raw)) {
           const t = _cache.get(raw);
@@ -293,6 +338,75 @@
           _missing.add(raw);
           scheduleBatch();
         }
+      });
+    });
+  }
+
+  // ─── Collecte des textes visibles pour forcer le premier batch ────────────
+  // Utilisé pour les créoles et langues sans fichier warm-up
+  function _collectVisibleTexts() {
+    if (!document.body) return;
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        const p = node.parentElement;
+        if (!p) return NodeFilter.FILTER_REJECT;
+        if (['SCRIPT','STYLE','NOSCRIPT'].includes(p.tagName)) return NodeFilter.FILTER_REJECT;
+        if (p.closest('#i18n-lang-selector')) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    let n;
+    while ((n = walker.nextNode())) {
+      // Toujours utiliser l'original FR
+      let origFR = n._i18nOrig;
+      if (origFR === undefined) {
+        origFR = n.textContent;
+        n._i18nOrig = origFR;
+      }
+      const trimmed = origFR && origFR.trim();
+      if (trimmed && trimmed.length > 1 && !/^\d+([.,]\d+)?[%€$]?$/.test(trimmed)) {
+        if (!_cache.has(trimmed)) {
+          _missing.add(trimmed);
+        }
+      }
+    }
+    document.body.querySelectorAll('[placeholder],[title]').forEach(el => {
+      ['placeholder','title'].forEach(attr => {
+        const origKey = '_i18nOrig_' + attr;
+        let v = el[origKey];
+        if (v === undefined) {
+          v = el.getAttribute(attr) || '';
+          el[origKey] = v;
+        }
+        if (v && v.length > 1 && !_cache.has(v)) _missing.add(v);
+      });
+    });
+    if (_missing.size > 0) {
+      console.log('[i18n v6] collecte forcée : ' + _missing.size + ' textes pour batch');
+      scheduleBatch();
+    }
+  }
+
+  // ─── Retour au français : restaurer les textes originaux ─────────────────
+  function restoreOriginalFR() {
+    if (!document.body) return;
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        const p = node.parentElement;
+        if (!p) return NodeFilter.FILTER_REJECT;
+        if (['SCRIPT','STYLE','NOSCRIPT'].includes(p.tagName)) return NodeFilter.FILTER_REJECT;
+        if (p.closest('#i18n-lang-selector')) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    let n;
+    while ((n = walker.nextNode())) {
+      if (n._i18nOrig !== undefined) n.textContent = n._i18nOrig;
+    }
+    document.body.querySelectorAll('[placeholder],[title]').forEach(el => {
+      ['placeholder','title'].forEach(attr => {
+        const origKey = '_i18nOrig_' + attr;
+        if (el[origKey] !== undefined) el.setAttribute(attr, el[origKey]);
       });
     });
   }
@@ -435,11 +549,15 @@
 
     if (lang === DEFAULT) {
       _cache.clear(); _dictRegex = null; _dictKeys = [];
-      // Recharger les langues actives (l'admin peut en avoir réactivé)
       await loadLanguages();
       _ready = true;
       updateSelectorBtn();
-      location.reload();
+      // Restaurer les textes FR originaux (évite le reload sur la landing)
+      restoreOriginalFR();
+      // Si page dynamique (member-app.js) → reload pour un état propre
+      if (typeof showPage === 'function') {
+        location.reload();
+      }
       return;
     }
 
@@ -451,48 +569,24 @@
 
     _ready = true;
     updateSelectorBtn();
+
+    // ── ÉTAPE CLÉ : Appliquer les traductions sur le DOM SSR existant ──────
+    // 1. Patcher innerHTML pour les pages dynamiques (member-app.js)
+    patchInnerHTML();
+
+    // 2. Traduire directement le DOM statique (landing SSR) avec le cache warm-up
+    //    ET collecter les textes manquants pour le batch DeepSeek
+    applyTranslationsToDOM();
     translateSidebar();
 
-    // Re-rendre la page pour déclencher le patch innerHTML
-    rerenderPage();
+    // 3. Pour les pages dynamiques (member-app.js) : re-rendre via showPage()
+    if (typeof showPage === 'function' && typeof currentPage !== 'undefined') {
+      showPage(currentPage);
+    }
 
-    // Pour les créoles (cache vide) : forcer un batch immédiat
-    // en collectant tous les textes visibles du DOM
-    if (_cache.size === 0) {
-      _collectVisibleTexts();
-    }
-  }
-
-  // ─── Collecte des textes visibles pour forcer le premier batch ────────────
-  // Utilisé pour les langues sans fichier warm-up (créoles, langues rares)
-  function _collectVisibleTexts() {
-    if (!document.body) return;
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
-      acceptNode(node) {
-        const p = node.parentElement;
-        if (!p) return NodeFilter.FILTER_REJECT;
-        if (['SCRIPT','STYLE','NOSCRIPT'].includes(p.tagName)) return NodeFilter.FILTER_REJECT;
-        if (p.closest('#i18n-lang-selector')) return NodeFilter.FILTER_REJECT;
-        return NodeFilter.FILTER_ACCEPT;
-      }
-    });
-    let n;
-    while ((n = walker.nextNode())) {
-      const trimmed = n.textContent && n.textContent.trim();
-      if (trimmed && trimmed.length > 1 && !/^\d+([.,]\d+)?[%€$]?$/.test(trimmed)) {
-        _missing.add(trimmed);
-      }
-    }
-    document.body.querySelectorAll('[placeholder],[title]').forEach(el => {
-      ['placeholder','title'].forEach(attr => {
-        const v = el.getAttribute(attr);
-        if (v && v.length > 1) _missing.add(v);
-      });
-    });
-    if (_missing.size > 0) {
-      console.log('[i18n v5] collecte forcée : ' + _missing.size + ' textes pour batch');
-      scheduleBatch();
-    }
+    // 4. Forcer la collecte de TOUS les textes visibles pour le batch
+    //    (inclut les textes hors cache warm-up : hero, sections, etc.)
+    _collectVisibleTexts();
   }
 
   // ─── Init ─────────────────────────────────────────────────────────────────
@@ -508,7 +602,7 @@
       await warmupCache(_lang);
     }
 
-    // 3. Activer le patch APRÈS warm-up
+    // 3. Activer le patch APRÈS warm-up (pour les pages dynamiques)
     _ready = true;
     patchInnerHTML();
 
@@ -517,14 +611,20 @@
       startWatchdog();
 
       if (_lang !== DEFAULT) {
-        // Attendre le premier rendu de member-app.js (~400ms)
+        // Attendre le premier rendu (~400ms pour member-app.js)
         setTimeout(() => {
+          // Appliquer sur le DOM existant (landing SSR + sidebar)
+          applyTranslationsToDOM();
           translateSidebar();
-          rerenderPage();
-          // Si cache encore vide (créoles) → collecter et batcher
-          if (_cache.size === 0) {
-            _collectVisibleTexts();
+
+          // Pour les pages dynamiques (member-app.js)
+          if (typeof showPage === 'function' && typeof currentPage !== 'undefined') {
+            showPage(currentPage);
           }
+
+          // Collecter et batcher TOUS les textes visibles
+          // (textes hero, sections, etc. non présents dans le warm-up JSON)
+          _collectVisibleTexts();
         }, 450);
       }
     }
@@ -542,10 +642,15 @@
     supported: () => _langs.map(l => l.code),
     cache:     () => _cache,
     stats:     () => ({ lang: _lang, cached: _cache.size, missing: _missing.size }),
-    // Forcer un rechargement de la liste des langues (ex: après modif admin)
     reloadLangs: async () => {
       await loadLanguages();
       buildSelector();
+    },
+    // Debug : forcer re-traduction complète du DOM
+    retranslate: () => {
+      applyTranslationsToDOM();
+      translateSidebar();
+      _collectVisibleTexts();
     },
   };
 
