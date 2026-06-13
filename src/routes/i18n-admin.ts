@@ -1,14 +1,17 @@
 // ============================================================
-// routes/i18n-admin.ts — Gestion des langues i18n (admin)
+// routes/i18n-admin.ts — Gestion des langues i18n
+// Public  : GET /api/i18n/languages       → utilisé par i18n.js
+// Admin   : /api/admin/i18n/*             → panel admin
 // ============================================================
 import { Hono } from 'hono'
 import type { Bindings } from '../types/index.js'
 
-const router = new Hono<{ Bindings: Bindings }>()
+// ── Router public ─────────────────────────────────────────────────────────────
+// Monté sur /api/i18n
+const i18nPublic = new Hono<{ Bindings: Bindings }>()
 
-// ── GET /api/i18n/languages — public, utilisé par i18n.js ───────────────────
-// Retourne toutes les langues actives (sans auth)
-router.get('/languages', async (c) => {
+// GET /api/i18n/languages — langues actives, utilisé par i18n.js côté client
+i18nPublic.get('/languages', async (c) => {
   const db = (c.env as any)?.DB as D1Database
   if (!db) return c.json({ languages: [] })
   try {
@@ -24,8 +27,15 @@ router.get('/languages', async (c) => {
   }
 })
 
-// ── GET /api/admin/i18n/languages — toutes les langues (admin) ───────────────
-router.get('/admin/languages', async (c) => {
+// POST /api/i18n/translate — appelé par i18n.js (KV → DeepSeek)
+// NOTE: cet endpoint est aussi défini inline dans index.tsx — on ne le redéfinit pas ici
+
+// ── Router admin ──────────────────────────────────────────────────────────────
+// Monté sur /api/admin/i18n
+const i18nAdmin = new Hono<{ Bindings: Bindings }>()
+
+// GET /api/admin/i18n/languages — toutes les langues (actives + inactives)
+i18nAdmin.get('/languages', async (c) => {
   const db = (c.env as any)?.DB as D1Database
   try {
     const { results } = await db.prepare(
@@ -37,8 +47,8 @@ router.get('/admin/languages', async (c) => {
   }
 })
 
-// ── POST /api/admin/i18n/languages — créer une nouvelle langue ───────────────
-router.post('/admin/languages', async (c) => {
+// POST /api/admin/i18n/languages — créer une langue
+i18nAdmin.post('/languages', async (c) => {
   const db = (c.env as any)?.DB as D1Database
   try {
     const body = await c.req.json()
@@ -46,7 +56,7 @@ router.post('/admin/languages', async (c) => {
 
     if (!code || !name) return c.json({ error: 'code et name requis' }, 400)
 
-    const codeClean = code.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '')
+    const codeClean = String(code).trim().toLowerCase().replace(/[^a-z0-9_-]/g, '')
     if (!codeClean) return c.json({ error: 'Code invalide' }, 400)
 
     await db.prepare(
@@ -54,10 +64,10 @@ router.post('/admin/languages', async (c) => {
        VALUES (?, ?, ?, ?, ?)`
     ).bind(
       codeClean,
-      name.trim(),
-      (flag || '🌐').trim(),
+      String(name).trim(),
+      String(flag || '🌐').trim(),
       is_active !== undefined ? (is_active ? 1 : 0) : 1,
-      sort_order || 100
+      Number(sort_order) || 100
     ).run()
 
     const row = await db.prepare(
@@ -73,8 +83,8 @@ router.post('/admin/languages', async (c) => {
   }
 })
 
-// ── PUT /api/admin/i18n/languages/:id — modifier une langue ──────────────────
-router.put('/admin/languages/:id', async (c) => {
+// PUT /api/admin/i18n/languages/:id — modifier nom/flag/ordre
+i18nAdmin.put('/languages/:id', async (c) => {
   const db = (c.env as any)?.DB as D1Database
   const id = Number(c.req.param('id'))
   try {
@@ -83,15 +93,15 @@ router.put('/admin/languages/:id', async (c) => {
 
     await db.prepare(
       `UPDATE i18n_languages
-       SET name = COALESCE(?, name),
-           flag = COALESCE(?, flag),
-           is_active = COALESCE(?, is_active),
+       SET name       = COALESCE(?, name),
+           flag       = COALESCE(?, flag),
+           is_active  = COALESCE(?, is_active),
            sort_order = COALESCE(?, sort_order),
            updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`
     ).bind(
-      name?.trim() || null,
-      flag?.trim() || null,
+      name  ? String(name).trim()  : null,
+      flag  ? String(flag).trim()  : null,
       is_active !== undefined ? (is_active ? 1 : 0) : null,
       sort_order !== undefined ? Number(sort_order) : null,
       id
@@ -107,12 +117,11 @@ router.put('/admin/languages/:id', async (c) => {
   }
 })
 
-// ── PATCH /api/admin/i18n/languages/:id/toggle — activer/désactiver ──────────
-router.patch('/admin/languages/:id/toggle', async (c) => {
+// PATCH /api/admin/i18n/languages/:id/toggle — activer/désactiver
+i18nAdmin.patch('/languages/:id/toggle', async (c) => {
   const db = (c.env as any)?.DB as D1Database
   const id = Number(c.req.param('id'))
   try {
-    // Empêcher de désactiver le français (langue source)
     const row = await db.prepare(
       `SELECT * FROM i18n_languages WHERE id = ?`
     ).bind(id).first() as any
@@ -131,8 +140,8 @@ router.patch('/admin/languages/:id/toggle', async (c) => {
   }
 })
 
-// ── DELETE /api/admin/i18n/languages/:id — supprimer une langue ──────────────
-router.delete('/admin/languages/:id', async (c) => {
+// DELETE /api/admin/i18n/languages/:id — supprimer
+i18nAdmin.delete('/languages/:id', async (c) => {
   const db = (c.env as any)?.DB as D1Database
   const id = Number(c.req.param('id'))
   try {
@@ -153,11 +162,11 @@ router.delete('/admin/languages/:id', async (c) => {
   }
 })
 
-// ── GET /api/admin/i18n/cache-stats — stats du cache KV ─────────────────────
-router.get('/admin/cache-stats', async (c) => {
+// GET /api/admin/i18n/cache-stats — stats du cache KV
+i18nAdmin.get('/cache-stats', async (c) => {
   const env = c.env as any
   const i18nKV: KVNamespace | undefined = env?.I18N_KV
-  if (!i18nKV) return c.json({ error: 'I18N_KV non configuré' }, 503)
+  if (!i18nKV) return c.json({ total: 0, by_lang: {} })
   try {
     const list = await i18nKV.list({ prefix: 'i18n:' })
     const byLang: Record<string, number> = {}
@@ -167,23 +176,23 @@ router.get('/admin/cache-stats', async (c) => {
     }
     return c.json({ total: list.keys.length, by_lang: byLang })
   } catch (err) {
-    return c.json({ error: String(err) }, 500)
+    return c.json({ total: 0, by_lang: {} })
   }
 })
 
-// ── DELETE /api/admin/i18n/cache/:lang — vider le cache KV d'une langue ──────
-router.delete('/admin/cache/:lang', async (c) => {
+// DELETE /api/admin/i18n/cache/:lang — vider le cache KV d'une langue
+i18nAdmin.delete('/cache/:lang', async (c) => {
   const env = c.env as any
   const i18nKV: KVNamespace | undefined = env?.I18N_KV
   const lang = c.req.param('lang')
   if (!i18nKV) return c.json({ error: 'I18N_KV non configuré' }, 503)
   try {
     const list = await i18nKV.list({ prefix: `i18n:${lang}:` })
-    await Promise.all(list.keys.map(k => i18nKV.delete(k.name)))
+    await Promise.all(list.keys.map((k: { name: string }) => i18nKV.delete(k.name)))
     return c.json({ ok: true, deleted: list.keys.length })
   } catch (err) {
     return c.json({ error: String(err) }, 500)
   }
 })
 
-export { router as i18nRouter }
+export { i18nPublic, i18nAdmin }

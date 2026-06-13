@@ -17,7 +17,7 @@ import { pspRouter, pspAdminRouter } from './routes/psp.js'
 import { emailAdmin } from './routes/email-admin.js'
 import brokerRouter, { brokerAdmin as brokerAdminRouter } from './routes/broker.js'
 import { landingPublic, landingAdmin, buildLandingPage } from './routes/landing.js'
-import { i18nRouter } from './routes/i18n-admin.js'
+import { i18nPublic, i18nAdmin } from './routes/i18n-admin.js'
 import type { Bindings } from './types/index.js'
 import { processDailyPayments, getMauritiusDateStr, processBVQueue, processRankQueue, activateAndReward, createNotification, orchestrateur } from './lib/mlm.js'
 import { sendEmail } from './lib/mailer.js'
@@ -204,8 +204,8 @@ app.route('/api/admin/broker', brokerAdminRouter)
 // ── Landing page routes ────────────────────────────────────────
 app.route('/', landingPublic)
 app.route('/api/admin', landingAdmin)
-app.route('/api/i18n', i18nRouter)
-app.route('/api/admin', i18nRouter)
+app.route('/api/i18n', i18nPublic)
+app.route('/api/admin/i18n', i18nAdmin)
 
 // ── Route cron externe (cron-job.org) ─────────────────────────
 // Répond immédiatement 200 puis exécute l'orchestrateur en arrière-plan
