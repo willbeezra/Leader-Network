@@ -32,10 +32,11 @@ async function getServices(db: D1Database, includeInactive = false): Promise<any
   // Déduplique par id (rowid MIN) pour éviter l'affichage en double
   // si la table a été peuplée plusieurs fois (INSERT OR IGNORE réexécuté)
   const dedup = (rows: any[]): any[] => {
-    const seen = new Set<number>()
-    return rows.filter(r => {
-      if (seen.has(r.id)) return false
-      seen.add(r.id)
+    const seen = new Set()
+    return rows.filter((r, idx) => {
+      const key = r.id != null ? r.id : `_idx_${idx}`
+      if (seen.has(key)) return false
+      seen.add(key)
       return true
     })
   }
@@ -66,8 +67,13 @@ async function getServices(db: D1Database, includeInactive = false): Promise<any
 
 async function getTestimonials(db: D1Database, featuredOnly = false): Promise<any[]> {
   const dedup = (rows: any[]): any[] => {
-    const seen = new Set<number>()
-    return rows.filter(r => { if (seen.has(r.id)) return false; seen.add(r.id); return true })
+    const seen = new Set()
+    return rows.filter((r, idx) => {
+      const key = r.id != null ? r.id : `_idx_${idx}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
   }
   try {
     const q = featuredOnly
@@ -648,13 +654,40 @@ ${testimonialsActive && featuredTestimonials.length > 0 ? `
 
     <div class="text-center mb-10 reveal">
       <span class="section-label mb-4 block" data-i18n="Témoignages">Témoignages</span>
-      <h2 class="text-3xl md:text-5xl font-black mb-3" data-i18n="${cfg.testimonials_title || 'Ils ont transformé leur vie'}">${cfg.testimonials_title || 'Ils ont transformé leur vie'}</h2>
-      <!-- Compteur avis -->
-      <div class="flex items-center justify-center gap-2 mt-4">
-        <span style="color:#F5A623;font-size:1rem;letter-spacing:0.05em">★★★★★</span>
-        <span style="color:#FFFFFF;font-weight:700;font-size:0.95rem">${cfg.stats_rating || '4.9'}/5</span>
-        <span style="color:rgba(245,240,232,0.4);font-size:0.85rem">·</span>
-        <span style="color:rgba(245,240,232,0.55);font-size:0.85rem">${cfg.stats_reviews || '237'} avis vérifiés</span>
+      <h2 class="text-3xl md:text-5xl font-black mb-6" data-i18n="${cfg.testimonials_title || 'Ils ont transformé leur vie'}">${cfg.testimonials_title || 'Ils ont transformé leur vie'}</h2>
+
+      <!-- Badge Trustpilot officiel -->
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mt-2">
+
+        <!-- Widget Trustpilot style -->
+        <a href="https://fr.trustpilot.com/review/willbenetwork.com" target="_blank" rel="noopener"
+           style="display:inline-flex;align-items:center;gap:12px;background:#FFFFFF;border-radius:10px;padding:10px 18px;text-decoration:none;box-shadow:0 4px 20px rgba(0,0,0,0.3);transition:transform 0.2s"
+           onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+          <!-- Logo Trustpilot SVG officiel -->
+          <svg width="110" height="28" viewBox="0 0 110 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M14 0L17.163 9.763H27.456L19.147 15.819L22.31 25.582L14 19.527L5.69 25.582L8.853 15.819L0.544 9.763H10.837L14 0Z" fill="#00B67A"/>
+            <text x="33" y="20" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#191919">Trustpilot</text>
+          </svg>
+          <!-- Note + étoiles -->
+          <div style="display:flex;flex-direction:column;align-items:flex-start;gap:2px">
+            <div style="display:flex;align-items:center;gap:4px">
+              <!-- 5 étoiles Trustpilot vertes -->
+              ${Array.from({length: 5}, (_, i) => `<span style="display:inline-block;width:20px;height:20px;background:${i < 4 ? '#00B67A' : '#FF8622'};border-radius:2px;display:flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></span>`).join('')}
+            </div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:0.8rem;font-weight:700;color:#191919">${cfg.stats_rating || '4.7'} / 5</span>
+              <span style="font-size:0.72rem;color:#555;border-left:1px solid #ddd;padding-left:6px">${cfg.stats_reviews || '38'} avis</span>
+            </div>
+          </div>
+        </a>
+
+        <!-- Séparateur + total membres -->
+        <div style="display:flex;align-items:center;gap-8px;color:rgba(245,240,232,0.4);font-size:0.8rem">
+          <span style="color:rgba(245,240,232,0.35)">Rejoignez les</span>
+          <span style="color:#FFFFFF;font-weight:700;margin:0 4px">${cfg.stats_members || '12 000'}+</span>
+          <span style="color:rgba(245,240,232,0.35)">membres satisfaits</span>
+        </div>
+
       </div>
     </div>
 
