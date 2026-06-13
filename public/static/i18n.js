@@ -1,45 +1,50 @@
 /**
- * i18n.js v4 — Moteur de traduction multilingue — Leader Network
+ * i18n.js v5 — Moteur de traduction multilingue — Leader Network
  *
- * Langues configurées 100% depuis la DB via /api/i18n/languages
- * Rien de hardcodé. L'admin peut ajouter/activer/désactiver depuis le panel.
+ * FIXES v5 :
+ *  - Langues : JAMAIS de cache localStorage → toujours depuis /api/i18n/languages
+ *    Désactiver une langue côté admin → disparaît immédiatement côté membre
+ *  - Créoles : warm-up échoue (pas de fichier .json) → on passe directement
+ *    au batch DeepSeek avec les textes visibles à l'écran
+ *  - Premier rendu : on attend que _langs soit chargé AVANT tout, puis on active
+ *    patchInnerHTML, puis on force rerenderPage() pour que member-app.js
+ *    re-rende avec les traductions
  *
  * Flux :
- *   1. Charge les langues depuis /api/i18n/languages (DB)
- *   2. warm-up: charge strings.{lang}.json statique si disponible
- *   3. patchInnerHTML() intercepte chaque rendu → applyCache() synchrone
- *   4. Textes manquants → batch → POST /api/i18n/translate (KV → DeepSeek)
- *   5. rerenderPage() après chaque batch → DOM mis à jour
+ *   1. loadLanguages() → GET /api/i18n/languages (DB, aucun cache)
+ *   2. warmupCache(lang) → strings.{lang}.json si dispo (EN/ES/PT…)
+ *      Pour les créoles : cache vide, mais _ready = true
+ *   3. patchInnerHTML() activé
+ *   4. rerenderPage() → showPage(currentPage) → innerHTML patché → traduction
+ *   5. Textes manquants → batch POST /api/i18n/translate → KV → DeepSeek
+ *   6. Après batch → rebuildRegex() → rerenderPage() → DOM mis à jour
  */
 (function () {
   'use strict';
 
   const DEFAULT     = 'fr';
   const STORAGE_KEY = 'leader_lang';
-  const LANGS_CACHE_KEY = 'i18n_langs_v4';
-  const LANGS_CACHE_TTL = 5 * 60 * 1000; // 5 min
 
-  // ─── État ────────────────────────────────────────────────────────────────────
-  let _lang     = DEFAULT;
-  let _ready    = false;
-  let _patched  = false;
-  let _langs    = [];   // [{ code, name, flag, sort_order }] — chargé depuis API
+  // ─── État ─────────────────────────────────────────────────────────────────
+  let _lang    = DEFAULT;
+  let _ready   = false;
+  let _patched = false;
+  let _langs   = [];  // chargé depuis API à chaque init/switch — jamais hardcodé
 
-  // Cache traductions : Map<texteFR, texteTraduction> pour la langue courante
-  let _cache    = new Map();
+  // Cache traductions : Map<texteFR, texteTraduction>
+  let _cache     = new Map();
   let _dictRegex = null;
   let _dictKeys  = [];
 
-  // Textes vus mais non encore traduits
+  // File d'attente batch
   let _missing      = new Set();
   let _batchPending = false;
 
-  // ─── Escape RegExp ──────────────────────────────────────────────────────────
+  // ─── Escape RegExp ────────────────────────────────────────────────────────
   function escapeRegex(s) {
     return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
-  // ─── Rebuild regex depuis _cache ────────────────────────────────────────────
   function rebuildRegex() {
     _dictKeys  = [..._cache.keys()].sort((a, b) => b.length - a.length);
     _dictRegex = _dictKeys.length > 0
@@ -47,13 +52,12 @@
       : null;
   }
 
-  // ─── Remplacement synchrone ─────────────────────────────────────────────────
   function applyCache(text) {
     if (!_dictRegex || !text) return text;
     return text.replace(_dictRegex, m => _cache.has(m) ? _cache.get(m) : m);
   }
 
-  // ─── Détection langue ────────────────────────────────────────────────────────
+  // ─── Détection langue ─────────────────────────────────────────────────────
   function detectLang() {
     const s = localStorage.getItem(STORAGE_KEY);
     if (s) return s;
@@ -61,72 +65,78 @@
     return n || DEFAULT;
   }
 
-  // ─── Chargement des langues depuis l'API (avec cache localStorage 5min) ─────
+  // ─── Chargement des langues ACTIVES depuis l'API — aucun cache ──────────
+  // Appel réseau à chaque init et à chaque switchLang.
+  // Garantit qu'une langue désactivée dans l'admin disparaît immédiatement.
   async function loadLanguages() {
-    // Essayer le cache local d'abord
     try {
-      const cached = localStorage.getItem(LANGS_CACHE_KEY);
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (parsed.ts && Date.now() - parsed.ts < LANGS_CACHE_TTL && parsed.langs?.length) {
-          _langs = parsed.langs;
-          return;
-        }
-      }
-    } catch(e) {}
-
-    try {
-      const r = await fetch('/api/i18n/languages');
+      const r = await fetch('/api/i18n/languages?_=' + Date.now());
       if (r.ok) {
         const data = await r.json();
         _langs = data.languages || [];
-        localStorage.setItem(LANGS_CACHE_KEY, JSON.stringify({ ts: Date.now(), langs: _langs }));
       }
     } catch(e) {
-      console.warn('[i18n v4] impossible de charger les langues:', e);
-      // Fallback minimal si l'API échoue
-      _langs = [{ code: 'fr', name: 'Français', flag: '🇫🇷', sort_order: 1 }];
+      console.warn('[i18n v5] loadLanguages error:', e);
+      // Fallback minimal — juste FR
+      if (!_langs.length) _langs = [{ code: 'fr', name: 'Français', flag: '🇫🇷', sort_order: 1 }];
+    }
+
+    // Si la langue courante a été désactivée → revenir au FR
+    if (_lang !== DEFAULT && _langs.length && !_langs.find(l => l.code === _lang)) {
+      console.warn('[i18n v5] langue "' + _lang + '" désactivée → retour FR');
+      _lang = DEFAULT;
+      localStorage.setItem(STORAGE_KEY, DEFAULT);
+      document.documentElement.setAttribute('lang', DEFAULT);
     }
   }
 
-  // ─── Warm-up : charge strings.{lang}.json statique dans _cache ──────────────
+  // ─── Warm-up : charge strings.{lang}.json dans _cache (si disponible) ───
+  // Pour les créoles (rcf, mfe, hat, gcf, mart, mad) : pas de fichier statique
+  // → _cache reste vide mais _ready = true
+  // → Le premier rendu passe en batch DeepSeek immédiatement
   async function warmupCache(lang) {
-    if (lang === DEFAULT) return;
     _cache.clear();
     _dictRegex = null;
     _dictKeys  = [];
+
+    if (lang === DEFAULT) return;
 
     try {
       const r = await fetch('/static/locales/strings.' + lang + '.json?_=' + Date.now());
       if (r.ok) {
         const dict = await r.json();
         if (dict && typeof dict === 'object') {
+          let count = 0;
           Object.entries(dict).forEach(([fr, translated]) => {
             if (fr && translated && typeof translated === 'string' && fr !== translated) {
               _cache.set(fr, translated);
+              count++;
             }
           });
-          console.log('[i18n v4] warm-up "' + lang + '" : ' + _cache.size + ' entrées');
+          if (count > 0) {
+            rebuildRegex();
+            console.log('[i18n v5] warm-up "' + lang + '" : ' + count + ' entrées');
+          }
         }
       }
-    } catch(e) { /* pas de fichier statique = normal */ }
-
-    rebuildRegex();
+      // Pas de fichier → cache vide, pas d'erreur — DeepSeek prendra le relais
+    } catch(e) { /* normal pour les créoles */ }
   }
 
-  // ─── Traduction HTML (synchrone depuis _cache) ───────────────────────────────
+  // ─── Traduction HTML (synchrone depuis _cache) ────────────────────────────
   function translateHTML(html) {
     if (!html || _lang === DEFAULT || !_ready) return html;
 
     let hasMissing = false;
 
-    // 1. Textes visibles entre balises
+    // Textes visibles entre balises
     html = html.replace(/>([^<]+)</g, function(match, text) {
       const trimmed = text.trim();
       if (!trimmed) return match;
       if (_cache.has(trimmed)) {
         return '>' + text.replace(trimmed, _cache.get(trimmed)) + '<';
       }
+      // Texte non en cache : l'ajouter à la file sauf si c'est un nombre/montant pur
       if (trimmed.length > 1 && !/^\d+([.,]\d+)?[%€$]?$/.test(trimmed)) {
         _missing.add(trimmed);
         hasMissing = true;
@@ -134,13 +144,11 @@
       return match;
     });
 
-    // 2. Attributs placeholder / title / value
-    html = html.replace(/\b(placeholder|title|value)=(['"])([^'"]+)\2/g,
+    // Attributs placeholder / title
+    html = html.replace(/\b(placeholder|title)=(['"])([^'"]+)\2/g,
       function(match, attr, q, val) {
         const trimmed = val.trim();
-        if (_cache.has(trimmed)) {
-          return attr + '=' + q + _cache.get(trimmed) + q;
-        }
+        if (_cache.has(trimmed)) return attr + '=' + q + _cache.get(trimmed) + q;
         if (trimmed.length > 1) { _missing.add(trimmed); hasMissing = true; }
         return match;
       }
@@ -150,7 +158,7 @@
     return html;
   }
 
-  // ─── Patch innerHTML ─────────────────────────────────────────────────────────
+  // ─── Patch innerHTML ──────────────────────────────────────────────────────
   function patchInnerHTML() {
     if (_patched) return;
     _patched = true;
@@ -170,11 +178,11 @@
     });
   }
 
-  // ─── Batch de traduction ─────────────────────────────────────────────────────
+  // ─── Batch DeepSeek ───────────────────────────────────────────────────────
   function scheduleBatch() {
     if (_batchPending || _missing.size === 0) return;
     _batchPending = true;
-    setTimeout(flushBatch, 80);
+    setTimeout(flushBatch, 100);
   }
 
   async function flushBatch() {
@@ -185,7 +193,7 @@
     _missing.clear();
     if (texts.length === 0) return;
 
-    console.log('[i18n v4] batch', texts.length, 'textes →', _lang);
+    console.log('[i18n v5] batch', texts.length, 'textes →', _lang);
 
     try {
       const resp = await fetch('/api/i18n/translate', {
@@ -199,33 +207,38 @@
 
       let newEntries = 0;
       Object.entries(translations).forEach(([fr, translated]) => {
-        if (fr && translated && typeof translated === 'string') {
+        if (fr && translated && typeof translated === 'string' && translated !== fr) {
           _cache.set(fr, translated);
           newEntries++;
         }
       });
+      // Textes non traduits → stocker original pour éviter batchs infinis
       texts.forEach(t => { if (!_cache.has(t)) _cache.set(t, t); });
 
       if (newEntries > 0) {
         rebuildRegex();
+        console.log('[i18n v5] +' + newEntries + ' nouvelles traductions → re-rendu');
         rerenderPage();
       }
     } catch(e) {
-      console.warn('[i18n v4] batch error:', e);
+      console.warn('[i18n v5] batch error:', e);
       texts.forEach(t => _cache.set(t, t));
     }
   }
 
-  // ─── Re-rendu ────────────────────────────────────────────────────────────────
+  // ─── Re-rendu de la page ──────────────────────────────────────────────────
   function rerenderPage() {
+    // member-app.js expose showPage() + currentPage
     if (typeof showPage === 'function' && typeof currentPage !== 'undefined') {
-      showPage(currentPage); return;
+      showPage(currentPage);
+      return;
     }
-    translateExistingDOM();
+    // Fallback : re-traduire le DOM directement
+    translateDOM_el(document.body);
     translateSidebar();
   }
 
-  // ─── Traduire DOM existant ───────────────────────────────────────────────────
+  // ─── Traduire les nœuds texte d'un élément ───────────────────────────────
   function translateDOM_el(root) {
     if (_lang === DEFAULT || !_ready || !root) return;
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
@@ -262,8 +275,6 @@
     if (_missing.size > 0) scheduleBatch();
   }
 
-  function translateExistingDOM() { translateDOM_el(document.body); }
-
   function translateSidebar() {
     if (_lang === DEFAULT || !_ready) return;
     const sidebar = document.getElementById('sidebar');
@@ -275,13 +286,18 @@
         if (cn.nodeType !== Node.TEXT_NODE) return;
         const raw = cn.textContent.trim();
         if (!raw) return;
-        if (_cache.has(raw)) { const t = _cache.get(raw); if (t !== raw) cn.textContent = ' ' + t; }
-        else { _missing.add(raw); scheduleBatch(); }
+        if (_cache.has(raw)) {
+          const t = _cache.get(raw);
+          if (t !== raw) cn.textContent = ' ' + t;
+        } else {
+          _missing.add(raw);
+          scheduleBatch();
+        }
       });
     });
   }
 
-  // ─── Sélecteur de langue ─────────────────────────────────────────────────────
+  // ─── Sélecteur de langue ──────────────────────────────────────────────────
   function buildSelector() {
     const existing = document.getElementById('i18n-lang-selector');
     if (existing) existing.remove();
@@ -296,7 +312,6 @@
       fontSize: '13px', userSelect: 'none',
     });
 
-    // Dropdown
     const drop = document.createElement('div');
     drop.id = 'i18n-lang-dropdown';
     Object.assign(drop.style, {
@@ -310,7 +325,10 @@
 
     // Barre de recherche
     const searchWrap = document.createElement('div');
-    Object.assign(searchWrap.style, { padding: '8px 10px', borderBottom: '1px solid rgba(255,255,255,0.07)' });
+    Object.assign(searchWrap.style, {
+      padding: '8px 10px',
+      borderBottom: '1px solid rgba(255,255,255,0.07)'
+    });
     const searchInput = document.createElement('input');
     searchInput.type = 'text';
     searchInput.placeholder = '🔍 Rechercher…';
@@ -394,14 +412,14 @@
     btn.textContent = cur.flag + ' ' + cur.name;
   }
 
-  // ─── Watchdog ────────────────────────────────────────────────────────────────
+  // ─── Watchdog ─────────────────────────────────────────────────────────────
   function startWatchdog() {
     setInterval(() => {
       if (!document.getElementById('i18n-lang-selector') && document.body) buildSelector();
     }, 1500);
   }
 
-  // ─── Changement de langue ────────────────────────────────────────────────────
+  // ─── Changement de langue ─────────────────────────────────────────────────
   async function switchLang(lang) {
     if (lang === _lang) return;
 
@@ -417,45 +435,97 @@
 
     if (lang === DEFAULT) {
       _cache.clear(); _dictRegex = null; _dictKeys = [];
+      // Recharger les langues actives (l'admin peut en avoir réactivé)
+      await loadLanguages();
       _ready = true;
       updateSelectorBtn();
       location.reload();
       return;
     }
 
+    // Recharger les langues actives depuis la DB
+    await loadLanguages();
+
+    // Warm-up depuis fichier statique (si disponible)
     await warmupCache(lang);
+
     _ready = true;
     updateSelectorBtn();
     translateSidebar();
-    translateExistingDOM();
+
+    // Re-rendre la page pour déclencher le patch innerHTML
     rerenderPage();
+
+    // Pour les créoles (cache vide) : forcer un batch immédiat
+    // en collectant tous les textes visibles du DOM
+    if (_cache.size === 0) {
+      _collectVisibleTexts();
+    }
   }
 
-  // ─── Init ────────────────────────────────────────────────────────────────────
+  // ─── Collecte des textes visibles pour forcer le premier batch ────────────
+  // Utilisé pour les langues sans fichier warm-up (créoles, langues rares)
+  function _collectVisibleTexts() {
+    if (!document.body) return;
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        const p = node.parentElement;
+        if (!p) return NodeFilter.FILTER_REJECT;
+        if (['SCRIPT','STYLE','NOSCRIPT'].includes(p.tagName)) return NodeFilter.FILTER_REJECT;
+        if (p.closest('#i18n-lang-selector')) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    let n;
+    while ((n = walker.nextNode())) {
+      const trimmed = n.textContent && n.textContent.trim();
+      if (trimmed && trimmed.length > 1 && !/^\d+([.,]\d+)?[%€$]?$/.test(trimmed)) {
+        _missing.add(trimmed);
+      }
+    }
+    document.body.querySelectorAll('[placeholder],[title]').forEach(el => {
+      ['placeholder','title'].forEach(attr => {
+        const v = el.getAttribute(attr);
+        if (v && v.length > 1) _missing.add(v);
+      });
+    });
+    if (_missing.size > 0) {
+      console.log('[i18n v5] collecte forcée : ' + _missing.size + ' textes pour batch');
+      scheduleBatch();
+    }
+  }
+
+  // ─── Init ─────────────────────────────────────────────────────────────────
   async function init() {
     _lang = detectLang();
     document.documentElement.setAttribute('lang', _lang);
 
-    // Charger la liste des langues depuis l'API (avec cache 5min)
+    // 1. Charger les langues actives depuis la DB (sans cache)
     await loadLanguages();
 
-    // Warm-up AVANT d'activer le patch
+    // 2. Warm-up si langue non-FR
     if (_lang !== DEFAULT) {
       await warmupCache(_lang);
     }
 
+    // 3. Activer le patch APRÈS warm-up
     _ready = true;
     patchInnerHTML();
 
     function inject() {
       buildSelector();
       startWatchdog();
+
       if (_lang !== DEFAULT) {
+        // Attendre le premier rendu de member-app.js (~400ms)
         setTimeout(() => {
           translateSidebar();
-          translateExistingDOM();
           rerenderPage();
-        }, 350);
+          // Si cache encore vide (créoles) → collecter et batcher
+          if (_cache.size === 0) {
+            _collectVisibleTexts();
+          }
+        }, 450);
       }
     }
 
@@ -463,16 +533,17 @@
     else document.addEventListener('DOMContentLoaded', inject);
   }
 
-  // ─── API publique ─────────────────────────────────────────────────────────────
+  // ─── API publique ─────────────────────────────────────────────────────────
   window.t    = (key) => _cache.get(key) || key;
   window.i18n = {
     switch:    switchLang,
     current:   () => _lang,
-    supported: () => _langs.map(l => l.code),
     langs:     () => _langs,
+    supported: () => _langs.map(l => l.code),
     cache:     () => _cache,
-    reload:    async () => {
-      localStorage.removeItem(LANGS_CACHE_KEY);
+    stats:     () => ({ lang: _lang, cached: _cache.size, missing: _missing.size }),
+    // Forcer un rechargement de la liste des langues (ex: après modif admin)
+    reloadLangs: async () => {
       await loadLanguages();
       buildSelector();
     },
