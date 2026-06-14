@@ -123,10 +123,12 @@ async function showCampusPage(container) {
       </div>
     `;
   } catch (err) {
+    console.error('[Campus] Erreur showCampusPage:', err);
     mainContent.innerHTML = `
       <div class="campus-error">
         <i class="fas fa-exclamation-circle"></i>
         <p>Erreur de chargement du campus</p>
+        <p style="font-size:11px;color:#f87171;margin-top:6px;font-family:monospace;max-width:600px;word-break:break-all;">${err?.message || String(err)}</p>
         <button onclick="showCampusPage()">Réessayer</button>
       </div>
     `;
@@ -847,9 +849,9 @@ function adminCampusNewCategory() {
       closeCampusModal();
       await adminCampusTab('categories', document.querySelector('.campus-admin-tab.active'));
       await loadAdminCampusStats();
-      showToast('Catégorie créée !', 'success');
+      _campusToast('Catégorie créée !', 'success');
     } else {
-      showToast(result.error || 'Erreur', 'error');
+      _campusToast(result.error || 'Erreur', 'error');
     }
   });
 }
@@ -949,9 +951,9 @@ function adminCampusNewCourse() {
         closeCampusModal();
         await adminCampusTab('courses', null);
         await loadAdminCampusStats();
-        showToast('Formation créée !', 'success');
+        _campusToast('Formation créée !', 'success');
       } else {
-        showToast(result.error || 'Erreur', 'error');
+        _campusToast(result.error || 'Erreur', 'error');
       }
     });
   });
@@ -985,9 +987,9 @@ function adminCampusNewModule(courseId) {
     if (result.success) {
       closeCampusModal();
       adminCampusManageCourse(courseId);
-      showToast('Module créé !', 'success');
+      _campusToast('Module créé !', 'success');
     } else {
-      showToast(result.error || 'Erreur', 'error');
+      _campusToast(result.error || 'Erreur', 'error');
     }
   });
 }
@@ -1048,9 +1050,9 @@ function adminCampusNewLesson(moduleId, courseId) {
     if (result.success) {
       closeCampusModal();
       adminCampusManageCourse(courseId);
-      showToast('Leçon créée !', 'success');
+      _campusToast('Leçon créée !', 'success');
     } else {
-      showToast(result.error || 'Erreur', 'error');
+      _campusToast(result.error || 'Erreur', 'error');
     }
   });
 }
@@ -1106,9 +1108,9 @@ async function adminCampusEditLesson(lessonId) {
     const result = await r.json();
     if (result.success) {
       closeCampusModal();
-      showToast('Leçon mise à jour !', 'success');
+      _campusToast('Leçon mise à jour !', 'success');
     } else {
-      showToast(result.error || 'Erreur', 'error');
+      _campusToast(result.error || 'Erreur', 'error');
     }
   });
 }
@@ -1118,10 +1120,10 @@ async function adminCampusDeleteLesson(lessonId, moduleId, courseId) {
   const res = await campusFetch(`/api/campus/admin/lessons/${lessonId}`, { method: 'DELETE' });
   const result = await res.json();
   if (result.success) {
-    showToast('Leçon supprimée', 'success');
+    _campusToast('Leçon supprimée', 'success');
     adminCampusManageCourse(courseId);
   } else {
-    showToast('Erreur', 'error');
+    _campusToast('Erreur', 'error');
   }
 }
 
@@ -1130,10 +1132,10 @@ async function adminCampusDeleteModule(moduleId, courseId) {
   const res = await campusFetch(`/api/campus/admin/modules/${moduleId}`, { method: 'DELETE' });
   const result = await res.json();
   if (result.success) {
-    showToast('Module supprimé', 'success');
+    _campusToast('Module supprimé', 'success');
     adminCampusManageCourse(courseId);
   } else {
-    showToast('Erreur', 'error');
+    _campusToast('Erreur', 'error');
   }
 }
 
@@ -1142,10 +1144,10 @@ async function adminCampusDeleteCourse(courseId, title) {
   const res = await campusFetch(`/api/campus/admin/courses/${courseId}`, { method: 'DELETE' });
   const result = await res.json();
   if (result.success) {
-    showToast('Formation supprimée', 'success');
+    _campusToast('Formation supprimée', 'success');
     await adminCampusTab('courses', null);
   } else {
-    showToast('Erreur', 'error');
+    _campusToast('Erreur', 'error');
   }
 }
 
@@ -1154,24 +1156,24 @@ async function adminCampusDeleteCategory(catId, name) {
   const res = await campusFetch(`/api/campus/admin/categories/${catId}`, { method: 'DELETE' });
   const result = await res.json();
   if (result.success) {
-    showToast('Catégorie désactivée', 'success');
+    _campusToast('Catégorie désactivée', 'success');
     await adminCampusLoadCategories();
   } else {
-    showToast('Erreur', 'error');
+    _campusToast('Erreur', 'error');
   }
 }
 
 async function adminCampusEditCategory(catId) {
   // Édition simplifiée via prompt pour l'instant
-  showToast('Double-clic sur la ligne pour éditer', 'info');
+  _campusToast('Double-clic sur la ligne pour éditer', 'info');
 }
 
 async function adminCampusEditCourse(courseId) {
-  showToast('Utilisez "Gérer" pour modifier les détails du cours', 'info');
+  _campusToast('Utilisez "Gérer" pour modifier les détails du cours', 'info');
 }
 
 async function adminCampusEditModule(moduleId) {
-  showToast('Édition du module en cours de développement', 'info');
+  _campusToast('Édition du module en cours de développement', 'info');
 }
 
 // ============================================================
@@ -1244,8 +1246,11 @@ async function campusModalConfirm() {
 
 // Helper toast (si pas déjà défini globalement)
 // showToast — utilise la fonction globale si disponible, sinon fallback
-if (typeof showToast === 'undefined') {
-function showToast(message, type) {
+function _campusToast(message, type) {
+  if (typeof showToast === 'function') {
+    _campusToast(message, type);
+    return;
+  }
   if (typeof window.showNotification === 'function') {
     window.showNotification(message, type);
     return;
@@ -1256,10 +1261,8 @@ function showToast(message, type) {
     padding:12px 20px;border-radius:8px;font-size:14px;font-weight:600;
     color:#fff;box-shadow:0 4px 20px rgba(0,0,0,0.3);
     background:${type === 'success' ? '#22c55e' : type === 'error' ? '#ef4444' : '#3b82f6'};
-    animation:slideUp .3s ease;
   `;
   toast.textContent = message;
   document.body.appendChild(toast);
   setTimeout(() => toast.remove(), 3000);
-}
 }
