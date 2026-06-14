@@ -11800,6 +11800,8 @@ const _campus = {
   moduleId: null,
   moduleTitle: '',
   categories: [],
+  coursesCache: [],   // cache pour éviter JSON.stringify dans onclick
+  modulesCache: [],   // cache modules courants
 };
 
 // ── Entrée principale ─────────────────────────────────────────
@@ -11897,6 +11899,8 @@ async function _campusLoadCourses() {
           </div>`).join('')}
       </div>`;
 
+    _campus.coursesCache = courses || [];
+
     if (!courses || !courses.length) {
       html += `<div class="text-center py-16 text-gray-500">
         <i class="fas fa-graduation-cap text-5xl mb-4 opacity-30"></i>
@@ -11913,7 +11917,7 @@ async function _campusLoadCourses() {
             <div class="p-4">
               <div class="flex items-start justify-between gap-2 mb-2">
                 <h3 class="font-semibold text-white text-sm leading-tight flex-1 cursor-pointer hover:text-red-300 transition"
-                    onclick="_campusLoadModules('${c.id}', ${JSON.stringify(c.title)})">${_esc(c.title)}</h3>
+                    onclick="_campusGoModules('${c.id}')">${_esc(c.title)}</h3>
                 <span class="text-[10px] px-2 py-0.5 rounded-full shrink-0 ${statusCls}">${c.is_active ? 'Actif' : 'Inactif'}</span>
               </div>
               ${c.category_name ? `<span class="text-[10px] px-2 py-0.5 rounded-full bg-dark-700 text-gray-400 mb-2 inline-block">${_esc(c.category_name)}</span>` : ''}
@@ -11922,7 +11926,7 @@ async function _campusLoadCourses() {
                 <span><i class="fas fa-play-circle mr-1"></i>${c.lesson_count_real||c.lesson_count||0} leçons</span>
               </div>
               <div class="flex gap-2">
-                <button onclick="_campusLoadModules('${c.id}', ${JSON.stringify(c.title)})"
+                <button onclick="_campusGoModules('${c.id}')"
                   class="flex-1 bg-dark-700 hover:bg-red-900/30 text-gray-300 hover:text-white text-xs px-3 py-2 rounded-lg transition flex items-center justify-center gap-1">
                   <i class="fas fa-layer-group"></i> Modules
                 </button>
@@ -11962,11 +11966,19 @@ async function _campusToggleCourse(id, currentActive) {
 
 function _campusNewCourse() { _campusShowCourseModal(null); }
 
+// Helper: aller aux modules via cache (évite JSON dans onclick)
+function _campusGoModules(courseId) {
+  const c = _campus.coursesCache.find(x => x.id === courseId);
+  _campusLoadModules(courseId, c ? c.title : courseId);
+}
+
 async function _campusEditCourse(id) {
   try {
+    const course = _campus.coursesCache.find(c => c.id === id);
+    if (course) { _campusShowCourseModal(course); return; }
     const courses = await apiCampusAdmin('GET', '/courses');
-    const course = courses.find(c => c.id === id);
-    if (course) _campusShowCourseModal(course);
+    const found = courses.find(c => c.id === id);
+    if (found) _campusShowCourseModal(found);
   } catch(e) { showToast('Erreur: ' + (e.error||e.message||''), 'error'); }
 }
 
@@ -12108,6 +12120,7 @@ async function _campusLoadModules(courseId, courseTitle) {
 
   try {
     const modules = await apiCampusAdmin('GET', `/modules/${courseId}`);
+    _campus.modulesCache = modules || [];
 
     let html = `<div class="space-y-3">`;
     if (!modules || !modules.length) {
@@ -12115,6 +12128,7 @@ async function _campusLoadModules(courseId, courseTitle) {
         <i class="fas fa-layer-group text-5xl mb-4 opacity-30"></i>
         <p>Aucun module. Créez le premier !</p></div>`;
     } else {
+
       for (const m of modules) {
         html += `
           <div class="bg-dark-800 border border-dark-700 rounded-xl p-4 hover:border-red-800/40 transition">
@@ -12123,14 +12137,14 @@ async function _campusLoadModules(courseId, courseTitle) {
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 mb-0.5 flex-wrap">
                   <h4 class="font-semibold text-white text-sm cursor-pointer hover:text-red-300 transition"
-                      onclick="_campusLoadLessons('${m.id}', ${JSON.stringify(m.title)})">${_esc(m.title)}</h4>
+                      onclick="_campusGoLessons('${m.id}')">${_esc(m.title)}</h4>
                   ${!m.is_active ? `<span class="text-[10px] px-2 py-0.5 rounded-full bg-gray-800 text-gray-500">Inactif</span>` : ''}
                 </div>
                 ${m.description ? `<div class="text-xs text-gray-500 truncate">${_esc(m.description)}</div>` : ''}
                 <div class="text-xs text-gray-600 mt-0.5">${m.lesson_count||0} leçon(s)</div>
               </div>
               <div class="flex gap-2 shrink-0">
-                <button onclick="_campusLoadLessons('${m.id}', ${JSON.stringify(m.title)})"
+                <button onclick="_campusGoLessons('${m.id}')"
                   class="bg-dark-700 hover:bg-red-900/30 text-gray-400 hover:text-white text-xs px-3 py-1.5 rounded-lg transition flex items-center gap-1">
                   <i class="fas fa-play-circle"></i> Leçons
                 </button>
@@ -12157,11 +12171,19 @@ async function _campusLoadModules(courseId, courseTitle) {
 
 function _campusNewModule() { _campusShowModuleModal(null); }
 
+// Helper: aller aux leçons via cache
+function _campusGoLessons(moduleId) {
+  const m = _campus.modulesCache.find(x => x.id === moduleId);
+  _campusLoadLessons(moduleId, m ? m.title : moduleId);
+}
+
 async function _campusEditModule(id) {
   try {
+    const mod = _campus.modulesCache.find(m => m.id === id);
+    if (mod) { _campusShowModuleModal(mod); return; }
     const modules = await apiCampusAdmin('GET', `/modules/${_campus.courseId}`);
-    const mod = modules.find(m => m.id === id);
-    if (mod) _campusShowModuleModal(mod);
+    const found = modules.find(m => m.id === id);
+    if (found) _campusShowModuleModal(found);
   } catch(e) { showToast('Erreur: ' + (e.error||e.message||''), 'error'); }
 }
 
