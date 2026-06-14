@@ -11472,18 +11472,54 @@ async function adminPackageServiceAccess(el) {
       .psa-count-badge.has-access { background: rgba(22,163,74,.2); color: #4ade80; }
 
       /* Ligne séparatrice de catégorie */
-      .psa-tr-cat-header td {
-        background: #080d14 !important;
-        padding: 10px 14px 6px;
+      .psa-tr-cat-header .psa-td-cat-header {
+        background: linear-gradient(90deg, rgba(121,30,21,0.22) 0%, rgba(121,30,21,0.06) 60%, transparent 100%) !important;
+        padding: 0;
+        border-top: 2px solid rgba(121,30,21,0.45);
         border-bottom: 1px solid rgba(121,30,21,0.2);
-        border-top: 2px solid rgba(121,30,21,0.15);
         position: sticky;
         left: 0;
+        min-width: 100%;
       }
-      .psa-td-cat-header {
-        position: sticky;
-        left: 0;
-        z-index: 1;
+      .psa-cat-inner {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 16px;
+      }
+      .psa-cat-label {
+        font-size: 11px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: .1em;
+        color: #e05c4a;
+        background: rgba(121,30,21,0.25);
+        border: 1px solid rgba(121,30,21,0.4);
+        border-radius: 6px;
+        padding: 3px 10px 3px 8px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+      }
+      .psa-cat-label::before {
+        content: '';
+        display: inline-block;
+        width: 6px; height: 6px;
+        border-radius: 50%;
+        background: #e05c4a;
+        flex-shrink: 0;
+      }
+      .psa-cat-count {
+        font-size: 10px;
+        color: rgba(245,240,232,0.35);
+        white-space: nowrap;
+      }
+      .psa-cat-line {
+        flex: 1;
+        height: 1px;
+        background: linear-gradient(90deg, rgba(121,30,21,0.3) 0%, transparent 100%);
+        min-width: 20px;
       }
     `;
     document.head.appendChild(s);
@@ -11569,12 +11605,11 @@ async function adminPackageServiceAccess(el) {
                 rows += `
                 <tr class="psa-tr-cat-header">
                   <td class="psa-td-cat-header" colspan="${services.length + 1}">
-                    <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;
-                                 color:rgba(121,30,21,0.9);background:rgba(121,30,21,0.12);
-                                 padding:2px 10px;border-radius:999px;border:1px solid rgba(121,30,21,0.25)">
-                      ${catName}
-                    </span>
-                    <span style="font-size:10px;color:rgba(245,240,232,0.3);margin-left:8px">${catPkgs.length} package${catPkgs.length > 1 ? 's' : ''}</span>
+                    <div class="psa-cat-inner">
+                      <span class="psa-cat-label">${catName}</span>
+                      <span class="psa-cat-count">${catPkgs.length} package${catPkgs.length > 1 ? 's' : ''}</span>
+                      <span class="psa-cat-line"></span>
+                    </div>
                   </td>
                 </tr>`;
 
