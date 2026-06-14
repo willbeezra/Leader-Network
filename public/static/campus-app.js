@@ -348,7 +348,11 @@ async function showCampusCourse(slug) {
                     ${mod.lessons.map((lesson, lessonIdx) => `
                       <div class="campus-lesson ${lesson.completed ? 'completed' : ''} ${firstLesson && lesson.id === firstLesson.id ? 'active' : ''}"
                            id="lesson-item-${lesson.id}"
-                           onclick="campusSelectLesson('${lesson.id}', '${lesson.video_url || ''}', '${lesson.video_type || 'youtube'}', this, ${JSON.stringify(lesson.title).replace(/'/g, "\\'")})"
+                           data-lesson-id="${lesson.id}"
+                           data-video-url="${encodeURIComponent(lesson.video_url || '')}"
+                           data-video-type="${lesson.video_type || 'youtube'}"
+                           data-lesson-title="${(lesson.title || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;')}"
+                           onclick="campusSelectLessonFromEl(this)"
                       >
                         <div class="campus-lesson-icon">
                           ${lesson.completed
@@ -433,6 +437,15 @@ function extractVimeoId(url) {
 function extractDriveId(url) {
   const m = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
   return m ? m[1] : null;
+}
+
+// Wrapper pour les onclick inline utilisant data-* attributes (évite les conflits de quotes)
+function campusSelectLessonFromEl(el) {
+  const lessonId  = el.dataset.lessonId;
+  const videoUrl  = decodeURIComponent(el.dataset.videoUrl || '');
+  const videoType = el.dataset.videoType || 'youtube';
+  const title     = el.dataset.lessonTitle || '';
+  campusSelectLesson(lessonId, videoUrl, videoType, el, title);
 }
 
 function campusSelectLesson(lessonId, videoUrl, videoType, el, lessonTitle) {
@@ -631,7 +644,7 @@ async function adminCampusLoadCategories() {
                   <button class="campus-btn-edit" onclick="adminCampusEditCategory('${cat.id}')">
                     <i class="fas fa-edit"></i>
                   </button>
-                  <button class="campus-btn-delete" onclick="adminCampusDeleteCategory('${cat.id}', '${cat.name}')">
+                  <button class="campus-btn-delete" onclick="adminCampusDeleteCategory('${cat.id}', decodeURIComponent('${encodeURIComponent(cat.name)}'))">
                     <i class="fas fa-trash"></i>
                   </button>
                 </div>
@@ -695,7 +708,7 @@ async function adminCampusLoadCourses(categoryId) {
             <button class="campus-btn-edit" onclick="adminCampusEditCourse('${course.id}')">
               <i class="fas fa-edit"></i>
             </button>
-            <button class="campus-btn-delete" onclick="adminCampusDeleteCourse('${course.id}', '${course.title}')">
+            <button class="campus-btn-delete" onclick="adminCampusDeleteCourse('${course.id}', decodeURIComponent('${encodeURIComponent(course.title)}'))">
               <i class="fas fa-trash"></i>
             </button>
           </div>
