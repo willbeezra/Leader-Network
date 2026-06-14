@@ -22,7 +22,7 @@ campus.get('/', async (c) => {
     SELECT c.id, c.category_id, c.title, c.slug, c.subtitle, c.instructor,
            c.thumbnail_url, c.is_free, c.price_usd, c.total_lessons,
            c.total_duration_minutes, c.level, c.language, c.display_order,
-           c.is_featured,
+           c.is_featured, c.access_type, c.required_package_id,
            cat.name AS category_name, cat.color AS category_color,
            cat.slug AS category_slug
     FROM campus_courses c
@@ -30,6 +30,16 @@ campus.get('/', async (c) => {
     WHERE c.is_active = 1
     ORDER BY cat.display_order ASC, c.display_order ASC
   `).all()
+
+  // Packages actifs du membre (pour vérifier accès)
+  let memberPackageIds: string[] = []
+  if (memberId) {
+    const pkgs = await db.prepare(`
+      SELECT DISTINCT package_id FROM package_orders
+      WHERE member_id = ? AND status = 'validated'
+    `).bind(memberId).all()
+    memberPackageIds = (pkgs.results as any[]).map(p => p.package_id)
+  }
 
   // Progress si connecté
   let progressMap: Record<string, number> = {}
@@ -46,10 +56,18 @@ campus.get('/', async (c) => {
     }
   }
 
-  const coursesWithProgress = (courses.results as any[]).map(course => ({
-    ...course,
-    progress: progressMap[course.id] || 0
-  }))
+  const coursesWithProgress = (courses.results as any[]).map(course => {
+    // Calcul accès membre
+    let hasAccess = true
+    if (course.access_type === 'packages' && course.required_package_id) {
+      hasAccess = memberPackageIds.includes(course.required_package_id)
+    }
+    return {
+      ...course,
+      progress: progressMap[course.id] || 0,
+      has_access: hasAccess
+    }
+  })
 
   return c.json({
     categories: categories.results,
@@ -71,6 +89,27 @@ campus.get('/course/:slug', async (c) => {
   `).bind(slug).first()
 
   if (!course) return c.json({ error: 'Formation non trouvée' }, 404)
+
+  // Vérification accès
+  let hasAccess = true
+  const courseData = course as any
+  if (courseData.access_type === 'packages' && courseData.required_package_id && memberId) {
+    const pkgCheck = await db.prepare(`
+      SELECT COUNT(*) AS cnt FROM package_orders
+      WHERE member_id = ? AND package_id = ? AND status = 'validated'
+    `).bind(memberId, courseData.required_package_id).first() as any
+    hasAccess = (pkgCheck?.cnt || 0) > 0
+  } else if (courseData.access_type === 'packages' && courseData.required_package_id && !memberId) {
+    hasAccess = false
+  }
+
+  // Récupérer infos package requis si applicable
+  let requiredPackage = null
+  if (courseData.required_package_id) {
+    requiredPackage = await db.prepare(`
+      SELECT id, name, slug, price_usd FROM packages WHERE id = ?
+    `).bind(courseData.required_package_id).first()
+  }
 
   const modules = await db.prepare(`
     SELECT m.id, m.title, m.description, m.display_order
@@ -100,19 +139,20 @@ campus.get('/course/:slug', async (c) => {
     }
   }
 
-  // Agréger leçons par module
+  // Agréger leçons par module — si pas d'accès, masquer video_url
   const modulesWithLessons = (modules.results as any[]).map(mod => ({
     ...mod,
     lessons: (lessons.results as any[])
       .filter(l => l.module_id === mod.id)
       .map(l => ({
         ...l,
+        video_url: hasAccess || l.is_free ? l.video_url : null,
         completed: lessonProgress[l.id]?.completed || 0,
         progress_seconds: lessonProgress[l.id]?.progress_seconds || 0
       }))
   }))
 
-  return c.json({ course, modules: modulesWithLessons })
+  return c.json({ course: { ...course, has_access: hasAccess, required_package: requiredPackage }, modules: modulesWithLessons })
 })
 
 // POST /campus/lesson/:id/progress — sauvegarder progression
@@ -271,18 +311,20 @@ campus.post('/admin/courses', async (c) => {
   } = body
   if (!title || !slug) return c.json({ error: 'title et slug requis' }, 400)
 
+  const { access_type, required_package_id } = body
   const id = 'course-' + Math.random().toString(36).substring(2, 12)
   await db.prepare(`
     INSERT INTO campus_courses (id, category_id, title, slug, subtitle, description, instructor, instructor_bio,
-      thumbnail_url, trailer_url, trailer_type, price_usd, is_free, is_featured, display_order, level, language, tags, meta_title, meta_description)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      thumbnail_url, trailer_url, trailer_type, price_usd, is_free, is_featured, display_order, level, language, tags, meta_title, meta_description, access_type, required_package_id)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
   `).bind(
     id, category_id || null, title, slug, subtitle || null, description || null,
     instructor || null, instructor_bio || null, thumbnail_url || null,
     trailer_url || null, trailer_type || 'youtube',
     price_usd || 0, is_free !== false ? 1 : 0, is_featured ? 1 : 0,
     display_order || 0, level || 'all', language || 'fr',
-    tags ? JSON.stringify(tags) : null, meta_title || null, meta_description || null
+    tags ? JSON.stringify(tags) : null, meta_title || null, meta_description || null,
+    access_type || 'all', required_package_id || null
   ).run()
 
   return c.json({ success: true, id })
@@ -299,7 +341,8 @@ campus.put('/admin/courses/:id', async (c) => {
   const allowed = [
     'category_id','title','slug','subtitle','description','instructor','instructor_bio',
     'thumbnail_url','trailer_url','trailer_type','price_usd','is_free','is_featured',
-    'is_active','display_order','level','language','tags','meta_title','meta_description'
+    'is_active','display_order','level','language','tags','meta_title','meta_description',
+    'access_type','required_package_id'
   ]
   for (const key of allowed) {
     if (key in body) {
@@ -470,6 +513,18 @@ campus.delete('/admin/lessons/:id', async (c) => {
     `).bind(lesson.course_id, lesson.course_id).run()
   }
   return c.json({ success: true })
+})
+
+// GET /campus/admin/packages — liste packages pour dropdown admin
+campus.get('/admin/packages', async (c) => {
+  const db = c.env.DB
+  const packages = await db.prepare(`
+    SELECT id, name, slug, price_usd
+    FROM packages
+    WHERE is_active = 1 AND deleted_at IS NULL
+    ORDER BY display_order ASC, name ASC
+  `).all()
+  return c.json(packages.results)
 })
 
 // GET /campus/admin/stats — statistiques globales

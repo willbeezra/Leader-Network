@@ -150,9 +150,13 @@ function renderCampusCourseCard(course) {
     <span class="campus-card-pct">${course.progress}%</span>
   ` : '';
 
-  const badge = course.is_free
-    ? `<span class="campus-badge-free">Gratuit</span>`
-    : `<span class="campus-badge-price">$${course.price_usd}</span>`;
+  const locked = course.has_access === false;
+
+  const badge = locked
+    ? `<span class="campus-badge-locked"><i class="fas fa-lock"></i> Verrouillé</span>`
+    : course.is_free
+      ? `<span class="campus-badge-free">Gratuit</span>`
+      : `<span class="campus-badge-price">$${course.price_usd}</span>`;
 
   const levelBadge = course.level !== 'all' ? `
     <span class="campus-badge-level">${course.level}</span>
@@ -164,13 +168,21 @@ function renderCampusCourseCard(course) {
         <i class="fas fa-play-circle" style="color:${course.category_color || '#791E15'}"></i>
        </div>`;
 
+  // Overlay cadenas si cours verrouillé
+  const lockOverlay = locked ? `
+    <div class="campus-card-lock-overlay">
+      <i class="fas fa-lock"></i>
+    </div>
+  ` : '';
+
   return `
-    <article class="campus-card" onclick="showCampusCourse('${course.slug}')" 
+    <article class="campus-card ${locked ? 'campus-card-locked' : ''}" onclick="showCampusCourse('${course.slug}')" 
              data-title="${course.title.toLowerCase()}" data-cat="${course.category_id}">
       <div class="campus-card-thumb">
         ${thumb}
         ${badge}
         ${progressBar}
+        ${lockOverlay}
       </div>
       <div class="campus-card-body">
         <div class="campus-card-meta">
@@ -185,9 +197,10 @@ function renderCampusCourseCard(course) {
           <span class="campus-card-instructor">
             <i class="fas fa-user-tie"></i> ${_t(course.instructor || 'Équipe LEADER')}
           </span>
-          <span class="campus-card-lessons">
-            <i class="fas fa-play-circle"></i> ${course.total_lessons || 0} ${_t(course.total_lessons > 1 ? 'leçons' : 'leçon')}
-          </span>
+          ${locked
+            ? `<span class="campus-card-unlock"><i class="fas fa-unlock-alt"></i> Débloquer</span>`
+            : `<span class="campus-card-lessons"><i class="fas fa-play-circle"></i> ${course.total_lessons || 0} ${_t(course.total_lessons > 1 ? 'leçons' : 'leçon')}</span>`
+          }
         </div>
       </div>
     </article>
@@ -252,8 +265,9 @@ async function showCampusCourse(slug) {
     const totalLessons = modules.reduce((acc, m) => acc + m.lessons.length, 0);
     const completedLessons = modules.reduce((acc, m) => acc + m.lessons.filter(l => l.completed).length, 0);
     const progress = totalLessons > 0 ? Math.round(100 * completedLessons / totalLessons) : 0;
+    const courseHasAccess = course.has_access !== false;
 
-    // Trouver la première leçon avec vidéo ou la première leçon
+    // Trouver la première leçon avec vidéo (accessible) ou la première leçon
     let firstLesson = null;
     for (const mod of modules) {
       for (const lesson of mod.lessons) {
@@ -261,6 +275,27 @@ async function showCampusCourse(slug) {
         if (lesson.video_url && !firstLesson.video_url) firstLesson = lesson;
       }
     }
+
+    // Bloc d'accès restreint
+    const lockedBanner = !courseHasAccess ? (() => {
+      const pkg = course.required_package;
+      const pkgSlug = pkg?.slug || '';
+      const pkgName = pkg?.name || 'ce package';
+      const pkgPrice = pkg?.price_usd ? `$${pkg.price_usd}` : '';
+      return `
+        <div class="campus-locked-banner">
+          <div class="campus-locked-banner-icon"><i class="fas fa-lock"></i></div>
+          <div class="campus-locked-banner-text">
+            <strong>Formation réservée aux membres</strong>
+            <p>Cette formation est accessible avec ${_t(pkgName)}${pkgPrice ? ` (${pkgPrice})` : ''}.</p>
+          </div>
+          <button class="campus-locked-btn"
+            onclick="${pkgSlug ? `window.location.hash='packages?pkg=${pkgSlug}'` : `window.location.hash='packages'`}">
+            <i class="fas fa-unlock-alt"></i> Obtenir l'accès
+          </button>
+        </div>
+      `;
+    })() : '';
 
     mainContent.innerHTML = `
       <div class="campus-course-wrap">
@@ -272,17 +307,24 @@ async function showCampusCourse(slug) {
           <span class="campus-course-nav-title">${_t(course.title)}</span>
         </nav>
 
+        ${lockedBanner}
+
         <div class="campus-course-layout">
           <!-- COLONNE PRINCIPALE -->
           <div class="campus-course-main">
             <!-- PLAYER -->
             <div class="campus-player-wrap" id="campus-player-wrap">
-              ${firstLesson && firstLesson.video_url
-                ? renderVideoPlayer(firstLesson.video_url, firstLesson.video_type, firstLesson.title)
-                : `<div class="campus-player-placeholder">
-                    <i class="fas fa-play-circle"></i>
-                    <p>Sélectionnez une leçon pour commencer</p>
-                   </div>`
+              ${!courseHasAccess
+                ? `<div class="campus-player-locked">
+                    <i class="fas fa-lock"></i>
+                    <p>Obtenez l'accès pour regarder cette formation</p>
+                  </div>`
+                : firstLesson && firstLesson.video_url
+                  ? renderVideoPlayer(firstLesson.video_url, firstLesson.video_type, firstLesson.title)
+                  : `<div class="campus-player-placeholder">
+                      <i class="fas fa-play-circle"></i>
+                      <p>Sélectionnez une leçon pour commencer</p>
+                     </div>`
               }
             </div>
             <div class="campus-player-lesson-title" id="campus-current-lesson-title">
@@ -352,21 +394,27 @@ async function showCampusCourse(slug) {
                     <span class="campus-module-count">${mod.lessons.length}</span>
                   </button>
                   <div class="campus-module-lessons ${modIdx === 0 ? 'open' : ''}">
-                    ${mod.lessons.map((lesson, lessonIdx) => `
-                      <div class="campus-lesson ${lesson.completed ? 'completed' : ''} ${firstLesson && lesson.id === firstLesson.id ? 'active' : ''}"
+                    ${mod.lessons.map((lesson, lessonIdx) => {
+                      // Leçon verrouillée = cours sans accès ET leçon sans video_url (masquée côté backend)
+                      const lessonLocked = !courseHasAccess && !lesson.video_url;
+                      return `
+                      <div class="campus-lesson ${lesson.completed ? 'completed' : ''} ${firstLesson && lesson.id === firstLesson.id ? 'active' : ''} ${lessonLocked ? 'locked' : ''}"
                            id="lesson-item-${lesson.id}"
                            data-lesson-id="${lesson.id}"
                            data-video-url="${encodeURIComponent(lesson.video_url || '')}"
                            data-video-type="${lesson.video_type || 'youtube'}"
                            data-lesson-title="${(lesson.title || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;')}"
+                           data-locked="${lessonLocked ? '1' : '0'}"
                            onclick="campusSelectLessonFromEl(this)"
                       >
                         <div class="campus-lesson-icon">
-                          ${lesson.completed
-                            ? '<i class="fas fa-check-circle" style="color:#22c55e"></i>'
-                            : lesson.video_url
-                              ? '<i class="fas fa-play-circle"></i>'
-                              : '<i class="fas fa-file-alt"></i>'
+                          ${lessonLocked
+                            ? '<i class="fas fa-lock" style="color:#f59e0b"></i>'
+                            : lesson.completed
+                              ? '<i class="fas fa-check-circle" style="color:#22c55e"></i>'
+                              : lesson.video_url
+                                ? '<i class="fas fa-play-circle"></i>'
+                                : '<i class="fas fa-file-alt"></i>'
                           }
                         </div>
                         <div class="campus-lesson-info">
@@ -374,7 +422,7 @@ async function showCampusCourse(slug) {
                           ${lesson.duration_label ? `<span class="campus-lesson-duration">${lesson.duration_label}</span>` : ''}
                         </div>
                       </div>
-                    `).join('')}
+                    `}).join('')}
                   </div>
                 </div>
               `).join('')}
@@ -475,10 +523,27 @@ function campusSelectLessonFromEl(el) {
   const videoUrl  = decodeURIComponent(el.dataset.videoUrl || '');
   const videoType = el.dataset.videoType || 'youtube';
   const title     = el.dataset.lessonTitle || '';
-  campusSelectLesson(lessonId, videoUrl, videoType, el, title);
+  const locked    = el.dataset.locked === '1';
+  campusSelectLesson(lessonId, videoUrl, videoType, el, title, locked);
 }
 
-function campusSelectLesson(lessonId, videoUrl, videoType, el, lessonTitle) {
+function campusSelectLesson(lessonId, videoUrl, videoType, el, lessonTitle, locked) {
+  // Si leçon verrouillée → afficher message accès requis, ne pas lancer la vidéo
+  if (locked) {
+    const playerWrap = document.getElementById('campus-player-wrap');
+    if (playerWrap) {
+      playerWrap.innerHTML = `
+        <div class="campus-player-locked">
+          <i class="fas fa-lock"></i>
+          <p>Cette leçon est verrouillée</p>
+          <small>Obtenez l'accès à cette formation pour la regarder</small>
+        </div>`;
+    }
+    const titleEl = document.getElementById('campus-current-lesson-title');
+    if (titleEl) titleEl.textContent = lessonTitle;
+    return;
+  }
+
   // Highlight actif
   document.querySelectorAll('.campus-lesson').forEach(l => l.classList.remove('active'));
   el.classList.add('active');

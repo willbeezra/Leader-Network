@@ -1218,3 +1218,160 @@
   .campus-course-info-header { flex-direction: column; }
   .campus-course-stats { flex-direction: row; flex-wrap: wrap; }
 }
+
+/* ============================================================
+   ACCÈS RESTREINT — Cadenas, overlay, banner
+   ============================================================ */
+
+/* Badge verrouillé sur carte */
+.campus-badge-locked {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 9px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: rgba(245, 158, 11, 0.9);
+  color: #fff;
+  backdrop-filter: blur(4px);
+}
+
+/* Overlay cadenas sur la miniature */
+.campus-card-lock-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+.campus-card-lock-overlay i {
+  font-size: 32px;
+  color: rgba(245, 158, 11, 0.85);
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.6));
+}
+
+/* Carte verrouillée — légère opacité */
+.campus-card.campus-card-locked {
+  opacity: 0.85;
+  cursor: pointer;
+}
+.campus-card.campus-card-locked:hover {
+  opacity: 1;
+}
+
+/* Bouton "Débloquer" dans le footer de carte */
+.campus-card-unlock {
+  font-size: 11px;
+  color: #f59e0b;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Bannière accès restreint en haut de la page cours */
+.campus-locked-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.06));
+  border: 1px solid rgba(245,158,11,0.35);
+  border-radius: 14px;
+  padding: 18px 22px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.campus-locked-banner-icon {
+  width: 48px;
+  height: 48px;
+  background: rgba(245,158,11,0.18);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.campus-locked-banner-icon i {
+  font-size: 20px;
+  color: #f59e0b;
+}
+.campus-locked-banner-text {
+  flex: 1;
+  min-width: 180px;
+}
+.campus-locked-banner-text strong {
+  display: block;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+.campus-locked-banner-text p {
+  color: #d1d5db;
+  font-size: 13px;
+  margin: 0;
+}
+.campus-locked-btn {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  transition: transform 0.15s, box-shadow 0.15s;
+  box-shadow: 0 4px 14px rgba(245,158,11,0.35);
+}
+.campus-locked-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(245,158,11,0.45);
+}
+
+/* Player verrouillé */
+.campus-player-locked {
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: #9ca3af;
+  border: 1px solid rgba(245,158,11,0.2);
+}
+.campus-player-locked i {
+  font-size: 52px;
+  color: rgba(245,158,11,0.6);
+}
+.campus-player-locked p {
+  font-size: 15px;
+  font-weight: 600;
+  color: #e5e7eb;
+  margin: 0;
+}
+.campus-player-locked small {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+/* Leçon verrouillée dans le curriculum */
+.campus-lesson.locked {
+  opacity: 0.7;
+  cursor: pointer;
+}
+.campus-lesson.locked:hover {
+  opacity: 1;
+  background: rgba(245,158,11,0.06);
+}

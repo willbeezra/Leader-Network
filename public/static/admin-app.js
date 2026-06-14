@@ -11848,8 +11848,12 @@ function _campusBreadcrumb() {
       <button onclick="_campusLoadCourses()" class="text-gray-400 hover:text-white text-sm transition">Formations</button>
       <i class="fas fa-chevron-right text-gray-600 text-xs"></i>
       <span class="text-white font-semibold text-sm truncate max-w-xs">${_campus.courseTitle}</span>`;
-    ac.innerHTML = `<button onclick="_campusNewModule()" class="btn-red px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
-      <i class="fas fa-plus"></i> Nouveau module</button>`;
+    ac.innerHTML = `
+      <button onclick="_campusLoadCourses()" class="bg-dark-700 hover:bg-dark-600 text-gray-300 px-3 py-2 rounded-lg text-sm flex items-center gap-2 transition">
+        <i class="fas fa-arrow-left"></i> Retour
+      </button>
+      <button onclick="_campusNewModule()" class="btn-red px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+        <i class="fas fa-plus"></i> Nouveau module</button>`;
   } else if (_campus.view === 'lessons') {
     bc.innerHTML = `<i class="fas fa-graduation-cap text-base text-red-400"></i>
       <button onclick="_campusLoadCourses()" class="text-gray-400 hover:text-white text-sm transition">Formations</button>
@@ -11857,8 +11861,12 @@ function _campusBreadcrumb() {
       <button onclick="_campusLoadModules(_campus.courseId, _campus.courseTitle)" class="text-gray-400 hover:text-white text-sm transition truncate max-w-[8rem]">${_campus.courseTitle}</button>
       <i class="fas fa-chevron-right text-gray-600 text-xs"></i>
       <span class="text-white font-semibold text-sm truncate max-w-xs">${_campus.moduleTitle}</span>`;
-    ac.innerHTML = `<button onclick="_campusNewLesson()" class="btn-red px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
-      <i class="fas fa-plus"></i> Nouvelle leçon</button>`;
+    ac.innerHTML = `
+      <button onclick="_campusLoadModules(_campus.courseId, _campus.courseTitle)" class="bg-dark-700 hover:bg-dark-600 text-gray-300 px-3 py-2 rounded-lg text-sm flex items-center gap-2 transition">
+        <i class="fas fa-arrow-left"></i> Retour
+      </button>
+      <button onclick="_campusNewLesson()" class="btn-red px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+        <i class="fas fa-plus"></i> Nouvelle leçon</button>`;
   }
 }
 
@@ -11924,6 +11932,9 @@ async function _campusLoadCourses() {
               <div class="flex items-center gap-3 text-xs text-gray-500 mb-3">
                 <span><i class="fas fa-layer-group mr-1"></i>${c.module_count||0} modules</span>
                 <span><i class="fas fa-play-circle mr-1"></i>${c.lesson_count_real||c.lesson_count||0} leçons</span>
+                ${c.access_type === 'packages'
+                  ? `<span class="text-yellow-400"><i class="fas fa-lock mr-1"></i>Package requis</span>`
+                  : `<span class="text-green-400"><i class="fas fa-globe mr-1"></i>Accès libre</span>`}
               </div>
               <div class="flex gap-2">
                 <button onclick="_campusGoModules('${c.id}')"
@@ -11982,11 +11993,23 @@ async function _campusEditCourse(id) {
   } catch(e) { showToast('Erreur: ' + (e.error||e.message||''), 'error'); }
 }
 
-function _campusShowCourseModal(course) {
+async function _campusShowCourseModal(course) {
   const isEdit = !!course;
   const catOpts = (_campus.categories||[]).map(cat =>
     `<option value="${cat.id}" ${course?.category_id === cat.id ? 'selected' : ''}>${_esc(cat.name)}</option>`
   ).join('');
+
+  // Charger la liste des packages pour le dropdown
+  let pkgOpts = '<option value="">— Aucun —</option>';
+  try {
+    const pkgs = await apiCampusAdmin('GET', '/packages');
+    pkgOpts += (pkgs||[]).map(p =>
+      `<option value="${p.id}" ${course?.required_package_id === p.id ? 'selected' : ''}
+        data-price="${p.price_usd||0}">${_esc(p.name)}${p.price_usd ? ` — $${p.price_usd}` : ' — Gratuit'}</option>`
+    ).join('');
+  } catch(e) {}
+
+  const accessType = course?.access_type || 'all';
 
   showModal(`
     <div class="p-6 max-w-2xl w-full mx-auto overflow-y-auto" style="max-height:90vh">
@@ -12032,6 +12055,39 @@ function _campusShowCourseModal(course) {
           <input id="cc-thumbnail" type="text" value="${_esc(course?.thumbnail_url||'')}" placeholder="https://..."
             class="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white text-sm focus:border-red-500 outline-none font-mono">
         </div>
+
+        <!-- ── SECTION ACCÈS ── -->
+        <div class="bg-dark-750 border border-dark-600 rounded-xl p-4 space-y-3">
+          <div class="flex items-center gap-2 mb-1">
+            <i class="fas fa-lock text-yellow-400 text-sm"></i>
+            <span class="text-sm font-semibold text-white">Accès à la formation</span>
+          </div>
+          <div class="flex gap-4">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="cc-access-type" id="cc-access-all" value="all"
+                ${accessType === 'all' ? 'checked' : ''}
+                onchange="document.getElementById('cc-pkg-wrap').style.display='none'"
+                class="accent-green-500">
+              <span class="text-sm text-gray-300"><i class="fas fa-globe text-green-400 mr-1"></i> Accès libre (tous les membres)</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="cc-access-type" id="cc-access-pkg" value="packages"
+                ${accessType === 'packages' ? 'checked' : ''}
+                onchange="document.getElementById('cc-pkg-wrap').style.display='block'"
+                class="accent-yellow-500">
+              <span class="text-sm text-gray-300"><i class="fas fa-box text-yellow-400 mr-1"></i> Restreint par package</span>
+            </label>
+          </div>
+          <div id="cc-pkg-wrap" style="display:${accessType === 'packages' ? 'block' : 'none'}">
+            <label class="text-xs text-gray-400 mb-1 block">Package requis</label>
+            <select id="cc-package" onchange="_campusUpdatePkgPrice(this)"
+              class="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white text-sm focus:border-yellow-500 outline-none">
+              ${pkgOpts}
+            </select>
+            <p id="cc-pkg-price-hint" class="text-xs text-yellow-400 mt-1 hidden"></p>
+          </div>
+        </div>
+
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div>
             <label class="text-xs text-gray-400 mb-1 block">Niveau</label>
@@ -12078,21 +12134,37 @@ function _campusShowCourseModal(course) {
   }
 }
 
+function _campusUpdatePkgPrice(sel) {
+  const opt = sel.options[sel.selectedIndex];
+  const hint = document.getElementById('cc-pkg-price-hint');
+  if (!hint) return;
+  if (opt && opt.dataset.price && parseFloat(opt.dataset.price) > 0) {
+    hint.textContent = `Prix du package sélectionné : $${opt.dataset.price}`;
+    hint.classList.remove('hidden');
+  } else {
+    hint.classList.add('hidden');
+  }
+}
+
 async function _campusSaveCourse(id) {
   const btn = document.getElementById('btn-save-course');
   const restore = btnSaving(btn);
+  const accessType = document.querySelector('input[name="cc-access-type"]:checked')?.value || 'all';
+  const pkgSel = document.getElementById('cc-package');
   const body = {
-    title:          document.getElementById('cc-title').value.trim(),
-    slug:           document.getElementById('cc-slug').value.trim(),
-    category_id:    document.getElementById('cc-category').value || null,
-    instructor:     document.getElementById('cc-instructor').value.trim() || null,
-    subtitle:       document.getElementById('cc-subtitle').value.trim() || null,
-    description:    document.getElementById('cc-description').value.trim() || null,
-    thumbnail_url:  document.getElementById('cc-thumbnail').value.trim() || null,
-    level:          document.getElementById('cc-level').value,
-    language:       document.getElementById('cc-language').value,
-    display_order:  parseInt(document.getElementById('cc-order').value) || 0,
-    is_featured:    document.getElementById('cc-featured').checked ? 1 : 0,
+    title:               document.getElementById('cc-title').value.trim(),
+    slug:                document.getElementById('cc-slug').value.trim(),
+    category_id:         document.getElementById('cc-category').value || null,
+    instructor:          document.getElementById('cc-instructor').value.trim() || null,
+    subtitle:            document.getElementById('cc-subtitle').value.trim() || null,
+    description:         document.getElementById('cc-description').value.trim() || null,
+    thumbnail_url:       document.getElementById('cc-thumbnail').value.trim() || null,
+    level:               document.getElementById('cc-level').value,
+    language:            document.getElementById('cc-language').value,
+    display_order:       parseInt(document.getElementById('cc-order').value) || 0,
+    is_featured:         document.getElementById('cc-featured').checked ? 1 : 0,
+    access_type:         accessType,
+    required_package_id: accessType === 'packages' && pkgSel?.value ? pkgSel.value : null,
     ...(id && document.getElementById('cc-active') ? { is_active: document.getElementById('cc-active').checked ? 1 : 0 } : {}),
   };
   if (!body.title || !body.slug) { restore(); return showToast('Titre et slug requis', 'error'); }
