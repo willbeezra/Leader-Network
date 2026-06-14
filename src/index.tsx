@@ -18,6 +18,7 @@ import { emailAdmin } from './routes/email-admin.js'
 import brokerRouter, { brokerAdmin as brokerAdminRouter } from './routes/broker.js'
 import { landingPublic, landingAdmin, buildLandingPage } from './routes/landing.js'
 import { i18nPublic, i18nAdmin } from './routes/i18n-admin.js'
+import { campus } from './routes/campus.js'
 import type { Bindings } from './types/index.js'
 import { processDailyPayments, getMauritiusDateStr, processBVQueue, processRankQueue, activateAndReward, createNotification, orchestrateur } from './lib/mlm.js'
 import { sendEmail } from './lib/mailer.js'
@@ -200,6 +201,33 @@ app.route('/api/admin/psp', pspAdminRouter)
 app.route('/api/admin/emails', emailAdmin)
 app.route('/api/broker', brokerRouter)
 app.route('/api/admin/broker', brokerAdminRouter)
+
+// ── Campus routes ──────────────────────────────────────────────
+// Middleware auth pour les routes membres campus
+app.use('/api/campus/*', async (c, next) => {
+  // Routes admin nécessitent admin auth
+  if (c.req.path.startsWith('/api/campus/admin')) {
+    const token = c.req.header('Authorization')?.split(' ')[1] || c.req.cookie?.('admin_token') || ''
+    if (!token) return c.json({ error: 'Admin non authentifié' }, 401)
+    // Vérifier token admin via DB
+    const session = await c.env.DB.prepare(
+      `SELECT sa.admin_id FROM admin_sessions sa WHERE sa.token = ? AND sa.expires_at > datetime('now')`
+    ).bind(token).first() as any
+    if (!session) return c.json({ error: 'Session admin invalide' }, 401)
+    c.set('adminId' as any, session.admin_id)
+  } else {
+    // Routes membres — inject memberId si token présent (optionnel)
+    const token = c.req.header('Authorization')?.split(' ')[1] || ''
+    if (token) {
+      const session = await c.env.DB.prepare(
+        `SELECT member_id FROM member_sessions WHERE token = ? AND expires_at > datetime('now')`
+      ).bind(token).first() as any
+      if (session) c.set('memberId' as any, session.member_id)
+    }
+  }
+  return next()
+})
+app.route('/api/campus', campus)
 
 // ── Landing page routes ────────────────────────────────────────
 app.route('/', landingPublic)
@@ -1830,6 +1858,7 @@ function memberHTML(opts: MemberHTMLOpts = {}, branding: BrandingPublic = { logo
   <script src="/static/country-selector.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/static/style.css?v=${Date.now()}">
+  <link rel="stylesheet" href="/static/campus.css?v=${Date.now()}">
 </head>
 <body class="bg-dark-900 text-white min-h-screen">
 
@@ -2131,6 +2160,11 @@ function memberHTML(opts: MemberHTMLOpts = {}, branding: BrandingPublic = { logo
         <i class="fas fa-th-large w-5 text-center" style="color:#791E15"></i>
         <span data-i18n="Services">Services</span>
       </button>
+      <button onclick="showPage('campus');closeSidebar()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="campus">
+        <i class="fas fa-graduation-cap w-5 text-center" style="color:#e05c4a"></i>
+        <span class="flex-1">Campus</span>
+        <span class="text-[9px] bg-red-900/30 text-red-400 px-1.5 py-0.5 rounded font-semibold border border-red-900/40">NOUVEAU</span>
+      </button>
       <button onclick="showPage('marketing');closeSidebar()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="marketing">
         <i class="fas fa-bullhorn w-5 text-center"></i> <span data-i18n="Marketing">Marketing</span>
       </button>
@@ -2341,6 +2375,7 @@ document.addEventListener('DOMContentLoaded', function() { regMsInit() })
 </script>
 
 <script src="/static/member-app.js?v=${Date.now()}"></script>
+<script src="/static/campus-app.js?v=${Date.now()}"></script>
 <script src="/static/i18n.js?v=${Date.now()}"></script>
 </body>
 </html>`
@@ -2403,6 +2438,7 @@ function adminHTML(branding: BrandingPublic = { logoUri: '', networkName: 'LEADE
   <script src="/static/axios.min.js"></script>
   <script src="/static/chart.min.js"></script>
   <link rel="stylesheet" href="/static/style.css?v=${Date.now()}">
+  <link rel="stylesheet" href="/static/campus.css?v=${Date.now()}">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
 </head>
 <body class="bg-dark-900 text-white min-h-screen">
@@ -2509,6 +2545,11 @@ function adminHTML(branding: BrandingPublic = { logoUri: '', networkName: 'LEADE
       <button onclick="showAdminPage('package-service-access');closeAdminSidebar()" class="admin-nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="package-service-access">
         <i class="fas fa-th-large w-5 text-center"></i> Accès Services
       </button>
+      <button onclick="showAdminPage('campus');closeAdminSidebar()" class="admin-nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="campus">
+        <i class="fas fa-graduation-cap w-5 text-center" style="color:#e05c4a"></i>
+        <span class="flex-1">Campus</span>
+        <span class="text-[9px] bg-red-900/30 text-red-400 px-1.5 py-0.5 rounded font-semibold border border-red-900/40">NEW</span>
+      </button>
       <button onclick="showAdminPage('payment-gateway');closeAdminSidebar()" class="admin-nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="payment-gateway">
         <i class="fas fa-credit-card w-5 text-center"></i> Paiement
       </button>
@@ -2579,6 +2620,7 @@ function adminHTML(branding: BrandingPublic = { logoUri: '', networkName: 'LEADE
 </div>
 
 <script src="/static/upload-zone.js?v=${Date.now()}"></script>
+<script src="/static/campus-app.js?v=${Date.now()}"></script>
 <script src="/static/admin-app.js?v=${Date.now()}"></script>
 <script src="/static/admin-landing.js?v=${Date.now()}"></script>
 </body>
