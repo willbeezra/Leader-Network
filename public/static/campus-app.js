@@ -2,6 +2,13 @@
 // CAMPUS APP — Interface membre premium + Admin
 // ============================================================
 
+// ── Helper traduction : utilise window.t() si disponible ─────────────────
+function _t(text) {
+  if (!text) return text;
+  if (typeof window.t === 'function') return window.t(text);
+  return text;
+}
+
 // ── Helpers API campus (avec auth automatique) ──────────────
 function _campusToken() {
   // Essaie le token admin d'abord, sinon le token membre
@@ -172,14 +179,14 @@ function renderCampusCourseCard(course) {
           </span>
           ${levelBadge}
         </div>
-        <h3 class="campus-card-title">${course.title}</h3>
-        ${course.subtitle ? `<p class="campus-card-sub">${course.subtitle}</p>` : ''}
+        <h3 class="campus-card-title">${_t(course.title)}</h3>
+        ${course.subtitle ? `<p class="campus-card-sub">${_t(course.subtitle)}</p>` : ''}
         <div class="campus-card-footer">
           <span class="campus-card-instructor">
-            <i class="fas fa-user-tie"></i> ${course.instructor || 'Équipe LEADER'}
+            <i class="fas fa-user-tie"></i> ${_t(course.instructor || 'Équipe LEADER')}
           </span>
           <span class="campus-card-lessons">
-            <i class="fas fa-play-circle"></i> ${course.total_lessons || 0} leçon${course.total_lessons > 1 ? 's' : ''}
+            <i class="fas fa-play-circle"></i> ${course.total_lessons || 0} ${_t(course.total_lessons > 1 ? 'leçons' : 'leçon')}
           </span>
         </div>
       </div>
@@ -262,7 +269,7 @@ async function showCampusCourse(slug) {
           <button class="campus-back-btn" onclick="showCampusPage()">
             <i class="fas fa-arrow-left"></i> Retour au catalogue
           </button>
-          <span class="campus-course-nav-title">${course.title}</span>
+          <span class="campus-course-nav-title">${_t(course.title)}</span>
         </nav>
 
         <div class="campus-course-layout">
@@ -279,7 +286,7 @@ async function showCampusCourse(slug) {
               }
             </div>
             <div class="campus-player-lesson-title" id="campus-current-lesson-title">
-              ${firstLesson ? firstLesson.title : 'Aucune leçon sélectionnée'}
+              ${firstLesson ? _t(firstLesson.title) : _t('Aucune leçon sélectionnée')}
             </div>
 
             <!-- DESCRIPTION COURS -->
@@ -289,8 +296,8 @@ async function showCampusCourse(slug) {
                   <span class="campus-course-cat-badge" style="background:${course.category_color || '#791E15'}22;color:${course.category_color || '#791E15'}">
                     ${course.category_name || ''}
                   </span>
-                  <h1 class="campus-course-title">${course.title}</h1>
-                  ${course.subtitle ? `<p class="campus-course-subtitle">${course.subtitle}</p>` : ''}
+                  <h1 class="campus-course-title">${_t(course.title)}</h1>
+                  ${course.subtitle ? `<p class="campus-course-subtitle">${_t(course.subtitle)}</p>` : ''}
                 </div>
                 <div class="campus-course-stats">
                   <div class="campus-course-stat">
@@ -341,7 +348,7 @@ async function showCampusCourse(slug) {
                 <div class="campus-module" data-mod-idx="${modIdx}">
                   <button class="campus-module-header" onclick="campusToggleModule(this)">
                     <i class="fas fa-chevron-${modIdx === 0 ? 'down' : 'right'} campus-module-chevron"></i>
-                    <span class="campus-module-title">${mod.title}</span>
+                    <span class="campus-module-title">${_t(mod.title)}</span>
                     <span class="campus-module-count">${mod.lessons.length}</span>
                   </button>
                   <div class="campus-module-lessons ${modIdx === 0 ? 'open' : ''}">
@@ -363,7 +370,7 @@ async function showCampusCourse(slug) {
                           }
                         </div>
                         <div class="campus-lesson-info">
-                          <span class="campus-lesson-title">${lesson.title}</span>
+                          <span class="campus-lesson-title">${_t(lesson.title)}</span>
                           ${lesson.duration_label ? `<span class="campus-lesson-duration">${lesson.duration_label}</span>` : ''}
                         </div>
                       </div>
