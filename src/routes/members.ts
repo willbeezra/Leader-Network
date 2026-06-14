@@ -817,6 +817,59 @@ members.get('/wallet', async (c) => {
   })
 })
 
+// GET /api/members/services — Services accessibles au membre selon son package actif
+// Retourne aussi tous les services avec un flag is_accessible pour afficher les cadenas
+members.get('/services', async (c) => {
+  const memberId = c.get('memberId' as any)
+
+  // Tous les services non-inactifs (pour afficher même les non-accessibles avec cadenas)
+  const allServices = await c.env.DB.prepare(`
+    SELECT id, name, slug, description, url, logo_url, logo_data_uri,
+           status, display_order, category, bg_color, text_color
+    FROM services
+    WHERE status != 'inactive'
+    ORDER BY display_order ASC, name ASC
+  `).all()
+
+  // Services accessibles au membre : jointure package_orders validés → package_service_access
+  const accessibleRows = await c.env.DB.prepare(`
+    SELECT DISTINCT psa.service_id
+    FROM package_service_access psa
+    JOIN package_orders po ON po.package_id = psa.package_id
+    WHERE po.member_id = ?
+      AND po.status = 'validated'
+      AND psa.is_enabled = 1
+  `).bind(memberId).all()
+
+  const accessibleIds = new Set(
+    ((accessibleRows.results || []) as any[]).map((r: any) => r.service_id)
+  )
+
+  // Récupérer le nom du package actif (pour le message cadenas)
+  const activePackage = await c.env.DB.prepare(`
+    SELECT p.name as package_name, p.id as package_id
+    FROM package_orders po
+    JOIN packages p ON p.id = po.package_id
+    WHERE po.member_id = ? AND po.status = 'validated'
+    ORDER BY po.validated_at DESC
+    LIMIT 1
+  `).bind(memberId).first() as any
+
+  // Enrichir chaque service avec le flag is_accessible
+  const services = ((allServices.results || []) as any[]).map((s: any) => ({
+    ...s,
+    is_accessible: accessibleIds.has(s.id),
+  }))
+
+  return c.json({
+    success: true,
+    services,
+    active_package: activePackage?.package_name || null,
+    accessible_count: accessibleIds.size,
+    total_count: services.length,
+  })
+})
+
 // GET /api/members/withdrawals — Historique des retraits du membre
 members.get('/withdrawals', async (c) => {
   const memberId = c.get('memberId' as any)

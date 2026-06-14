@@ -61,7 +61,7 @@ async function loadBrandingConfig(){
   }catch(e){
     console.warn('loadBrandingConfig error:', e);
   }
-}async function loadAdminBadges(){try{const e=(await apiAdmin("GET","/dashboard")).stats;setBadge("admin-ht-badge",e.holdingTankCount),setBadge("admin-act-badge",e.pendingOrders),setBadge("admin-wd-badge",e.pendingWithdrawals),setBadge("admin-kyc-badge",e.pendingKYC),setBadge("admin-support-badge",e.openTickets||0),setBadge("admin-cc-badge",e.pendingCCWithdrawals||0),document.getElementById("admin-header-info").textContent=`${e.totalMembers} membres · ${e.activeAMI} AMI actifs · BV Queue: ${e.pendingBVQueue||0}`}catch{}}function setBadge(e,t){const n=document.getElementById(e);n&&(t>0?(n.textContent=t,n.classList.remove("hidden")):n.classList.add("hidden"))}function showAdminPage(e){document.querySelectorAll(".admin-nav-btn").forEach(t=>t.classList.toggle("active",t.dataset.page===e)),document.getElementById("admin-page-title").textContent={dashboard:"Dashboard",members:"Membres","binary-tree":"Arbre Binaire","holding-tank":"Holding Tank",activations:"Activations",withdrawals:"Retraits",kyc:"Vérification KYC",commissions:"Commissions & Compensation",wallets:"Wallets",bv:"Volumes BV",licenses:"Licences","admin-fee":"Frais d'administration",config:"Configuration MLM",packages:"Gestion des Packages","payment-gateway":"Passerelle de Paiement",topups:"Recharges Wallet",reports:"Rapports",marketing:"Assets Marketing",admins:"Administrateurs","audit-log":"Journal d'Audit","cc-withdrawals":"Crédit de Croissance — Remboursements",support:"Support Client",team:"Équipe & Rôles","ai-agent":"Leader IA",administration:"Administration","earnings-docs":"Earnings & Documents","member-cards":"Cartes de Membre",emails:"Emails",broker:"Broker Triomarkets",landing:"Landing Page","i18n-languages":"Langues & Traductions"}[e]||e;const t=document.getElementById("admin-page-content");t.className="p-4 md:p-6 fade-in";const n={dashboard:adminDashboard,members:adminMembers,"binary-tree":adminBinaryTree,"holding-tank":adminHoldingTank,activations:adminActivations,withdrawals:adminWithdrawals,kyc:adminKycPage,commissions:adminCommissions,wallets:adminWallets,bv:adminBV,licenses:adminLicenses,"admin-fee":adminAdminFee,config:adminConfig,packages:adminPackages,"payment-gateway":adminPaymentGateway,topups:adminTopups,reports:adminReports,marketing:adminMarketing,admins:adminAdmins,"audit-log":adminAuditLog,"cc-withdrawals":adminCCWithdrawals,support:adminSupportPage,team:adminTeamPage,"ai-agent":adminAiAgentPage,administration:adminAdministration,"earnings-docs":adminEarningsDocs,"member-cards":adminMemberCards,emails:adminEmailsPage,broker:adminBrokerPage,landing:adminLandingPage,"i18n-languages":adminI18nLanguages};return n[e]?Promise.resolve(n[e](t)).then(r=>{setTimeout(_applyMobileFixes,300);return r;}):(t.innerHTML='<p class="text-gray-400">Page en construction</p>',setTimeout(_applyMobileFixes,300),Promise.resolve())}
+}async function loadAdminBadges(){try{const e=(await apiAdmin("GET","/dashboard")).stats;setBadge("admin-ht-badge",e.holdingTankCount),setBadge("admin-act-badge",e.pendingOrders),setBadge("admin-wd-badge",e.pendingWithdrawals),setBadge("admin-kyc-badge",e.pendingKYC),setBadge("admin-support-badge",e.openTickets||0),setBadge("admin-cc-badge",e.pendingCCWithdrawals||0),document.getElementById("admin-header-info").textContent=`${e.totalMembers} membres · ${e.activeAMI} AMI actifs · BV Queue: ${e.pendingBVQueue||0}`}catch{}}function setBadge(e,t){const n=document.getElementById(e);n&&(t>0?(n.textContent=t,n.classList.remove("hidden")):n.classList.add("hidden"))}function showAdminPage(e){document.querySelectorAll(".admin-nav-btn").forEach(t=>t.classList.toggle("active",t.dataset.page===e)),document.getElementById("admin-page-title").textContent={dashboard:"Dashboard",members:"Membres","binary-tree":"Arbre Binaire","holding-tank":"Holding Tank",activations:"Activations",withdrawals:"Retraits",kyc:"Vérification KYC",commissions:"Commissions & Compensation",wallets:"Wallets",bv:"Volumes BV",licenses:"Licences","admin-fee":"Frais d'administration",config:"Configuration MLM",packages:"Gestion des Packages","package-service-access":"Accès Services par Package","payment-gateway":"Passerelle de Paiement",topups:"Recharges Wallet",reports:"Rapports",marketing:"Assets Marketing",admins:"Administrateurs","audit-log":"Journal d'Audit","cc-withdrawals":"Crédit de Croissance — Remboursements",support:"Support Client",team:"Équipe & Rôles","ai-agent":"Leader IA",administration:"Administration","earnings-docs":"Earnings & Documents","member-cards":"Cartes de Membre",emails:"Emails",broker:"Broker Triomarkets",landing:"Landing Page","i18n-languages":"Langues & Traductions"}[e]||e;const t=document.getElementById("admin-page-content");t.className="p-4 md:p-6 fade-in";const n={dashboard:adminDashboard,members:adminMembers,"binary-tree":adminBinaryTree,"holding-tank":adminHoldingTank,activations:adminActivations,withdrawals:adminWithdrawals,kyc:adminKycPage,commissions:adminCommissions,wallets:adminWallets,bv:adminBV,licenses:adminLicenses,"admin-fee":adminAdminFee,config:adminConfig,packages:adminPackages,"package-service-access":adminPackageServiceAccess,"payment-gateway":adminPaymentGateway,topups:adminTopups,reports:adminReports,marketing:adminMarketing,admins:adminAdmins,"audit-log":adminAuditLog,"cc-withdrawals":adminCCWithdrawals,support:adminSupportPage,team:adminTeamPage,"ai-agent":adminAiAgentPage,administration:adminAdministration,"earnings-docs":adminEarningsDocs,"member-cards":adminMemberCards,emails:adminEmailsPage,broker:adminBrokerPage,landing:adminLandingPage,"i18n-languages":adminI18nLanguages};return n[e]?Promise.resolve(n[e](t)).then(r=>{setTimeout(_applyMobileFixes,300);return r;}):(t.innerHTML='<p class="text-gray-400">Page en construction</p>',setTimeout(_applyMobileFixes,300),Promise.resolve())}
 // ── Auto-refresh système ─────────────────────────────────────────────────
 function _currentPage(){var a=document.querySelector('.admin-nav-btn.active');return a?a.dataset.page:'dashboard';}
 async function _refreshCurrentPage(){try{await showAdminPage(_currentPage());}catch(e){}try{loadAdminBadges();}catch(e){}}
@@ -11323,4 +11323,358 @@ async function adminI18nDoEdit(id, btn) {
     showToast(e.error || 'Erreur', 'error');
     restore();
   }
+}
+
+// ══════════════════════════════════════════════════════════════
+// PAGE : ACCÈS SERVICES PAR PACKAGE
+// ══════════════════════════════════════════════════════════════
+async function adminPackageServiceAccess(el) {
+  el.innerHTML = `
+    <div class="flex items-center justify-center py-24">
+      <div class="flex flex-col items-center gap-4">
+        <div class="loader"></div>
+        <p class="text-gray-500 text-sm">Chargement de la matrice…</p>
+      </div>
+    </div>`;
+
+  let packages = [], services = [], access = {};
+  try {
+    const res = await apiAdmin('GET', '/package-service-access');
+    packages = res.packages || [];
+    services = res.services || [];
+    access   = res.access   || {};
+  } catch(e) {
+    el.innerHTML = `<div class="p-8 text-center text-red-400"><i class="fas fa-exclamation-triangle mr-2"></i>${e.error || 'Erreur de chargement'}</div>`;
+    return;
+  }
+
+  if (!packages.length || !services.length) {
+    el.innerHTML = `<div class="p-8 text-center text-gray-400">Aucun package ou service actif trouvé.</div>`;
+    return;
+  }
+
+  // ── Styles inline ──────────────────────────────────────────
+  if (!document.getElementById('psa-styles')) {
+    const s = document.createElement('style');
+    s.id = 'psa-styles';
+    s.textContent = `
+      .psa-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .psa-table { border-collapse: separate; border-spacing: 0; min-width: 100%; font-size: 13px; }
+      .psa-table th, .psa-table td { padding: 0; }
+
+      /* En-tête services (colonnes) */
+      .psa-th-svc {
+        background: #0d1117;
+        color: rgba(245,240,232,0.55);
+        font-weight: 600;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        padding: 10px 8px;
+        text-align: center;
+        min-width: 90px;
+        max-width: 110px;
+        border-bottom: 1px solid rgba(255,255,255,0.07);
+        border-right: 1px solid rgba(255,255,255,0.05);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+      }
+      .psa-th-pkg {
+        background: #0d1117;
+        position: sticky;
+        left: 0;
+        z-index: 3;
+        min-width: 160px;
+        padding: 10px 14px;
+        border-bottom: 1px solid rgba(255,255,255,0.07);
+        border-right: 1px solid rgba(255,255,255,0.1);
+        top: 0;
+      }
+
+      /* Lignes packages */
+      .psa-tr:nth-child(even) .psa-td { background: rgba(255,255,255,0.02); }
+      .psa-tr:nth-child(even) .psa-td-pkg { background: #0e1420; }
+      .psa-tr:nth-child(odd)  .psa-td-pkg { background: #0b1018; }
+
+      .psa-td-pkg {
+        position: sticky;
+        left: 0;
+        z-index: 1;
+        padding: 10px 14px;
+        border-right: 1px solid rgba(255,255,255,0.08);
+        white-space: nowrap;
+      }
+      .psa-pkg-name { font-weight: 700; color: #fff; font-size: 13px; }
+      .psa-pkg-price { color: rgba(245,240,232,0.35); font-size: 11px; }
+
+      .psa-td {
+        text-align: center;
+        padding: 8px 6px;
+        border-right: 1px solid rgba(255,255,255,0.04);
+      }
+
+      /* Toggle switch */
+      .psa-toggle { display: inline-block; position: relative; width: 40px; height: 22px; cursor: pointer; }
+      .psa-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+      .psa-slider {
+        position: absolute; inset: 0;
+        background: rgba(255,255,255,0.1);
+        border-radius: 999px;
+        transition: background .2s;
+        border: 1px solid rgba(255,255,255,0.12);
+      }
+      .psa-slider::before {
+        content: '';
+        position: absolute;
+        width: 16px; height: 16px;
+        left: 2px; top: 2px;
+        background: rgba(255,255,255,0.5);
+        border-radius: 50%;
+        transition: transform .2s, background .2s;
+      }
+      .psa-toggle input:checked + .psa-slider {
+        background: linear-gradient(135deg, #16a34a, #15803d);
+        border-color: #16a34a;
+      }
+      .psa-toggle input:checked + .psa-slider::before {
+        transform: translateX(18px);
+        background: #fff;
+      }
+      .psa-toggle.loading .psa-slider { opacity: .5; pointer-events: none; }
+
+      /* Boutons bulk */
+      .psa-bulk-btn {
+        font-size: 10px; font-weight: 700;
+        padding: 3px 8px; border-radius: 6px;
+        border: none; cursor: pointer;
+        transition: opacity .15s;
+        display: inline-block;
+        margin-top: 4px;
+      }
+      .psa-bulk-on  { background: rgba(22,163,74,.18); color: #4ade80; }
+      .psa-bulk-off { background: rgba(239,68,68,.14); color: #f87171; }
+      .psa-bulk-on:hover  { opacity: .8; }
+      .psa-bulk-off:hover { opacity: .8; }
+
+      /* Badge compteur */
+      .psa-count-badge {
+        display: inline-flex; align-items: center; justify-content: center;
+        background: rgba(121,30,21,0.25); color: #f87171;
+        border-radius: 999px; font-size: 10px; font-weight: 700;
+        min-width: 20px; height: 20px; padding: 0 5px;
+        margin-left: 6px; vertical-align: middle;
+        transition: background .2s, color .2s;
+      }
+      .psa-count-badge.has-access { background: rgba(22,163,74,.2); color: #4ade80; }
+    `;
+    document.head.appendChild(s);
+  }
+
+  // ── Construire la page ─────────────────────────────────────
+  const totalCells = packages.length * services.length;
+  const enabledCount = Object.values(access).filter(v => v.is_enabled).length;
+
+  el.innerHTML = `
+    <div class="space-y-6">
+
+      <!-- En-tête -->
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-bold text-white">Accès Services par Package</h2>
+          <p class="text-gray-400 text-sm mt-1">
+            ${packages.length} packages · ${services.length} services ·
+            <span id="psa-global-count" class="text-green-400 font-semibold">${enabledCount}</span>
+            / ${totalCells} accès activés
+          </p>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-gray-500 text-xs">Nouveau service ajouté → apparaît automatiquement ici</span>
+        </div>
+      </div>
+
+      <!-- Légende -->
+      <div class="flex items-center gap-6 text-xs text-gray-500">
+        <span class="flex items-center gap-2">
+          <span class="inline-block w-8 h-5 rounded-full bg-green-700 border border-green-600"></span>
+          Accès activé
+        </span>
+        <span class="flex items-center gap-2">
+          <span class="inline-block w-8 h-5 rounded-full bg-white/10 border border-white/10"></span>
+          Accès désactivé
+        </span>
+        <span class="flex items-center gap-2 ml-4">
+          <button class="psa-bulk-btn psa-bulk-on" style="pointer-events:none">Tout ON</button>
+          Activer tous les services du package
+        </span>
+        <span class="flex items-center gap-2">
+          <button class="psa-bulk-btn psa-bulk-off" style="pointer-events:none">Tout OFF</button>
+          Désactiver tous
+        </span>
+      </div>
+
+      <!-- Tableau -->
+      <div class="psa-wrap rounded-2xl border border-white/07 bg-dark-800" style="max-height: 70vh; overflow: auto;">
+        <table class="psa-table" id="psa-table">
+          <thead>
+            <tr>
+              <th class="psa-th-pkg">
+                <div class="text-xs font-bold text-gray-400 uppercase tracking-wide">Package</div>
+              </th>
+              ${services.map(s => `
+                <th class="psa-th-svc" title="${s.name}">
+                  ${s.logo_url || s.logo_data_uri
+                    ? `<img src="${s.logo_data_uri || s.logo_url}" alt="${s.name}"
+                         style="width:28px;height:28px;object-fit:contain;margin:0 auto 4px;mix-blend-mode:screen;filter:brightness(1.1)">`
+                    : `<div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#791E15,#5A1510);
+                                  display:flex;align-items:center;justify-content:center;
+                                  font-weight:900;font-size:12px;color:#fff;margin:0 auto 4px">${s.name.charAt(0)}</div>`
+                  }
+                  <div style="max-width:80px;overflow:hidden;text-overflow:ellipsis">${s.name}</div>
+                  ${s.status === 'coming_soon' ? `<div style="color:#f59e0b;font-size:9px">Bientôt</div>` : ''}
+                </th>
+              `).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            ${packages.map(pkg => {
+              // Compter les accès activés pour ce package
+              const pkgEnabled = services.filter(s => (access[`${pkg.id}:${s.id}`]?.is_enabled || 0) === 1).length;
+              return `
+              <tr class="psa-tr" data-pkg="${pkg.id}">
+                <td class="psa-td-pkg">
+                  <div class="psa-pkg-name">
+                    ${pkg.name}
+                    <span class="psa-count-badge ${pkgEnabled > 0 ? 'has-access' : ''}" id="badge-${pkg.id}">${pkgEnabled}/${services.length}</span>
+                  </div>
+                  <div class="psa-pkg-price">$${Number(pkg.price_usd).toLocaleString('en-US')}</div>
+                  <div style="display:flex;gap:4px;margin-top:5px">
+                    <button class="psa-bulk-btn psa-bulk-on"
+                      onclick="psaBulk('${pkg.id}', true)"
+                      title="Activer tous les services pour ${pkg.name}">
+                      ✓ Tout ON
+                    </button>
+                    <button class="psa-bulk-btn psa-bulk-off"
+                      onclick="psaBulk('${pkg.id}', false)"
+                      title="Désactiver tous les services pour ${pkg.name}">
+                      ✗ Tout OFF
+                    </button>
+                  </div>
+                </td>
+                ${services.map(svc => {
+                  const key = `${pkg.id}:${svc.id}`;
+                  const enabled = (access[key]?.is_enabled || 0) === 1;
+                  return `
+                  <td class="psa-td">
+                    <label class="psa-toggle" id="toggle-wrap-${pkg.id}-${svc.id}"
+                           title="${enabled ? 'Désactiver' : 'Activer'} ${svc.name} pour ${pkg.name}">
+                      <input type="checkbox" ${enabled ? 'checked' : ''}
+                             onchange="psaToggle(this,'${pkg.id}','${svc.id}','${pkg.name}','${svc.name}')">
+                      <span class="psa-slider"></span>
+                    </label>
+                  </td>`;
+                }).join('')}
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+
+    </div>`;
+
+  // Stocker les données pour les fonctions globales
+  window._psaData = { packages, services, access };
+}
+
+// Toggle un accès individuel
+async function psaToggle(checkbox, pkgId, svcId, pkgName, svcName) {
+  const wrap = document.getElementById(`toggle-wrap-${pkgId}-${svcId}`);
+  if (wrap) wrap.classList.add('loading');
+  const newVal = checkbox.checked ? 1 : 0;
+
+  try {
+    await apiAdmin('POST', '/package-service-access/toggle', {
+      package_id: pkgId,
+      service_id: parseInt(svcId),
+      is_enabled: newVal,
+    });
+
+    // Mettre à jour l'access map en mémoire
+    if (window._psaData) {
+      const key = `${pkgId}:${svcId}`;
+      if (!window._psaData.access[key]) window._psaData.access[key] = {};
+      window._psaData.access[key].is_enabled = newVal;
+    }
+
+    // Mettre à jour le badge du package
+    _psaUpdateBadge(pkgId);
+    // Mettre à jour le compteur global
+    _psaUpdateGlobalCount();
+
+    if (wrap) wrap.title = newVal ? `Désactiver ${svcName} pour ${pkgName}` : `Activer ${svcName} pour ${pkgName}`;
+    showToast(`${svcName} → ${pkgName} : ${newVal ? '✓ Activé' : '✗ Désactivé'}`, newVal ? 'success' : 'info');
+  } catch(e) {
+    // Annuler le changement visuel si erreur
+    checkbox.checked = !checkbox.checked;
+    showToast(e.error || 'Erreur lors de la mise à jour', 'error');
+  } finally {
+    if (wrap) wrap.classList.remove('loading');
+  }
+}
+
+// Tout activer / désactiver pour un package
+async function psaBulk(pkgId, enable) {
+  const pkg = window._psaData?.packages?.find(p => p.id === pkgId);
+  const pkgName = pkg?.name || pkgId;
+  const label = enable ? 'activer tous les services' : 'désactiver tous les services';
+
+  if (!confirm(`Confirmer : ${label} pour le package "${pkgName}" ?`)) return;
+
+  try {
+    await apiAdmin('POST', '/package-service-access/bulk', {
+      package_id: pkgId,
+      is_enabled: enable ? 1 : 0,
+    });
+
+    // Mettre à jour tous les toggles visuels de ce package
+    if (window._psaData) {
+      const services = window._psaData.services || [];
+      for (const svc of services) {
+        const key = `${pkgId}:${svc.id}`;
+        if (!window._psaData.access[key]) window._psaData.access[key] = {};
+        window._psaData.access[key].is_enabled = enable ? 1 : 0;
+        const cb = document.querySelector(`#toggle-wrap-${pkgId}-${svc.id} input`);
+        if (cb) cb.checked = enable;
+      }
+    }
+
+    _psaUpdateBadge(pkgId);
+    _psaUpdateGlobalCount();
+    showToast(`${pkgName} : tous les services ${enable ? 'activés ✓' : 'désactivés ✗'}`, enable ? 'success' : 'info');
+  } catch(e) {
+    showToast(e.error || 'Erreur', 'error');
+  }
+}
+
+// Mise à jour du badge compteur d'un package
+function _psaUpdateBadge(pkgId) {
+  if (!window._psaData) return;
+  const services = window._psaData.services || [];
+  const access   = window._psaData.access   || {};
+  const count    = services.filter(s => (access[`${pkgId}:${s.id}`]?.is_enabled || 0) === 1).length;
+  const badge    = document.getElementById(`badge-${pkgId}`);
+  if (!badge) return;
+  badge.textContent = `${count}/${services.length}`;
+  badge.className   = `psa-count-badge ${count > 0 ? 'has-access' : ''}`;
+}
+
+// Mise à jour du compteur global
+function _psaUpdateGlobalCount() {
+  if (!window._psaData) return;
+  const count = Object.values(window._psaData.access).filter(v => v.is_enabled).length;
+  const el = document.getElementById('psa-global-count');
+  if (el) el.textContent = count;
 }

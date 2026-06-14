@@ -7306,4 +7306,161 @@ admin.get('/reports/cash-flow', requirePermission('reports.view'), async (c) => 
   })
 })
 
+// ══════════════════════════════════════════════════════════════
+// ACCÈS SERVICES PAR PACKAGE
+// ══════════════════════════════════════════════════════════════
+
+// GET /admin/package-service-access
+// Retourne la matrice complète : packages × services avec is_enabled
+admin.get('/package-service-access', requirePermission('packages.view'), async (c) => {
+  const db = c.env.DB
+
+  // Tous les packages actifs (non supprimés)
+  const pkgRows = await db.prepare(`
+    SELECT id, name, slug, price_usd, display_order
+    FROM packages
+    WHERE deleted_at IS NULL AND is_active = 1
+    ORDER BY display_order ASC, name ASC
+  `).all()
+
+  // Tous les services actifs
+  const svcRows = await db.prepare(`
+    SELECT id, name, slug, category, logo_url, logo_data_uri, bg_color, status
+    FROM services
+    WHERE status != 'inactive'
+    ORDER BY display_order ASC, name ASC
+  `).all()
+
+  // Tous les accès existants
+  const accessRows = await db.prepare(`
+    SELECT package_id, service_id, is_enabled, updated_at, updated_by
+    FROM package_service_access
+  `).all()
+
+  // Construire un map rapide package_id:service_id → {is_enabled, updated_at}
+  const accessMap: Record<string, { is_enabled: number; updated_at: string; updated_by: string | null }> = {}
+  for (const row of (accessRows.results || []) as any[]) {
+    accessMap[`${row.package_id}:${row.service_id}`] = {
+      is_enabled: row.is_enabled,
+      updated_at: row.updated_at,
+      updated_by: row.updated_by,
+    }
+  }
+
+  return c.json({
+    success: true,
+    packages: pkgRows.results || [],
+    services: svcRows.results || [],
+    access:   accessMap,
+  })
+})
+
+// POST /admin/package-service-access/toggle
+// Active ou désactive l'accès d'un service pour un package
+admin.post('/package-service-access/toggle', requirePermission('packages.edit'), async (c) => {
+  const adminId = c.get('adminId' as any) as string
+  const { package_id, service_id, is_enabled } = await c.req.json() as any
+
+  if (!package_id || !service_id || is_enabled === undefined) {
+    return c.json({ error: 'package_id, service_id et is_enabled requis' }, 400)
+  }
+
+  const enabled = is_enabled ? 1 : 0
+
+  // Vérifier que le package existe
+  const pkg = await c.env.DB.prepare(
+    `SELECT id, name FROM packages WHERE id = ? AND deleted_at IS NULL`
+  ).bind(package_id).first() as any
+  if (!pkg) return c.json({ error: 'Package introuvable' }, 404)
+
+  // Vérifier que le service existe
+  const svc = await c.env.DB.prepare(
+    `SELECT id, name FROM services WHERE id = ?`
+  ).bind(service_id).first() as any
+  if (!svc) return c.json({ error: 'Service introuvable' }, 404)
+
+  // UPSERT — créer ou mettre à jour
+  await c.env.DB.prepare(`
+    INSERT INTO package_service_access (package_id, service_id, is_enabled, updated_at, updated_by)
+    VALUES (?, ?, ?, datetime('now'), ?)
+    ON CONFLICT(package_id, service_id)
+    DO UPDATE SET
+      is_enabled = excluded.is_enabled,
+      updated_at = excluded.updated_at,
+      updated_by = excluded.updated_by
+  `).bind(package_id, service_id, enabled, adminId).run()
+
+  // Log d'audit
+  await c.env.DB.prepare(`
+    INSERT INTO admin_audit_log (admin_id, action, target_type, target_id, details, created_at)
+    VALUES (?, 'package_service_access_toggle', 'package_service', ?, ?, datetime('now'))
+  `).bind(
+    adminId,
+    `${package_id}:${service_id}`,
+    JSON.stringify({ package_name: pkg.name, service_name: svc.name, is_enabled: enabled })
+  ).run()
+
+  return c.json({
+    success: true,
+    package_id,
+    service_id,
+    is_enabled: enabled,
+    package_name: pkg.name,
+    service_name: svc.name,
+  })
+})
+
+// POST /admin/package-service-access/bulk
+// Activer/désactiver tous les services d'un package en une fois
+admin.post('/package-service-access/bulk', requirePermission('packages.edit'), async (c) => {
+  const adminId = c.get('adminId' as any) as string
+  const { package_id, is_enabled } = await c.req.json() as any
+
+  if (!package_id || is_enabled === undefined) {
+    return c.json({ error: 'package_id et is_enabled requis' }, 400)
+  }
+
+  const enabled = is_enabled ? 1 : 0
+
+  // Vérifier que le package existe
+  const pkg = await c.env.DB.prepare(
+    `SELECT id, name FROM packages WHERE id = ? AND deleted_at IS NULL`
+  ).bind(package_id).first() as any
+  if (!pkg) return c.json({ error: 'Package introuvable' }, 404)
+
+  // Mettre à jour tous les accès de ce package
+  const result = await c.env.DB.prepare(`
+    UPDATE package_service_access
+    SET is_enabled = ?, updated_at = datetime('now'), updated_by = ?
+    WHERE package_id = ?
+  `).bind(enabled, adminId, package_id).run()
+
+  // S'il n'y avait pas encore d'entrées pour ce package (nouveaux services ajoutés)
+  // → insérer les manquants
+  await c.env.DB.prepare(`
+    INSERT OR IGNORE INTO package_service_access (package_id, service_id, is_enabled, updated_at, updated_by)
+    SELECT ?, s.id, ?, datetime('now'), ?
+    FROM services s
+    WHERE s.status != 'inactive'
+  `).bind(package_id, enabled, adminId).run()
+
+  // Remettre à jour après l'insert (les inserts avaient is_enabled correct déjà)
+  await c.env.DB.prepare(`
+    UPDATE package_service_access
+    SET is_enabled = ?, updated_at = datetime('now'), updated_by = ?
+    WHERE package_id = ?
+  `).bind(enabled, adminId, package_id).run()
+
+  await c.env.DB.prepare(`
+    INSERT INTO admin_audit_log (admin_id, action, target_type, target_id, details, created_at)
+    VALUES (?, 'package_service_access_bulk', 'package', ?, ?, datetime('now'))
+  `).bind(
+    adminId,
+    package_id,
+    JSON.stringify({ package_name: pkg.name, is_enabled: enabled, action: 'bulk' })
+  ).run()
+
+  return c.json({ success: true, package_id, is_enabled: enabled, rows_updated: result.meta?.changes || 0 })
+})
+
 export { admin }

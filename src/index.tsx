@@ -2506,6 +2506,9 @@ function adminHTML(branding: BrandingPublic = { logoUri: '', networkName: 'LEADE
       <button onclick="showAdminPage('packages');closeAdminSidebar()" class="admin-nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="packages">
         <i class="fas fa-box-open w-5 text-center"></i> Packages
       </button>
+      <button onclick="showAdminPage('package-service-access');closeAdminSidebar()" class="admin-nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="package-service-access">
+        <i class="fas fa-th-large w-5 text-center"></i> Accès Services
+      </button>
       <button onclick="showAdminPage('payment-gateway');closeAdminSidebar()" class="admin-nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="payment-gateway">
         <i class="fas fa-credit-card w-5 text-center"></i> Paiement
       </button>
