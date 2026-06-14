@@ -11754,3 +11754,784 @@ function _psaUpdateGlobalCount() {
   const el = document.getElementById('psa-global-count');
   if (el) el.textContent = count;
 }
+
+
+// ============================================================
+// ADMIN CAMPUS — Gestion complète Cours / Modules / Leçons
+// ⚡ Toute modification admin se reflète immédiatement côté membre
+// Routes: /api/campus/admin/...
+// ============================================================
+
+// ── Helper API campus admin (base path correct) ──────────────
+function apiCampusAdmin(method, path, body) {
+  if (!adminToken) {
+    _forceAdminLogout('Aucune session active');
+    return Promise.reject({ error: 'Non connecté' });
+  }
+  return axios({
+    method,
+    url: `/api/campus/admin${path}`,
+    data: body,
+    headers: { Authorization: `Bearer ${adminToken}` }
+  }).then(r => r.data).catch(err => {
+    const status = err.response?.status;
+    const data = err.response?.data;
+    if (status === 401 || data?.code === 'INVALID_ADMIN_SESSION') {
+      _forceAdminLogout('Session expirée');
+      const e = data || { error: err.message };
+      e._accessDenied = true;
+      throw e;
+    }
+    if (status === 403) {
+      const e = data || { error: err.message };
+      e._accessDenied = true;
+      _showAccessDenied(data?.required);
+      throw e;
+    }
+    throw data || { error: err.message };
+  });
+}
+
+// ── État global campus ────────────────────────────────────────
+const _campus = {
+  view: 'courses',   // 'courses' | 'modules' | 'lessons'
+  courseId: null,
+  courseTitle: '',
+  moduleId: null,
+  moduleTitle: '',
+  categories: [],
+};
+
+// ── Entrée principale ─────────────────────────────────────────
+async function showAdminCampus(el) {
+  _campus.view = 'courses';
+  _campus.courseId = null;
+  _campus.moduleId = null;
+  el.innerHTML = `
+    <div id="campus-root">
+      <div class="flex items-center justify-between mb-6 gap-3 flex-wrap">
+        <div class="flex items-center gap-3 flex-wrap" id="campus-breadcrumb">
+          <i class="fas fa-graduation-cap text-2xl text-red-400"></i>
+          <h2 class="text-xl font-bold text-white">Campus — Formations</h2>
+        </div>
+        <div class="flex gap-2" id="campus-actions">
+          <button onclick="_campusNewCourse()" class="btn-red px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+            <i class="fas fa-plus"></i> Nouveau cours
+          </button>
+        </div>
+      </div>
+      <div id="campus-content"></div>
+    </div>`;
+
+  try {
+    _campus.categories = await apiCampusAdmin('GET', '/categories') || [];
+  } catch(e) { _campus.categories = []; }
+
+  await _campusLoadCourses();
+}
+
+// ── Breadcrumb dynamique ──────────────────────────────────────
+function _campusBreadcrumb() {
+  const bc = document.getElementById('campus-breadcrumb');
+  const ac = document.getElementById('campus-actions');
+  if (!bc || !ac) return;
+
+  if (_campus.view === 'courses') {
+    bc.innerHTML = `<i class="fas fa-graduation-cap text-xl text-red-400"></i>
+      <span class="text-white font-bold text-lg">Campus — Formations</span>`;
+    ac.innerHTML = `<button onclick="_campusNewCourse()" class="btn-red px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+      <i class="fas fa-plus"></i> Nouveau cours</button>`;
+  } else if (_campus.view === 'modules') {
+    bc.innerHTML = `<i class="fas fa-graduation-cap text-base text-red-400"></i>
+      <button onclick="_campusLoadCourses()" class="text-gray-400 hover:text-white text-sm transition">Formations</button>
+      <i class="fas fa-chevron-right text-gray-600 text-xs"></i>
+      <span class="text-white font-semibold text-sm truncate max-w-xs">${_campus.courseTitle}</span>`;
+    ac.innerHTML = `<button onclick="_campusNewModule()" class="btn-red px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+      <i class="fas fa-plus"></i> Nouveau module</button>`;
+  } else if (_campus.view === 'lessons') {
+    bc.innerHTML = `<i class="fas fa-graduation-cap text-base text-red-400"></i>
+      <button onclick="_campusLoadCourses()" class="text-gray-400 hover:text-white text-sm transition">Formations</button>
+      <i class="fas fa-chevron-right text-gray-600 text-xs"></i>
+      <button onclick="_campusLoadModules(_campus.courseId, _campus.courseTitle)" class="text-gray-400 hover:text-white text-sm transition truncate max-w-[8rem]">${_campus.courseTitle}</button>
+      <i class="fas fa-chevron-right text-gray-600 text-xs"></i>
+      <span class="text-white font-semibold text-sm truncate max-w-xs">${_campus.moduleTitle}</span>`;
+    ac.innerHTML = `<button onclick="_campusNewLesson()" class="btn-red px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+      <i class="fas fa-plus"></i> Nouvelle leçon</button>`;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// NIVEAU 1 — COURS
+// ══════════════════════════════════════════════════════════════
+async function _campusLoadCourses() {
+  _campus.view = 'courses';
+  _campus.courseId = null;
+  _campus.moduleId = null;
+  _campusBreadcrumb();
+
+  const el = document.getElementById('campus-content');
+  el.innerHTML = `<div class="text-center py-12"><i class="fas fa-spinner fa-spin text-3xl text-red-400"></i></div>`;
+
+  try {
+    const [stats, courses] = await Promise.all([
+      apiCampusAdmin('GET', '/stats').catch(() => ({})),
+      apiCampusAdmin('GET', '/courses'),
+    ]);
+
+    let html = `
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        ${[
+          { label:'Catégories', val: stats.total_categories||0, icon:'fa-tags', col:'text-blue-400' },
+          { label:'Formations', val: stats.total_courses||0, icon:'fa-graduation-cap', col:'text-green-400' },
+          { label:'Modules', val: stats.total_modules||0, icon:'fa-layer-group', col:'text-yellow-400' },
+          { label:'Leçons', val: stats.total_lessons||0, icon:'fa-play-circle', col:'text-red-400' },
+        ].map(s => `
+          <div class="bg-dark-800 rounded-xl p-4 border border-dark-700">
+            <div class="flex items-center gap-3">
+              <i class="fas ${s.icon} text-xl ${s.col}"></i>
+              <div>
+                <div class="text-2xl font-bold text-white">${s.val}</div>
+                <div class="text-xs text-gray-500">${s.label}</div>
+              </div>
+            </div>
+          </div>`).join('')}
+      </div>`;
+
+    if (!courses || !courses.length) {
+      html += `<div class="text-center py-16 text-gray-500">
+        <i class="fas fa-graduation-cap text-5xl mb-4 opacity-30"></i>
+        <p>Aucune formation. Créez la première !</p></div>`;
+    } else {
+      html += `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">`;
+      for (const c of courses) {
+        const statusCls = c.is_active ? 'bg-green-900/30 text-green-300' : 'bg-gray-800 text-gray-500';
+        html += `
+          <div class="bg-dark-800 border border-dark-700 rounded-xl overflow-hidden hover:border-red-800/50 transition">
+            ${c.thumbnail_url
+              ? `<img src="${c.thumbnail_url}" alt="${_esc(c.title)}" class="w-full h-36 object-cover">`
+              : `<div class="w-full h-36 bg-dark-700 flex items-center justify-center"><i class="fas fa-graduation-cap text-4xl text-gray-600"></i></div>`}
+            <div class="p-4">
+              <div class="flex items-start justify-between gap-2 mb-2">
+                <h3 class="font-semibold text-white text-sm leading-tight flex-1 cursor-pointer hover:text-red-300 transition"
+                    onclick="_campusLoadModules('${c.id}', ${JSON.stringify(c.title)})">${_esc(c.title)}</h3>
+                <span class="text-[10px] px-2 py-0.5 rounded-full shrink-0 ${statusCls}">${c.is_active ? 'Actif' : 'Inactif'}</span>
+              </div>
+              ${c.category_name ? `<span class="text-[10px] px-2 py-0.5 rounded-full bg-dark-700 text-gray-400 mb-2 inline-block">${_esc(c.category_name)}</span>` : ''}
+              <div class="flex items-center gap-3 text-xs text-gray-500 mb-3">
+                <span><i class="fas fa-layer-group mr-1"></i>${c.module_count||0} modules</span>
+                <span><i class="fas fa-play-circle mr-1"></i>${c.lesson_count_real||c.lesson_count||0} leçons</span>
+              </div>
+              <div class="flex gap-2">
+                <button onclick="_campusLoadModules('${c.id}', ${JSON.stringify(c.title)})"
+                  class="flex-1 bg-dark-700 hover:bg-red-900/30 text-gray-300 hover:text-white text-xs px-3 py-2 rounded-lg transition flex items-center justify-center gap-1">
+                  <i class="fas fa-layer-group"></i> Modules
+                </button>
+                <button onclick="_campusEditCourse('${c.id}')"
+                  class="bg-dark-700 hover:bg-blue-900/30 text-gray-400 hover:text-blue-300 text-xs px-3 py-2 rounded-lg transition" title="Modifier">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button onclick="_campusToggleCourse('${c.id}', ${c.is_active ? 1 : 0})"
+                  class="bg-dark-700 hover:bg-yellow-900/30 text-gray-400 hover:text-yellow-300 text-xs px-3 py-2 rounded-lg transition" title="${c.is_active ? 'Désactiver' : 'Activer'}">
+                  <i class="fas fa-${c.is_active ? 'eye-slash' : 'eye'}"></i>
+                </button>
+              </div>
+            </div>
+          </div>`;
+      }
+      html += `</div>`;
+    }
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = `<div class="bg-red-900/20 border border-red-800 rounded-xl p-6 text-red-300">
+      <i class="fas fa-exclamation-triangle mr-2"></i>Erreur chargement: ${e.error||e.message||'Inconnue'}</div>`;
+  }
+}
+
+// Utilitaire escape HTML
+function _esc(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function _campusToggleCourse(id, currentActive) {
+  try {
+    await apiCampusAdmin('PUT', `/courses/${id}`, { is_active: currentActive ? 0 : 1 });
+    showToast(currentActive ? 'Cours désactivé' : 'Cours activé', 'success');
+    await _campusLoadCourses();
+  } catch(e) { showToast('Erreur: ' + (e.error||e.message||''), 'error'); }
+}
+
+function _campusNewCourse() { _campusShowCourseModal(null); }
+
+async function _campusEditCourse(id) {
+  try {
+    const courses = await apiCampusAdmin('GET', '/courses');
+    const course = courses.find(c => c.id === id);
+    if (course) _campusShowCourseModal(course);
+  } catch(e) { showToast('Erreur: ' + (e.error||e.message||''), 'error'); }
+}
+
+function _campusShowCourseModal(course) {
+  const isEdit = !!course;
+  const catOpts = (_campus.categories||[]).map(cat =>
+    `<option value="${cat.id}" ${course?.category_id === cat.id ? 'selected' : ''}>${_esc(cat.name)}</option>`
+  ).join('');
+
+  showModal(`
+    <div class="p-6 max-w-2xl w-full mx-auto overflow-y-auto" style="max-height:90vh">
+      <h3 class="text-lg font-bold text-white mb-4"><i class="fas fa-graduation-cap mr-2 text-red-400"></i>${isEdit ? 'Modifier' : 'Nouveau'} cours</h3>
+      <div class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="text-xs text-gray-400 mb-1 block">Titre *</label>
+            <input id="cc-title" type="text" value="${_esc(course?.title||'')}"
+              class="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white text-sm focus:border-red-500 outline-none">
+          </div>
+          <div>
+            <label class="text-xs text-gray-400 mb-1 block">Slug * <span class="text-gray-600">(identifiant URL)</span></label>
+            <input id="cc-slug" type="text" value="${_esc(course?.slug||'')}"
+              class="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white text-sm focus:border-red-500 outline-none font-mono">
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="text-xs text-gray-400 mb-1 block">Catégorie</label>
+            <select id="cc-category" class="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white text-sm focus:border-red-500 outline-none">
+              <option value="">— Aucune —</option>${catOpts}
+            </select>
+          </div>
+          <div>
+            <label class="text-xs text-gray-400 mb-1 block">Formateur</label>
+            <input id="cc-instructor" type="text" value="${_esc(course?.instructor||'')}"
+              class="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white text-sm focus:border-red-500 outline-none">
+          </div>
+        </div>
+        <div>
+          <label class="text-xs text-gray-400 mb-1 block">Sous-titre</label>
+          <input id="cc-subtitle" type="text" value="${_esc(course?.subtitle||'')}"
+            class="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white text-sm focus:border-red-500 outline-none">
+        </div>
+        <div>
+          <label class="text-xs text-gray-400 mb-1 block">Description</label>
+          <textarea id="cc-description" rows="3"
+            class="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white text-sm focus:border-red-500 outline-none resize-none">${_esc(course?.description||'')}</textarea>
+        </div>
+        <div>
+          <label class="text-xs text-gray-400 mb-1 block">URL Miniature (thumbnail)</label>
+          <input id="cc-thumbnail" type="text" value="${_esc(course?.thumbnail_url||'')}" placeholder="https://..."
+            class="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white text-sm focus:border-red-500 outline-none font-mono">
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div>
+            <label class="text-xs text-gray-400 mb-1 block">Niveau</label>
+            <select id="cc-level" class="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white text-sm focus:border-red-500 outline-none">
+              ${['all','beginner','intermediate','advanced'].map(l=>`<option value="${l}" ${course?.level===l?'selected':''}>${l}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label class="text-xs text-gray-400 mb-1 block">Langue</label>
+            <select id="cc-language" class="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white text-sm focus:border-red-500 outline-none">
+              ${['fr','en','es','pt'].map(l=>`<option value="${l}" ${course?.language===l?'selected':''}>${l}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label class="text-xs text-gray-400 mb-1 block">Ordre d'affichage</label>
+            <input id="cc-order" type="number" value="${course?.display_order||0}"
+              class="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white text-sm focus:border-red-500 outline-none">
+          </div>
+          <div class="flex items-end pb-2 gap-3 flex-col">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input id="cc-featured" type="checkbox" ${course?.is_featured ? 'checked' : ''} class="w-4 h-4 accent-red-500">
+              <span class="text-xs text-gray-400">Mis en avant</span>
+            </label>
+            ${isEdit ? `<label class="flex items-center gap-2 cursor-pointer">
+              <input id="cc-active" type="checkbox" ${course?.is_active ? 'checked' : ''} class="w-4 h-4 accent-red-500">
+              <span class="text-xs text-gray-400">Actif</span>
+            </label>` : ''}
+          </div>
+        </div>
+      </div>
+      <div class="flex gap-3 mt-6">
+        <button onclick="closeModal()" class="flex-1 bg-dark-700 hover:bg-dark-600 text-gray-300 py-2.5 rounded-lg text-sm transition">Annuler</button>
+        <button id="btn-save-course" onclick="_campusSaveCourse(${isEdit ? `'${course.id}'` : 'null'})"
+          class="flex-1 btn-red py-2.5 rounded-lg text-sm font-semibold">${isEdit ? 'Mettre à jour' : 'Créer le cours'}</button>
+      </div>
+    </div>`);
+
+  if (!isEdit) {
+    document.getElementById('cc-title').addEventListener('input', function() {
+      document.getElementById('cc-slug').value = this.value
+        .toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+        .replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+    });
+  }
+}
+
+async function _campusSaveCourse(id) {
+  const btn = document.getElementById('btn-save-course');
+  const restore = btnSaving(btn);
+  const body = {
+    title:          document.getElementById('cc-title').value.trim(),
+    slug:           document.getElementById('cc-slug').value.trim(),
+    category_id:    document.getElementById('cc-category').value || null,
+    instructor:     document.getElementById('cc-instructor').value.trim() || null,
+    subtitle:       document.getElementById('cc-subtitle').value.trim() || null,
+    description:    document.getElementById('cc-description').value.trim() || null,
+    thumbnail_url:  document.getElementById('cc-thumbnail').value.trim() || null,
+    level:          document.getElementById('cc-level').value,
+    language:       document.getElementById('cc-language').value,
+    display_order:  parseInt(document.getElementById('cc-order').value) || 0,
+    is_featured:    document.getElementById('cc-featured').checked ? 1 : 0,
+    ...(id && document.getElementById('cc-active') ? { is_active: document.getElementById('cc-active').checked ? 1 : 0 } : {}),
+  };
+  if (!body.title || !body.slug) { restore(); return showToast('Titre et slug requis', 'error'); }
+  try {
+    if (id) await apiCampusAdmin('PUT', `/courses/${id}`, body);
+    else     await apiCampusAdmin('POST', '/courses', body);
+    closeModal();
+    showToast(id ? 'Cours mis à jour ✓' : 'Cours créé !', 'success');
+    await _campusLoadCourses();
+  } catch(e) { restore(); showToast('Erreur: ' + (e.error||e.message||''), 'error'); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// NIVEAU 2 — MODULES
+// ══════════════════════════════════════════════════════════════
+async function _campusLoadModules(courseId, courseTitle) {
+  _campus.view = 'modules';
+  _campus.courseId = courseId;
+  _campus.courseTitle = courseTitle;
+  _campus.moduleId = null;
+  _campusBreadcrumb();
+
+  const el = document.getElementById('campus-content');
+  el.innerHTML = `<div class="text-center py-12"><i class="fas fa-spinner fa-spin text-3xl text-red-400"></i></div>`;
+
+  try {
+    const modules = await apiCampusAdmin('GET', `/modules/${courseId}`);
+
+    let html = `<div class="space-y-3">`;
+    if (!modules || !modules.length) {
+      html += `<div class="text-center py-16 text-gray-500">
+        <i class="fas fa-layer-group text-5xl mb-4 opacity-30"></i>
+        <p>Aucun module. Créez le premier !</p></div>`;
+    } else {
+      for (const m of modules) {
+        html += `
+          <div class="bg-dark-800 border border-dark-700 rounded-xl p-4 hover:border-red-800/40 transition">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-lg bg-dark-700 flex items-center justify-center text-gray-400 text-xs font-bold shrink-0">${m.display_order||'—'}</div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-0.5 flex-wrap">
+                  <h4 class="font-semibold text-white text-sm cursor-pointer hover:text-red-300 transition"
+                      onclick="_campusLoadLessons('${m.id}', ${JSON.stringify(m.title)})">${_esc(m.title)}</h4>
+                  ${!m.is_active ? `<span class="text-[10px] px-2 py-0.5 rounded-full bg-gray-800 text-gray-500">Inactif</span>` : ''}
+                </div>
+                ${m.description ? `<div class="text-xs text-gray-500 truncate">${_esc(m.description)}</div>` : ''}
+                <div class="text-xs text-gray-600 mt-0.5">${m.lesson_count||0} leçon(s)</div>
+              </div>
+              <div class="flex gap-2 shrink-0">
+                <button onclick="_campusLoadLessons('${m.id}', ${JSON.stringify(m.title)})"
+                  class="bg-dark-700 hover:bg-red-900/30 text-gray-400 hover:text-white text-xs px-3 py-1.5 rounded-lg transition flex items-center gap-1">
+                  <i class="fas fa-play-circle"></i> Leçons
+                </button>
+                <button onclick="_campusEditModule('${m.id}')"
+                  class="bg-dark-700 hover:bg-blue-900/30 text-gray-400 hover:text-blue-300 text-xs px-3 py-1.5 rounded-lg transition" title="Modifier">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button onclick="_campusDeleteModule('${m.id}')"
+                  class="bg-dark-700 hover:bg-red-900/30 text-gray-400 hover:text-red-400 text-xs px-3 py-1.5 rounded-lg transition" title="Supprimer">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </div>
+          </div>`;
+      }
+    }
+    html += `</div>`;
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = `<div class="bg-red-900/20 border border-red-800 rounded-xl p-6 text-red-300">
+      Erreur: ${e.error||e.message||'Inconnue'}</div>`;
+  }
+}
+
+function _campusNewModule() { _campusShowModuleModal(null); }
+
+async function _campusEditModule(id) {
+  try {
+    const modules = await apiCampusAdmin('GET', `/modules/${_campus.courseId}`);
+    const mod = modules.find(m => m.id === id);
+    if (mod) _campusShowModuleModal(mod);
+  } catch(e) { showToast('Erreur: ' + (e.error||e.message||''), 'error'); }
+}
+
+function _campusShowModuleModal(mod) {
+  const isEdit = !!mod;
+  showModal(`
+    <div class="p-6 max-w-lg w-full mx-auto" style="max-height:90vh;overflow-y:auto">
+      <h3 class="text-lg font-bold text-white mb-4"><i class="fas fa-layer-group mr-2 text-red-400"></i>${isEdit ? 'Modifier' : 'Nouveau'} module</h3>
+      <div class="space-y-4">
+        <div>
+          <label class="text-xs text-gray-400 mb-1 block">Titre du module *</label>
+          <input id="cm-title" type="text" value="${_esc(mod?.title||'')}"
+            class="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white text-sm focus:border-red-500 outline-none">
+        </div>
+        <div>
+          <label class="text-xs text-gray-400 mb-1 block">Description</label>
+          <textarea id="cm-desc" rows="3"
+            class="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white text-sm focus:border-red-500 outline-none resize-none">${_esc(mod?.description||'')}</textarea>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-gray-400 mb-1 block">Ordre d'affichage</label>
+            <input id="cm-order" type="number" value="${mod?.display_order||0}"
+              class="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white text-sm focus:border-red-500 outline-none">
+          </div>
+          ${isEdit ? `<div class="flex items-end pb-2">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input id="cm-active" type="checkbox" ${mod?.is_active ? 'checked' : ''} class="w-4 h-4 accent-red-500">
+              <span class="text-xs text-gray-400">Module actif</span>
+            </label>
+          </div>` : '<div></div>'}
+        </div>
+      </div>
+      <div class="flex gap-3 mt-6">
+        <button onclick="closeModal()" class="flex-1 bg-dark-700 hover:bg-dark-600 text-gray-300 py-2.5 rounded-lg text-sm transition">Annuler</button>
+        <button id="btn-save-module" onclick="_campusSaveModule(${isEdit ? `'${mod.id}'` : 'null'})"
+          class="flex-1 btn-red py-2.5 rounded-lg text-sm font-semibold">${isEdit ? 'Mettre à jour' : 'Créer le module'}</button>
+      </div>
+    </div>`);
+}
+
+async function _campusSaveModule(id) {
+  const btn = document.getElementById('btn-save-module');
+  const restore = btnSaving(btn);
+  const title = document.getElementById('cm-title').value.trim();
+  if (!title) { restore(); return showToast('Titre requis', 'error'); }
+  const body = {
+    title,
+    description:   document.getElementById('cm-desc').value.trim() || null,
+    display_order: parseInt(document.getElementById('cm-order').value) || 0,
+    ...(id
+      ? { is_active: document.getElementById('cm-active')?.checked ? 1 : 0 }
+      : { course_id: _campus.courseId }),
+  };
+  try {
+    if (id) await apiCampusAdmin('PUT', `/modules/${id}`, body);
+    else     await apiCampusAdmin('POST', '/modules', body);
+    closeModal();
+    showToast(id ? 'Module mis à jour ✓' : 'Module créé !', 'success');
+    await _campusLoadModules(_campus.courseId, _campus.courseTitle);
+  } catch(e) { restore(); showToast('Erreur: ' + (e.error||e.message||''), 'error'); }
+}
+
+async function _campusDeleteModule(id) {
+  if (!confirm('Supprimer ce module ? (il sera désactivé)')) return;
+  try {
+    await apiCampusAdmin('DELETE', `/modules/${id}`);
+    showToast('Module supprimé', 'success');
+    await _campusLoadModules(_campus.courseId, _campus.courseTitle);
+  } catch(e) { showToast('Erreur: ' + (e.error||e.message||''), 'error'); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// NIVEAU 3 — LEÇONS (video_url + video_type + preview)
+// ══════════════════════════════════════════════════════════════
+async function _campusLoadLessons(moduleId, moduleTitle) {
+  _campus.view = 'lessons';
+  _campus.moduleId = moduleId;
+  _campus.moduleTitle = moduleTitle;
+  _campusBreadcrumb();
+
+  const el = document.getElementById('campus-content');
+  el.innerHTML = `<div class="text-center py-12"><i class="fas fa-spinner fa-spin text-3xl text-red-400"></i></div>`;
+
+  try {
+    const lessons = await apiCampusAdmin('GET', `/lessons/${moduleId}`);
+
+    let html = `<div class="space-y-2">`;
+    if (!lessons || !lessons.length) {
+      html += `<div class="text-center py-16 text-gray-500">
+        <i class="fas fa-play-circle text-5xl mb-4 opacity-30"></i>
+        <p>Aucune leçon. Créez la première !</p></div>`;
+    } else {
+      for (const l of lessons) {
+        const vi = _campusVideoIcon(l.video_type);
+        const hasVideo = !!l.video_url;
+        html += `
+          <div class="bg-dark-800 border border-dark-700 rounded-xl p-4 hover:border-red-800/40 transition">
+            <div class="flex items-start gap-3">
+              <div class="w-8 h-8 rounded-lg bg-dark-700 flex items-center justify-center text-gray-400 text-xs font-bold shrink-0 mt-0.5">${l.display_order||'—'}</div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1 flex-wrap">
+                  <h4 class="font-semibold text-white text-sm">${_esc(l.title)}</h4>
+                  ${!l.is_active ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-500">Inactif</span>` : ''}
+                  ${l.is_free ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-900/30 text-blue-300">Gratuit</span>` : ''}
+                  ${l.duration_label ? `<span class="text-[10px] text-gray-500"><i class="fas fa-clock mr-0.5"></i>${_esc(l.duration_label)}</span>` : ''}
+                </div>
+                <div class="flex items-center gap-2 text-xs flex-wrap">
+                  ${hasVideo
+                    ? `<span class="flex items-center gap-1 ${vi.color} shrink-0">
+                        <i class="${vi.icon}"></i>
+                        <span class="font-medium uppercase text-[10px]">${l.video_type||'url'}</span>
+                       </span>
+                       <code class="text-gray-500 text-[10px] truncate max-w-xs bg-dark-700 px-2 py-0.5 rounded" title="${_esc(l.video_url)}">${_esc(l.video_url)}</code>`
+                    : `<span class="text-yellow-600 text-[10px] italic"><i class="fas fa-exclamation-circle mr-1"></i>Pas de vidéo configurée</span>`}
+                </div>
+              </div>
+              <div class="flex gap-2 shrink-0">
+                <button onclick="_campusEditLesson('${l.id}')"
+                  class="bg-dark-700 hover:bg-blue-900/30 text-gray-400 hover:text-blue-300 text-xs px-3 py-1.5 rounded-lg transition flex items-center gap-1">
+                  <i class="fas fa-edit"></i> Modifier
+                </button>
+                <button onclick="_campusDeleteLesson('${l.id}')"
+                  class="bg-dark-700 hover:bg-red-900/30 text-gray-400 hover:text-red-400 text-xs px-3 py-1.5 rounded-lg transition" title="Supprimer">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </div>
+          </div>`;
+      }
+    }
+    html += `</div>`;
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = `<div class="bg-red-900/20 border border-red-800 rounded-xl p-6 text-red-300">
+      Erreur: ${e.error||e.message||'Inconnue'}</div>`;
+  }
+}
+
+// Icônes par type de vidéo
+function _campusVideoIcon(type) {
+  return {
+    wistia:  { icon: 'fas fa-video',       color: 'text-blue-400' },
+    youtube: { icon: 'fab fa-youtube',     color: 'text-red-400' },
+    vimeo:   { icon: 'fab fa-vimeo-v',     color: 'text-blue-300' },
+    drive:   { icon: 'fab fa-google-drive',color: 'text-yellow-400' },
+    url:     { icon: 'fas fa-link',         color: 'text-gray-400' },
+  }[type] || { icon: 'fas fa-link', color: 'text-gray-400' };
+}
+
+function _campusNewLesson() { _campusShowLessonModal(null); }
+
+async function _campusEditLesson(id) {
+  try {
+    const lessons = await apiCampusAdmin('GET', `/lessons/${_campus.moduleId}`);
+    const lesson = lessons.find(l => l.id === id);
+    if (lesson) _campusShowLessonModal(lesson);
+    else showToast('Leçon introuvable', 'error');
+  } catch(e) { showToast('Erreur: ' + (e.error||e.message||''), 'error'); }
+}
+
+function _campusShowLessonModal(lesson) {
+  const isEdit = !!lesson;
+  const vtype = lesson?.video_type || 'wistia';
+
+  const videoTypesBtns = [
+    { val:'wistia',  label:'Wistia',   icon:'fas fa-video',        hint:'https://fast.wistia.com/embed/medias/{mediaId}' },
+    { val:'youtube', label:'YouTube',  icon:'fab fa-youtube',      hint:'https://www.youtube.com/watch?v={videoId}' },
+    { val:'vimeo',   label:'Vimeo',    icon:'fab fa-vimeo-v',      hint:'https://vimeo.com/{videoId}' },
+    { val:'drive',   label:'Drive',    icon:'fab fa-google-drive', hint:'https://drive.google.com/file/d/{fileId}/view' },
+    { val:'url',     label:'URL directe', icon:'fas fa-link',      hint:'https://example.com/video.mp4' },
+  ];
+
+  showModal(`
+    <div class="p-6 max-w-2xl w-full mx-auto" style="max-height:92vh;overflow-y:auto">
+      <h3 class="text-lg font-bold text-white mb-1">
+        <i class="fas fa-play-circle mr-2 text-red-400"></i>${isEdit ? 'Modifier' : 'Nouvelle'} leçon
+      </h3>
+      ${isEdit ? `<p class="text-[10px] text-gray-600 font-mono mb-4">ID: ${lesson.id}</p>` : '<div class="mb-4"></div>'}
+
+      <div class="space-y-4">
+
+        <!-- Titre -->
+        <div>
+          <label class="text-xs text-gray-400 mb-1 block">Titre de la leçon *</label>
+          <input id="cl-title" type="text" value="${_esc(lesson?.title||'')}"
+            class="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white text-sm focus:border-red-500 outline-none">
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label class="text-xs text-gray-400 mb-1 block">Description / Résumé</label>
+          <textarea id="cl-desc" rows="2"
+            class="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white text-sm focus:border-red-500 outline-none resize-none">${_esc(lesson?.description||'')}</textarea>
+        </div>
+
+        <!-- ── SECTION VIDÉO ── -->
+        <div class="bg-dark-750 border border-dark-600 rounded-xl p-4 space-y-3">
+          <div class="flex items-center gap-2">
+            <i class="fas fa-video text-red-400"></i>
+            <span class="text-sm font-semibold text-white">Vidéo</span>
+          </div>
+
+          <!-- Sélecteur type -->
+          <div>
+            <label class="text-xs text-gray-400 mb-2 block">Plateforme vidéo</label>
+            <div class="grid grid-cols-5 gap-1.5" id="cl-type-btns">
+              ${videoTypesBtns.map(t => `
+                <button type="button" data-vtype="${t.val}" data-hint="${t.hint}"
+                  onclick="_campusSelectVideoType('${t.val}')"
+                  class="vtype-btn flex flex-col items-center gap-1 p-2 rounded-lg border text-xs transition
+                    ${vtype===t.val
+                      ? 'bg-red-900/40 border-red-500 text-white'
+                      : 'bg-dark-700 border-dark-600 text-gray-400 hover:border-red-700 hover:text-white'}">
+                  <i class="${t.icon} text-sm"></i>
+                  <span class="text-[10px] leading-tight text-center">${t.label}</span>
+                </button>`).join('')}
+            </div>
+          </div>
+
+          <!-- URL vidéo -->
+          <div>
+            <label class="text-xs text-gray-400 mb-1 block">URL de la vidéo</label>
+            <input id="cl-video-url" type="text" value="${_esc(lesson?.video_url||'')}"
+              placeholder="https://fast.wistia.com/embed/medias/xxxxxxxxxx"
+              class="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white text-sm focus:border-red-500 outline-none font-mono">
+            <p id="cl-video-hint" class="text-[10px] text-gray-500 mt-1 font-mono">
+              ${videoTypesBtns.find(t=>t.val===vtype)?.hint || ''}
+            </p>
+          </div>
+
+          <!-- Bouton aperçu -->
+          <div>
+            <button type="button" onclick="_campusPreviewVideo()"
+              class="text-xs text-blue-400 hover:text-blue-300 underline underline-offset-2 transition flex items-center gap-1">
+              <i class="fas fa-eye"></i> Prévisualiser
+            </button>
+            <div id="cl-preview" class="mt-2 hidden rounded-lg overflow-hidden bg-black" style="aspect-ratio:16/9;max-height:180px"></div>
+          </div>
+        </div>
+
+        <!-- Durée + Ordre + Options -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div>
+            <label class="text-xs text-gray-400 mb-1 block">Durée (secondes)</label>
+            <input id="cl-duration" type="number" value="${lesson?.duration_seconds||0}" min="0"
+              class="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white text-sm focus:border-red-500 outline-none">
+          </div>
+          <div>
+            <label class="text-xs text-gray-400 mb-1 block">Durée affichée</label>
+            <input id="cl-duration-label" type="text" value="${_esc(lesson?.duration_label||'')}" placeholder="ex: 14 min"
+              class="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white text-sm focus:border-red-500 outline-none">
+          </div>
+          <div>
+            <label class="text-xs text-gray-400 mb-1 block">Ordre</label>
+            <input id="cl-order" type="number" value="${lesson?.display_order||0}"
+              class="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white text-sm focus:border-red-500 outline-none">
+          </div>
+          <div class="flex flex-col gap-2 justify-end pb-1">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input id="cl-free" type="checkbox" ${lesson?.is_free ? 'checked' : ''} class="w-4 h-4 accent-red-500">
+              <span class="text-xs text-gray-400">Leçon gratuite</span>
+            </label>
+            ${isEdit ? `<label class="flex items-center gap-2 cursor-pointer">
+              <input id="cl-active" type="checkbox" ${lesson?.is_active ? 'checked' : ''} class="w-4 h-4 accent-red-500">
+              <span class="text-xs text-gray-400">Active</span>
+            </label>` : ''}
+          </div>
+        </div>
+
+        <!-- Transcription -->
+        <div>
+          <label class="text-xs text-gray-400 mb-1 block">Transcription / Notes <span class="text-gray-600">(optionnel)</span></label>
+          <textarea id="cl-transcript" rows="3"
+            class="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white text-sm focus:border-red-500 outline-none resize-none">${_esc(lesson?.transcript||'')}</textarea>
+        </div>
+
+      </div>
+
+      <div class="flex gap-3 mt-6">
+        <button onclick="closeModal()" class="flex-1 bg-dark-700 hover:bg-dark-600 text-gray-300 py-2.5 rounded-lg text-sm transition">Annuler</button>
+        <button id="btn-save-lesson" onclick="_campusSaveLesson(${isEdit ? `'${lesson.id}'` : 'null'})"
+          class="flex-1 btn-red py-2.5 rounded-lg text-sm font-semibold">${isEdit ? 'Mettre à jour' : 'Créer la leçon'}</button>
+      </div>
+    </div>`);
+
+  // Mémoriser type courant
+  window._campusCurrentVideoType = vtype;
+}
+
+function _campusSelectVideoType(type) {
+  window._campusCurrentVideoType = type;
+  // Mettre à jour les boutons
+  document.querySelectorAll('.vtype-btn').forEach(btn => {
+    const sel = btn.dataset.vtype === type;
+    btn.className = `vtype-btn flex flex-col items-center gap-1 p-2 rounded-lg border text-xs transition ${
+      sel ? 'bg-red-900/40 border-red-500 text-white'
+          : 'bg-dark-700 border-dark-600 text-gray-400 hover:border-red-700 hover:text-white'}`;
+  });
+  // Mettre à jour le hint
+  const hintEl = document.getElementById('cl-video-hint');
+  if (hintEl) {
+    const btn = document.querySelector(`.vtype-btn[data-vtype="${type}"]`);
+    hintEl.textContent = btn?.dataset.hint || '';
+  }
+  // Masquer l'aperçu
+  const prev = document.getElementById('cl-preview');
+  if (prev) { prev.innerHTML=''; prev.classList.add('hidden'); }
+}
+
+function _campusPreviewVideo() {
+  const url = (document.getElementById('cl-video-url')?.value || '').trim();
+  const type = window._campusCurrentVideoType || 'wistia';
+  const previewEl = document.getElementById('cl-preview');
+  if (!previewEl) return;
+  if (!url) { showToast('Entrez une URL vidéo d\'abord', 'error'); return; }
+
+  let embedUrl = url;
+  if (type === 'wistia') {
+    const m = url.match(/(?:embed\/medias?|embed\/iframe)\/([a-zA-Z0-9]+)/);
+    if (m) embedUrl = `https://fast.wistia.net/embed/iframe/${m[1]}?videoFoam=true`;
+  } else if (type === 'youtube') {
+    const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+    if (m) embedUrl = `https://www.youtube.com/embed/${m[1]}?rel=0`;
+  } else if (type === 'vimeo') {
+    const m = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+    if (m) embedUrl = `https://player.vimeo.com/video/${m[1]}`;
+  } else if (type === 'drive') {
+    const m = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (m) embedUrl = `https://drive.google.com/file/d/${m[1]}/preview`;
+  }
+
+  previewEl.innerHTML = `<iframe src="${embedUrl}" class="w-full h-full" frameborder="0" allowfullscreen></iframe>`;
+  previewEl.classList.remove('hidden');
+}
+
+async function _campusSaveLesson(id) {
+  const btn = document.getElementById('btn-save-lesson');
+  const restore = btnSaving(btn);
+  const videoUrl = (document.getElementById('cl-video-url')?.value || '').trim() || null;
+  const videoType = window._campusCurrentVideoType || 'wistia';
+  const body = {
+    title:            document.getElementById('cl-title').value.trim(),
+    description:      document.getElementById('cl-desc').value.trim() || null,
+    video_url:        videoUrl,
+    video_type:       videoType,
+    duration_seconds: parseInt(document.getElementById('cl-duration').value) || 0,
+    duration_label:   document.getElementById('cl-duration-label').value.trim() || null,
+    display_order:    parseInt(document.getElementById('cl-order').value) || 0,
+    is_free:          document.getElementById('cl-free')?.checked ? 1 : 0,
+    transcript:       document.getElementById('cl-transcript').value.trim() || null,
+    ...(id
+      ? { is_active: document.getElementById('cl-active')?.checked ? 1 : 0 }
+      : { module_id: _campus.moduleId, course_id: _campus.courseId }),
+  };
+  if (!body.title) { restore(); return showToast('Titre requis', 'error'); }
+  try {
+    if (id) await apiCampusAdmin('PUT', `/lessons/${id}`, body);
+    else     await apiCampusAdmin('POST', '/lessons', body);
+    closeModal();
+    showToast(id ? 'Leçon mise à jour ✓' : 'Leçon créée !', 'success');
+    await _campusLoadLessons(_campus.moduleId, _campus.moduleTitle);
+  } catch(e) { restore(); showToast('Erreur: ' + (e.error||e.message||''), 'error'); }
+}
+
+async function _campusDeleteLesson(id) {
+  if (!confirm('Supprimer cette leçon ?')) return;
+  try {
+    await apiCampusAdmin('DELETE', `/lessons/${id}`);
+    showToast('Leçon supprimée', 'success');
+    await _campusLoadLessons(_campus.moduleId, _campus.moduleTitle);
+  } catch(e) { showToast('Erreur: ' + (e.error||e.message||''), 'error'); }
+}

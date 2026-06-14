@@ -400,7 +400,23 @@ function renderVideoPlayer(url, type, title) {
   let embedUrl = url;
   type = type || detectVideoType(url);
 
-  if (type === 'youtube') {
+  if (type === 'wistia') {
+    // Wistia embed — extraire le media ID
+    const wistiaId = extractWistiaId(url);
+    if (wistiaId) {
+      return `
+        <div class="campus-player">
+          <iframe src="https://fast.wistia.net/embed/iframe/${wistiaId}?videoFoam=true&autoPlay=false"
+            title="${title || 'Leçon'}"
+            frameborder="0"
+            allow="autoplay; fullscreen"
+            allowfullscreen
+            class="wistia_embed">
+          </iframe>
+        </div>
+      `;
+    }
+  } else if (type === 'youtube') {
     const ytId = extractYoutubeId(url);
     if (ytId) embedUrl = `https://www.youtube.com/embed/${ytId}?autoplay=0&rel=0&modestbranding=1`;
   } else if (type === 'vimeo') {
@@ -425,10 +441,17 @@ function renderVideoPlayer(url, type, title) {
 
 function detectVideoType(url) {
   if (!url) return 'url';
+  if (url.includes('wistia.com') || url.includes('wistia.net')) return 'wistia';
   if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
   if (url.includes('vimeo.com')) return 'vimeo';
   if (url.includes('drive.google.com')) return 'drive';
   return 'url';
+}
+
+function extractWistiaId(url) {
+  // https://fast.wistia.com/embed/medias/abc123xyz → abc123xyz
+  const m = url.match(/(?:embed\/medias?|embed\/iframe)\/([a-zA-Z0-9]+)/);
+  return m ? m[1] : null;
 }
 
 function extractYoutubeId(url) {
