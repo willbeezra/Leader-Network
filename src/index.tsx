@@ -4,7 +4,7 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { serveStatic } from 'hono/cloudflare-workers'
-import { auth } from './routes/auth.js'
+import { auth, verifyJWT } from './routes/auth.js'
 import { members } from './routes/members.js'
 import { admin } from './routes/admin.js'
 import { support, adminSupport } from './routes/support.js'
@@ -203,26 +203,23 @@ app.route('/api/broker', brokerRouter)
 app.route('/api/admin/broker', brokerAdminRouter)
 
 // ── Campus routes ──────────────────────────────────────────────
-// Middleware auth pour les routes membres campus
+// Middleware auth pour les routes membres campus (JWT — pas de sessions DB)
 app.use('/api/campus/*', async (c, next) => {
-  // Routes admin nécessitent admin auth
+  const token = c.req.header('Authorization')?.split(' ')[1] || ''
+
   if (c.req.path.startsWith('/api/campus/admin')) {
-    const token = c.req.header('Authorization')?.split(' ')[1] || c.req.cookie?.('admin_token') || ''
+    // Routes admin — vérifier JWT admin
     if (!token) return c.json({ error: 'Admin non authentifié' }, 401)
-    // Vérifier token admin via DB
-    const session = await c.env.DB.prepare(
-      `SELECT sa.admin_id FROM admin_sessions sa WHERE sa.token = ? AND sa.expires_at > datetime('now')`
-    ).bind(token).first() as any
-    if (!session) return c.json({ error: 'Session admin invalide' }, 401)
-    c.set('adminId' as any, session.admin_id)
+    const payload = await verifyJWT(token, c.env.JWT_SECRET).catch(() => null)
+    if (!payload || payload.role !== 'admin') return c.json({ error: 'Session admin invalide' }, 401)
+    c.set('adminId' as any, payload.sub)
   } else {
-    // Routes membres — inject memberId si token présent (optionnel)
-    const token = c.req.header('Authorization')?.split(' ')[1] || ''
+    // Routes membres — JWT optionnel (pour la progression)
     if (token) {
-      const session = await c.env.DB.prepare(
-        `SELECT member_id FROM member_sessions WHERE token = ? AND expires_at > datetime('now')`
-      ).bind(token).first() as any
-      if (session) c.set('memberId' as any, session.member_id)
+      const payload = await verifyJWT(token, c.env.JWT_SECRET).catch(() => null)
+      if (payload && payload.role === 'member') {
+        c.set('memberId' as any, payload.sub)
+      }
     }
   }
   return next()
