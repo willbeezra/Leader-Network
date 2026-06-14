@@ -11470,6 +11470,21 @@ async function adminPackageServiceAccess(el) {
         transition: background .2s, color .2s;
       }
       .psa-count-badge.has-access { background: rgba(22,163,74,.2); color: #4ade80; }
+
+      /* Ligne séparatrice de catégorie */
+      .psa-tr-cat-header td {
+        background: #080d14 !important;
+        padding: 10px 14px 6px;
+        border-bottom: 1px solid rgba(121,30,21,0.2);
+        border-top: 2px solid rgba(121,30,21,0.15);
+        position: sticky;
+        left: 0;
+      }
+      .psa-td-cat-header {
+        position: sticky;
+        left: 0;
+        z-index: 1;
+      }
     `;
     document.head.appendChild(s);
   }
@@ -11540,45 +11555,71 @@ async function adminPackageServiceAccess(el) {
             </tr>
           </thead>
           <tbody>
-            ${packages.map(pkg => {
-              // Compter les accès activés pour ce package
-              const pkgEnabled = services.filter(s => (access[`${pkg.id}:${s.id}`]?.is_enabled || 0) === 1).length;
-              return `
-              <tr class="psa-tr" data-pkg="${pkg.id}">
-                <td class="psa-td-pkg">
-                  <div class="psa-pkg-name">
-                    ${pkg.name}
-                    <span class="psa-count-badge ${pkgEnabled > 0 ? 'has-access' : ''}" id="badge-${pkg.id}">${pkgEnabled}/${services.length}</span>
-                  </div>
-                  <div class="psa-pkg-price">$${Number(pkg.price_usd).toLocaleString('en-US')}</div>
-                  <div style="display:flex;gap:4px;margin-top:5px">
-                    <button class="psa-bulk-btn psa-bulk-on"
-                      onclick="psaBulk('${pkg.id}', true)"
-                      title="Activer tous les services pour ${pkg.name}">
-                      ✓ Tout ON
-                    </button>
-                    <button class="psa-bulk-btn psa-bulk-off"
-                      onclick="psaBulk('${pkg.id}', false)"
-                      title="Désactiver tous les services pour ${pkg.name}">
-                      ✗ Tout OFF
-                    </button>
-                  </div>
-                </td>
-                ${services.map(svc => {
-                  const key = `${pkg.id}:${svc.id}`;
-                  const enabled = (access[key]?.is_enabled || 0) === 1;
-                  return `
-                  <td class="psa-td">
-                    <label class="psa-toggle" id="toggle-wrap-${pkg.id}-${svc.id}"
-                           title="${enabled ? 'Désactiver' : 'Activer'} ${svc.name} pour ${pkg.name}">
-                      <input type="checkbox" ${enabled ? 'checked' : ''}
-                             onchange="psaToggle(this,'${pkg.id}','${svc.id}','${pkg.name}','${svc.name}')">
-                      <span class="psa-slider"></span>
-                    </label>
-                  </td>`;
-                }).join('')}
-              </tr>`;
-            }).join('')}
+            ${(() => {
+              // ── Grouper les packages par catégorie ──────────────────
+              const catMap = new Map(); // cat_name → [pkg, ...]
+              for (const pkg of packages) {
+                const cat = pkg.category_name || 'Autres';
+                if (!catMap.has(cat)) catMap.set(cat, []);
+                catMap.get(cat).push(pkg);
+              }
+              let rows = '';
+              for (const [catName, catPkgs] of catMap) {
+                // ── Ligne séparatrice de catégorie ──
+                rows += `
+                <tr class="psa-tr-cat-header">
+                  <td class="psa-td-cat-header" colspan="${services.length + 1}">
+                    <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;
+                                 color:rgba(121,30,21,0.9);background:rgba(121,30,21,0.12);
+                                 padding:2px 10px;border-radius:999px;border:1px solid rgba(121,30,21,0.25)">
+                      ${catName}
+                    </span>
+                    <span style="font-size:10px;color:rgba(245,240,232,0.3);margin-left:8px">${catPkgs.length} package${catPkgs.length > 1 ? 's' : ''}</span>
+                  </td>
+                </tr>`;
+
+                // ── Lignes de packages de cette catégorie ──
+                for (const pkg of catPkgs) {
+                  const pkgEnabled = services.filter(s => (access[`${pkg.id}:${s.id}`]?.is_enabled || 0) === 1).length;
+                  rows += `
+                  <tr class="psa-tr" data-pkg="${pkg.id}">
+                    <td class="psa-td-pkg">
+                      <div class="psa-pkg-name">
+                        ${pkg.name}
+                        <span class="psa-count-badge ${pkgEnabled > 0 ? 'has-access' : ''}" id="badge-${pkg.id}">${pkgEnabled}/${services.length}</span>
+                      </div>
+                      <div class="psa-pkg-price">$${Number(pkg.price_usd).toLocaleString('en-US')}</div>
+                      <div style="display:flex;gap:4px;margin-top:5px">
+                        <button class="psa-bulk-btn psa-bulk-on"
+                          onclick="psaBulk('${pkg.id}', true)"
+                          title="Activer tous les services pour ${pkg.name}">
+                          ✓ Tout ON
+                        </button>
+                        <button class="psa-bulk-btn psa-bulk-off"
+                          onclick="psaBulk('${pkg.id}', false)"
+                          title="Désactiver tous les services pour ${pkg.name}">
+                          ✗ Tout OFF
+                        </button>
+                      </div>
+                    </td>
+                    ${services.map(svc => {
+                      const key = `${pkg.id}:${svc.id}`;
+                      const enabled = (access[key]?.is_enabled || 0) === 1;
+                      return `
+                      <td class="psa-td">
+                        <label class="psa-toggle" id="toggle-wrap-${pkg.id}-${svc.id}"
+                               title="${enabled ? 'Désactiver' : 'Activer'} ${svc.name} pour ${pkg.name}">
+                          <input type="checkbox" ${enabled ? 'checked' : ''}
+                                 onchange="psaToggle(this,'${pkg.id}','${svc.id}','${pkg.name}','${svc.name}')">
+                          <span class="psa-slider"></span>
+                        </label>
+                      </td>`;
+                    }).join('')}
+                  </tr>`;
+                }
+              }
+              return rows;
+            })()}
           </tbody>
         </table>
       </div>

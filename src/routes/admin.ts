@@ -7315,12 +7315,14 @@ admin.get('/reports/cash-flow', requirePermission('reports.view'), async (c) => 
 admin.get('/package-service-access', requirePermission('packages.view'), async (c) => {
   const db = c.env.DB
 
-  // Tous les packages actifs (non supprimés)
+  // Tous les packages actifs (non supprimés) avec leur catégorie
   const pkgRows = await db.prepare(`
-    SELECT id, name, slug, price_usd, display_order
-    FROM packages
-    WHERE deleted_at IS NULL AND is_active = 1
-    ORDER BY display_order ASC, name ASC
+    SELECT p.id, p.name, p.slug, p.price_usd, p.display_order,
+           p.category_id, pc.name AS category_name, pc.display_order AS cat_order
+    FROM packages p
+    LEFT JOIN package_categories pc ON pc.id = p.category_id
+    WHERE p.deleted_at IS NULL AND p.is_active = 1
+    ORDER BY pc.display_order ASC, p.display_order ASC, p.name ASC
   `).all()
 
   // Tous les services actifs
@@ -7391,13 +7393,16 @@ admin.post('/package-service-access/toggle', requirePermission('packages.edit'),
   `).bind(package_id, service_id, enabled, adminId).run()
 
   // Log d'audit
+  const adminEmailToggle = (c.get('adminEmail' as any) as string) || 'admin@system'
   await c.env.DB.prepare(`
-    INSERT INTO admin_audit_log (admin_id, action, target_type, target_id, details, created_at)
-    VALUES (?, 'package_service_access_toggle', 'package_service', ?, ?, datetime('now'))
+    INSERT INTO admin_audit_log
+    (id, admin_id, admin_email, action, description, metadata, created_at)
+    VALUES (lower(hex(randomblob(16))), ?, ?, 'package_service_access_toggle', ?, ?, datetime('now'))
   `).bind(
     adminId,
-    `${package_id}:${service_id}`,
-    JSON.stringify({ package_name: pkg.name, service_name: svc.name, is_enabled: enabled })
+    adminEmailToggle,
+    `Accès ${svc.name} → ${pkg.name} : ${enabled ? 'activé' : 'désactivé'}`,
+    JSON.stringify({ package_id, service_id, package_name: pkg.name, service_name: svc.name, is_enabled: enabled })
   ).run()
 
   return c.json({
@@ -7451,13 +7456,16 @@ admin.post('/package-service-access/bulk', requirePermission('packages.edit'), a
     WHERE package_id = ?
   `).bind(enabled, adminId, package_id).run()
 
+  const adminEmailBulk = (c.get('adminEmail' as any) as string) || 'admin@system'
   await c.env.DB.prepare(`
-    INSERT INTO admin_audit_log (admin_id, action, target_type, target_id, details, created_at)
-    VALUES (?, 'package_service_access_bulk', 'package', ?, ?, datetime('now'))
+    INSERT INTO admin_audit_log
+    (id, admin_id, admin_email, action, description, metadata, created_at)
+    VALUES (lower(hex(randomblob(16))), ?, ?, 'package_service_access_bulk', ?, ?, datetime('now'))
   `).bind(
     adminId,
-    package_id,
-    JSON.stringify({ package_name: pkg.name, is_enabled: enabled, action: 'bulk' })
+    adminEmailBulk,
+    `Bulk ${enabled ? 'activation' : 'désactivation'} services → ${pkg.name}`,
+    JSON.stringify({ package_id, package_name: pkg.name, is_enabled: enabled })
   ).run()
 
   return c.json({ success: true, package_id, is_enabled: enabled, rows_updated: result.meta?.changes || 0 })
