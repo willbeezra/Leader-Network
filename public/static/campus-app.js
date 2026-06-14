@@ -279,7 +279,6 @@ async function showCampusCourse(slug) {
     // Bloc d'accès restreint
     const lockedBanner = !courseHasAccess ? (() => {
       const pkg = course.required_package;
-      const pkgSlug = pkg?.slug || '';
       const pkgName = pkg?.name || 'ce package';
       const pkgPrice = pkg?.price_usd ? `$${pkg.price_usd}` : '';
       return `
@@ -289,8 +288,7 @@ async function showCampusCourse(slug) {
             <strong>Formation réservée aux membres</strong>
             <p>Cette formation est accessible avec ${_t(pkgName)}${pkgPrice ? ` (${pkgPrice})` : ''}.</p>
           </div>
-          <button class="campus-locked-btn"
-            onclick="${pkgSlug ? `window.location.hash='packages?pkg=${pkgSlug}'` : `window.location.hash='packages'`}">
+          <button class="campus-locked-btn" onclick="campusGoToPackages()">
             <i class="fas fa-unlock-alt"></i> Obtenir l'accès
           </button>
         </div>
@@ -1373,4 +1371,17 @@ function _campusToast(message, type) {
   toast.textContent = message;
   document.body.appendChild(toast);
   setTimeout(() => toast.remove(), 3000);
+}
+
+// ============================================================
+// Navigation vers la page packages depuis le campus
+// Utilise showPage() (contexte membre app) si disponible
+// ============================================================
+function campusGoToPackages() {
+  if (typeof showPage === 'function') {
+    showPage('packages');
+  } else {
+    // Fallback : navigation par hash si hors contexte app
+    window.location.hash = 'packages';
+  }
 }
