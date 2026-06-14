@@ -250,12 +250,42 @@ function buildLandingHTML(cfg: Record<string, string>, services: any[], testimon
     .service-card:nth-child(8) .service-logo-anim { animation-delay:0.54s }
 
     /* Testimonials carrousel */
-    #testimonials-track::-webkit-scrollbar { display:none; }
+    #testimonials-track {
+      display: grid;
+      grid-template-rows: 1fr 1fr;
+      grid-auto-flow: column;
+      grid-auto-columns: clamp(300px, 42vw, 380px);
+      gap: 1rem;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      cursor: grab;
+      padding-bottom: 4px;
+    }
+    #testimonials-track::-webkit-scrollbar { display: none; }
     #testimonials-track.dragging { cursor: grabbing; user-select: none; }
 
     /* Testimonial */
-    .testimonial-card { transition: transform 0.3s ease; }
-    .testimonial-card:hover { transform: translateY(-4px); }
+    .testimonial-card {
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+      scroll-snap-align: start;
+      width: 100%;
+      height: auto;
+      min-height: 0;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+    .testimonial-card:hover { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(121,30,21,0.18); }
+
+    @media (max-width: 640px) {
+      #testimonials-track {
+        grid-template-rows: 1fr;
+        grid-auto-columns: clamp(280px, 88vw, 340px);
+        gap: 0.75rem;
+      }
+    }
 
     /* Navbar */
     .navbar-scrolled { backdrop-filter: blur(20px); border-bottom: 1px solid rgba(121,30,21,0.2) !important; }
@@ -691,40 +721,41 @@ ${testimonialsActive && featuredTestimonials.length > 0 ? `
       </div>
     </div>
 
-    <!-- Carrousel desktop : grille 3 colonnes / mobile : scroll horizontal -->
-    <div id="testimonials-track" style="display:flex;gap:1.25rem;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:8px;cursor:grab">
+    <!-- Carrousel 2 lignes desktop / 1 ligne mobile -->
+    <div id="testimonials-track">
       ${featuredTestimonials.map(t => `
-      <div class="testimonial-card glass-dark rounded-2xl p-7 flex flex-col gap-4"
-           style="border:1px solid rgba(121,30,21,0.2);min-width:clamp(280px,80vw,360px);flex-shrink:0;scroll-snap-align:start;opacity:1;transform:none">
-        <!-- Stars -->
-        <div class="flex gap-0.5 text-base">${renderStars(t.rating)}</div>
+      <div class="testimonial-card glass-dark rounded-2xl p-5 flex flex-col gap-3"
+           style="border:1px solid rgba(121,30,21,0.2)">
 
-        <!-- Transformation badge -->
-        ${t.transformation ? `<div class="inline-flex items-center gap-2 glass-rouge rounded-full px-3 py-1 w-fit">
-          <i class="fas fa-bolt" style="color:#791E15;font-size:0.7rem"></i>
-          <span style="color:#791E15;font-size:0.75rem;font-weight:700">${t.transformation}</span>
-        </div>` : ''}
+        <!-- Stars + badge sur la même ligne -->
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex gap-0.5">${renderStars(t.rating)}</div>
+          ${t.transformation ? `<div class="inline-flex items-center gap-1 glass-rouge rounded-full px-2 py-0.5" style="flex-shrink:0">
+            <i class="fas fa-bolt" style="color:#791E15;font-size:0.6rem"></i>
+            <span style="color:#791E15;font-size:0.68rem;font-weight:700;white-space:nowrap">${t.transformation}</span>
+          </div>` : ''}
+        </div>
 
-        <!-- Contenu -->
-        <blockquote class="text-cream/70 text-sm leading-relaxed italic" style="overflow-wrap:break-word;word-break:break-word;white-space:normal;overflow:visible;flex-shrink:0">"${t.content}"</blockquote>
+        <!-- Contenu texte : entièrement visible, multi-ligne -->
+        <blockquote style="color:rgba(245,240,232,0.75);font-size:0.82rem;line-height:1.55;font-style:italic;margin:0;word-break:break-word;overflow-wrap:break-word;white-space:normal;flex:1">&ldquo;${t.content}&rdquo;</blockquote>
 
         <!-- Auteur -->
-        <div class="flex items-center gap-3 pt-3 border-t border-white/5">
+        <div class="flex items-center gap-2" style="padding-top:0.5rem;border-top:1px solid rgba(255,255,255,0.06)">
           ${t.author_photo
-            ? `<img src="${t.author_photo}" alt="${t.author_name}" class="w-10 h-10 rounded-full object-cover" style="border:1px solid rgba(121,30,21,0.4)">`
-            : `<div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm text-white" style="background:linear-gradient(135deg,#791E15,#5A1510)">${t.author_name.charAt(0)}</div>`
+            ? `<img src="${t.author_photo}" alt="${t.author_name}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:1px solid rgba(121,30,21,0.4);flex-shrink:0">`
+            : `<div style="width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.8rem;color:#fff;background:linear-gradient(135deg,#791E15,#5A1510);flex-shrink:0">${t.author_name.charAt(0)}</div>`
           }
-          <div>
-            <div class="text-cream font-semibold text-sm">${t.author_name}</div>
-            <div class="text-cream/40 text-xs">${t.author_role}${t.author_country ? ` · ${t.author_country}` : ''}</div>
+          <div style="min-width:0">
+            <div style="color:rgba(245,240,232,1);font-weight:600;font-size:0.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.author_name}</div>
+            <div style="color:rgba(245,240,232,0.38);font-size:0.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.author_role}${t.author_country ? ` · ${t.author_country}` : ''}</div>
           </div>
         </div>
       </div>`).join('')}
     </div>
 
-    <!-- Dots navigation mobile -->
-    <div id="testimonials-dots" class="flex justify-center gap-2 mt-6 md:hidden">
-      ${featuredTestimonials.map((_, i) => `<button onclick="scrollToTestimonial(${i})" style="width:8px;height:8px;border-radius:50%;background:${i === 0 ? '#791E15' : 'rgba(255,255,255,0.2)'};border:none;cursor:pointer;padding:0;transition:all 0.3s" class="dot-btn"></button>`).join('')}
+    <!-- Dots navigation -->
+    <div id="testimonials-dots" class="flex justify-center gap-2 mt-5">
+      ${Array.from({length: Math.ceil(featuredTestimonials.length / 2)}, (_, i) => `<button onclick="scrollToTestimonial(${i})" style="width:8px;height:8px;border-radius:50%;background:${i === 0 ? '#791E15' : 'rgba(255,255,255,0.2)'};border:none;cursor:pointer;padding:0;transition:all 0.3s" class="dot-btn"></button>`).join('')}
     </div>
 
   </div>
@@ -930,61 +961,80 @@ const observer = new IntersectionObserver((entries) => {
 
 document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
-// ── Carrousel témoignages (drag-scroll + auto-scroll + dots) ──────
+// ── Carrousel témoignages — drag fluide + auto-scroll + dots ─────
 (function() {
   const track = document.getElementById('testimonials-track');
   if (!track) return;
 
-  // Drag scroll
-  let isDown = false, startX = 0, scrollLeft = 0;
-  track.addEventListener('mousedown', e => {
-    isDown = true; track.classList.add('dragging');
-    startX = e.pageX - track.offsetLeft;
-    scrollLeft = track.scrollLeft;
-  });
-  track.addEventListener('mouseleave', () => { isDown = false; track.classList.remove('dragging'); });
-  track.addEventListener('mouseup',    () => { isDown = false; track.classList.remove('dragging'); });
-  track.addEventListener('mousemove',  e => {
-    if (!isDown) return; e.preventDefault();
-    const x = e.pageX - track.offsetLeft;
-    track.scrollLeft = scrollLeft - (x - startX) * 1.2;
-  });
+  // ── Largeur d'une colonne (snap unit) ──────────────────────────
+  function colWidth() {
+    const card = track.querySelector('.testimonial-card');
+    if (!card) return 320;
+    const gap = parseInt(getComputedStyle(track).columnGap || getComputedStyle(track).gap || '16') || 16;
+    return card.offsetWidth + gap;
+  }
 
-  // Auto-scroll toutes les 4s (pause si hover)
-  let autoTimer, paused = false;
+  // ── Drag-scroll souris — sans multiplicateur agressif ──────────
+  let isDown = false, startX = 0, scrollLeft = 0, moved = false;
+  track.addEventListener('mousedown', e => {
+    isDown = true; moved = false;
+    track.classList.add('dragging');
+    startX    = e.clientX;
+    scrollLeft = track.scrollLeft;
+    track.style.scrollSnapType = 'none'; // désactive snap pendant le drag
+  });
+  window.addEventListener('mouseup', () => {
+    if (!isDown) return;
+    isDown = false;
+    track.classList.remove('dragging');
+    track.style.scrollSnapType = 'x mandatory'; // réactive snap → accroche à la prochaine carte
+  });
+  window.addEventListener('mousemove', e => {
+    if (!isDown) return;
+    const dx = startX - e.clientX;
+    if (Math.abs(dx) > 3) moved = true;
+    track.scrollLeft = scrollLeft + dx;
+  });
+  // empêche le clic sur les boutons si l'utilisateur a dragué
+  track.addEventListener('click', e => { if (moved) e.stopPropagation(); }, true);
+
+  // ── Auto-scroll toutes les 5s ──────────────────────────────────
+  let paused = false;
   function nextSlide() {
     if (paused) return;
-    const cardW = track.querySelector('[style*="min-width"]')?.offsetWidth || 320;
+    const cw = colWidth();
     const maxScroll = track.scrollWidth - track.clientWidth;
-    if (track.scrollLeft + cardW + 10 >= maxScroll) track.scrollTo({ left: 0, behavior: 'smooth' });
-    else track.scrollBy({ left: cardW + 20, behavior: 'smooth' });
-    updateDots();
+    const target = track.scrollLeft + cw >= maxScroll - 4 ? 0 : track.scrollLeft + cw;
+    track.scrollTo({ left: target, behavior: 'smooth' });
   }
-  autoTimer = setInterval(nextSlide, 4000);
+  const autoTimer = setInterval(nextSlide, 5000);
   track.addEventListener('mouseenter', () => { paused = true; });
   track.addEventListener('mouseleave', () => { paused = false; });
   track.addEventListener('touchstart', () => { paused = true; }, { passive: true });
-  track.addEventListener('touchend',   () => { setTimeout(() => { paused = false; }, 2000); }, { passive: true });
+  track.addEventListener('touchend',   () => { setTimeout(() => { paused = false; }, 2500); }, { passive: true });
 
-  // Dots
+  // ── Dots ───────────────────────────────────────────────────────
   function updateDots() {
     const dots = document.querySelectorAll('.dot-btn');
     if (!dots.length) return;
-    const cardW = track.querySelector('[style*="min-width"]')?.offsetWidth || 320;
-    const idx = Math.round(track.scrollLeft / (cardW + 20));
-    dots.forEach(function(d, i) {
+    const cw = colWidth();
+    const idx = cw > 0 ? Math.round(track.scrollLeft / cw) : 0;
+    dots.forEach((d, i) => {
       d.style.background = i === idx ? '#791E15' : 'rgba(255,255,255,0.2)';
+      d.style.transform  = i === idx ? 'scale(1.3)' : 'scale(1)';
     });
   }
   track.addEventListener('scroll', updateDots, { passive: true });
+  updateDots();
 })();
 
-// Fonction globale pour les dots
 function scrollToTestimonial(idx) {
   const track = document.getElementById('testimonials-track');
   if (!track) return;
-  const cardW = track.querySelector('[style*="min-width"]')?.offsetWidth || 320;
-  track.scrollTo({ left: idx * (cardW + 20), behavior: 'smooth' });
+  const card = track.querySelector('.testimonial-card');
+  if (!card) return;
+  const gap = parseInt(getComputedStyle(track).columnGap || getComputedStyle(track).gap || '16') || 16;
+  track.scrollTo({ left: idx * (card.offsetWidth + gap), behavior: 'smooth' });
 }
 </script>
 
