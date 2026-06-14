@@ -23,8 +23,8 @@ async function campusFetch(url, options = {}) {
 // ============================================================
 // SECTION MEMBRE — Catalogue Campus
 // ============================================================
-async function showCampusPage() {
-  const mainContent = document.getElementById('main-content');
+async function showCampusPage(container) {
+  const mainContent = container || document.getElementById('page-content') || document.getElementById('main-content');
   if (!mainContent) return;
 
   mainContent.innerHTML = `
@@ -224,7 +224,7 @@ function campusSearch(query) {
 // PAGE FORMATION — Détail + Player
 // ============================================================
 async function showCampusCourse(slug) {
-  const mainContent = document.getElementById('main-content');
+  const mainContent = document.getElementById('page-content') || document.getElementById('main-content');
   mainContent.innerHTML = `
     <div class="campus-loading">
       <div class="campus-loading-inner">
@@ -487,8 +487,8 @@ async function saveLessonProgress(lessonId, completed, progressSeconds) {
 // ============================================================
 // SECTION ADMIN — Gestion Campus
 // ============================================================
-async function showAdminCampus() {
-  const mainContent = document.getElementById('main-content');
+async function showAdminCampus(container) {
+  const mainContent = container || document.getElementById('admin-page-content') || document.getElementById('main-content');
   if (!mainContent) return;
 
   mainContent.innerHTML = `
