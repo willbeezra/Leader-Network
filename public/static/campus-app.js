@@ -62,11 +62,11 @@ async function showCampusPage(container) {
     const res = await campusFetch('/api/campus');
     console.log('[Campus] réponse HTTP', res.status);
     const data = await res.json();
-    const { categories, courses, has_campus_access } = data;
+    const { categories, courses, has_campus_access, config = {}, campus_logo } = data;
     console.log('[Campus] données reçues — courses:', courses?.length, 'cats:', categories?.length, 'access:', has_campus_access);
 
     // ── TOUJOURS : landing en premier, catalogue en dessous ───────────────────
-    _renderCampusFullPage(mainContent, courses, categories, !!has_campus_access);
+    _renderCampusFullPage(mainContent, courses, categories, !!has_campus_access, config, campus_logo);
     console.log('[Campus] rendu terminé');
 
   } catch (err) {
@@ -83,13 +83,68 @@ async function showCampusPage(container) {
 }
 
 // ── Page complète Campus : landing TOUJOURS visible + catalogue en dessous ────
-function _renderCampusFullPage(mainContent, courses, categories, hasAccess) {
-  const totalCourses = courses.length;
-  const totalCats    = categories.length;
-  const totalHours   = courses.reduce((s, c) => s + (c.total_duration_minutes || 0), 0);
-  const hoursDisplay = totalHours > 0 ? Math.round(totalHours / 60) : 30;
+// config = objet {campus_hero_title, campus_hero_desc, ...} depuis landing_config
+// campusLogo = data-uri ou url du logo détouré depuis landing_services
+function _renderCampusFullPage(mainContent, courses, categories, hasAccess, config = {}, campusLogo = null) {
 
-  // Grouper cours par catégorie pour le catalogue
+  // ── Helpers config ────────────────────────────────────────────────────────
+  const cfg = (key, fallback) => (config[key] !== undefined && config[key] !== '') ? config[key] : fallback;
+
+  // ── Logo : data-uri prioritaire, puis URL Genspark, puis fallback icon ────
+  const logoSrc = campusLogo || 'https://www.genspark.ai/api/files/s/7McAtYcm';
+
+  // ── Stats : prendre le nombre réel de cours/cats si plus grand ────────────
+  const realCourses  = courses.length;
+  const realCats     = categories.length;
+  const realHours    = courses.reduce((s, c) => s + (c.total_duration_minutes || 0), 0);
+  const hoursDisplay = realHours > 0 ? Math.round(realHours / 60) : 0;
+
+  const statCourses = cfg('campus_stat_courses', realCourses > 0 ? realCourses + '+' : '100+');
+  const statHours   = cfg('campus_stat_hours',   hoursDisplay > 0 ? hoursDisplay + 'h+' : '1 000h+');
+  const statCats    = realCats;
+  const statAccess  = cfg('campus_stat_access',  '∞');
+
+  // ── Textes hero ───────────────────────────────────────────────────────────
+  const heroTitle       = cfg('campus_hero_title',        'Club privé d\'éducation');
+  const heroAccent      = cfg('campus_hero_title_accent', 'financière');
+  const heroBadge       = cfg('campus_hero_pillar_badge', 'Pilier n°1 — Éducation Financière');
+  const heroSlogan      = cfg('campus_hero_slogan',       '"Ensemble, faisons une différence"');
+  const heroDesc        = cfg('campus_hero_desc',
+    'Campus LEADER est le 1er des 6 piliers de l\'éducation financière. Une plateforme exclusive réservée aux membres de notre communauté — des formations conçues par les meilleurs formateurs, coachs et conférenciers de la planète pour transformer ta façon de voir l\'argent, les affaires et ta vie.');
+
+  const ctaAccess    = cfg('campus_cta_access',     'Accéder à mes formations');
+  const ctaGetAccess = cfg('campus_cta_get_access', 'Obtenir l\'accès Campus');
+  const ctaExplore   = cfg('campus_cta_explore',    'Explorer les formations');
+  const ctaScroll    = cfg('campus_cta_scroll',     'Explorer');
+
+  // ── Formateurs ────────────────────────────────────────────────────────────
+  const coachTitle   = cfg('campus_coaches_title', 'Les meilleurs experts de la planète');
+  const coachDesc    = cfg('campus_coaches_desc',
+    'Nos formations sont animées par des entrepreneurs millionnaires, investisseurs reconnus, coachs certifiés et conférenciers internationaux. Des méthodes éprouvées, des résultats concrets.');
+  const coachBadge1  = cfg('campus_coaches_badge_1', 'Formateurs certifiés');
+  const coachBadge2  = cfg('campus_coaches_badge_2', 'Conférenciers internationaux');
+  const coachBadge3  = cfg('campus_coaches_badge_3', 'Entrepreneurs & investisseurs');
+  const coachBadge4  = cfg('campus_coaches_badge_4', 'Coachs & mentors d\'élite');
+
+  // ── 6 piliers depuis config ───────────────────────────────────────────────
+  const PILLARS = [1,2,3,4,5,6].map(n => ({
+    num:    n,
+    label:  cfg(`campus_pillar_${n}_label`, ['S\'Éduquer','Créer la richesse','Protéger sa richesse','Multiplier sa richesse','Profiter de sa richesse','Partager'][n-1]),
+    icon:   cfg(`campus_pillar_${n}_icon`,  ['fa-graduation-cap','fa-seedling','fa-shield-halved','fa-chart-line','fa-gem','fa-heart-handshake'][n-1]),
+    color:  cfg(`campus_pillar_${n}_color`, ['#c9a84c','#4ade80','#60a5fa','#a78bfa','#f472b6','#fb923c'][n-1]),
+    active: cfg(`campus_pillar_${n}_active`, n === 1 ? '1' : '0') === '1',
+  }));
+
+  // ── Piliers textes ────────────────────────────────────────────────────────
+  const pillarsTitle = cfg('campus_pillars_title', 'Les 6 piliers de l\'éducation financière');
+  const pillarsDesc  = cfg('campus_pillars_desc',  'Campus est le premier. Les 5 autres piliers arrivent bientôt.');
+
+  // ── Bannière accès refusé ─────────────────────────────────────────────────
+  const bannerTitle  = cfg('campus_banner_title', 'Les formations ci-dessous sont verrouillées');
+  const bannerDesc   = cfg('campus_banner_desc',  'L\'accès Campus est inclus dans certains packages LEADER.');
+  const bannerCta    = cfg('campus_banner_cta',   'Voir les packages');
+
+  // ── Grouper cours par catégorie pour le catalogue ─────────────────────────
   const catMap = new Map();
   for (const cat of categories) catMap.set(cat.id, { ...cat, courses: [] });
   for (const course of courses) {
@@ -99,15 +154,13 @@ function _renderCampusFullPage(mainContent, courses, categories, hasAccess) {
   mainContent.innerHTML = `
     <div class="campus-full-page">
 
-      <!-- ══════════════════════════════════════════════════════
-           LANDING HERO — toujours visible
-      ══════════════════════════════════════════════════════ -->
+      <!-- ══════════ HERO ══════════ -->
       <section class="cl-hero">
         <div class="cl-hero-glow"></div>
         <div class="cl-hero-content">
 
           <div class="cl-hero-logo-wrap">
-            <img src="${_CAMPUS_LOGO_URL}" alt="Campus LEADER" class="cl-hero-logo"
+            <img src="${logoSrc}" alt="Campus LEADER" class="cl-hero-logo"
                  onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
             <div class="cl-hero-logo-fallback" style="display:none">
               <i class="fas fa-graduation-cap"></i>
@@ -116,84 +169,91 @@ function _renderCampusFullPage(mainContent, courses, categories, hasAccess) {
 
           <div class="cl-hero-pillar-badge">
             <i class="fas fa-star"></i>
-            <span>Pilier n°1 — Éducation Financière</span>
+            <span>${heroBadge}</span>
           </div>
 
           <h1 class="cl-hero-title">
-            Club privé d'éducation<br>
-            <span class="cl-hero-title-accent">financière</span>
+            ${heroTitle}<br>
+            <span class="cl-hero-title-accent">${heroAccent}</span>
           </h1>
 
-          <p class="cl-hero-slogan">"Ensemble, faisons une différence"</p>
-
-          <p class="cl-hero-desc">
-            Campus LEADER est le 1er des 6 piliers de l'éducation financière de LEADER.
-            Une plateforme exclusive réservée aux membres de notre communauté — des formations
-            conçues pour transformer ta façon de voir l'argent, les affaires et ta vie.
-          </p>
+          <p class="cl-hero-slogan">${heroSlogan}</p>
+          <p class="cl-hero-desc">${heroDesc}</p>
 
           <!-- Stats -->
           <div class="cl-hero-stats">
             <div class="cl-stat">
-              <div class="cl-stat-num">${totalCourses}+</div>
-              <div class="cl-stat-label">Formations</div>
+              <div class="cl-stat-num">${statCourses}</div>
+              <div class="cl-stat-label">${cfg('campus_stat_courses_label','Formations')}</div>
             </div>
             <div class="cl-stat-divider"></div>
             <div class="cl-stat">
-              <div class="cl-stat-num">${hoursDisplay}h+</div>
-              <div class="cl-stat-label">De contenu</div>
+              <div class="cl-stat-num">${statHours}</div>
+              <div class="cl-stat-label">${cfg('campus_stat_hours_label','De contenu')}</div>
             </div>
             <div class="cl-stat-divider"></div>
             <div class="cl-stat">
-              <div class="cl-stat-num">${totalCats}</div>
-              <div class="cl-stat-label">Catégories</div>
+              <div class="cl-stat-num">${statCats}</div>
+              <div class="cl-stat-label">${cfg('campus_stat_cats_label','Catégories')}</div>
             </div>
             <div class="cl-stat-divider"></div>
             <div class="cl-stat">
-              <div class="cl-stat-num">∞</div>
-              <div class="cl-stat-label">Accès illimité</div>
+              <div class="cl-stat-num">${statAccess}</div>
+              <div class="cl-stat-label">${cfg('campus_stat_access_label','Accès illimité')}</div>
             </div>
           </div>
 
-          <!-- CTA selon accès -->
+          <!-- CTAs -->
           <div class="cl-cta-group">
             ${hasAccess
               ? `<button class="cl-cta-primary" onclick="_campusScrollToCatalog()">
-                   <i class="fas fa-play-circle"></i>
-                   Accéder à mes formations
+                   <i class="fas fa-play-circle"></i> ${ctaAccess}
                  </button>`
               : `<button class="cl-cta-primary" onclick="campusGoToPackages()">
-                   <i class="fas fa-unlock-alt"></i>
-                   Obtenir l'accès Campus
+                   <i class="fas fa-unlock-alt"></i> ${ctaGetAccess}
                  </button>`
             }
             <button class="cl-cta-secondary" onclick="_campusScrollToCatalog()">
-              <i class="fas fa-eye"></i>
-              Explorer les formations
+              <i class="fas fa-eye"></i> ${ctaExplore}
             </button>
           </div>
 
-          <!-- Flèche scroll -->
           <div class="cl-scroll-hint" onclick="_campusScrollToCatalog()">
-            <span>Explorer</span>
+            <span>${ctaScroll}</span>
             <i class="fas fa-chevron-down cl-scroll-arrow"></i>
           </div>
 
         </div>
       </section>
 
-      <!-- ══════════════════════════════════════════════════════
-           6 PILIERS
-      ══════════════════════════════════════════════════════ -->
+      <!-- ══════════ FORMATEURS ══════════ -->
+      <section class="cl-coaches">
+        <div class="cl-coaches-header">
+          <h2>${coachTitle}</h2>
+          <p>${coachDesc}</p>
+        </div>
+        <div class="cl-coaches-badges">
+          <span class="cl-coach-badge"><i class="fas fa-certificate"></i> ${coachBadge1}</span>
+          <span class="cl-coach-badge"><i class="fas fa-globe"></i> ${coachBadge2}</span>
+          <span class="cl-coach-badge"><i class="fas fa-briefcase"></i> ${coachBadge3}</span>
+          <span class="cl-coach-badge"><i class="fas fa-star"></i> ${coachBadge4}</span>
+        </div>
+        <div class="cl-coaches-quote">
+          <p>La connaissance est la seule richesse que personne ne peut te voler. Investir dans ton éducation financière, c'est poser les fondations d'une liberté durable.</p>
+          <cite>— Vision LEADER Network</cite>
+        </div>
+      </section>
+
+      <!-- ══════════ 6 PILIERS ══════════ -->
       <section class="cl-pillars">
         <div class="cl-pillars-header">
-          <h2>Les 6 piliers de l'éducation financière</h2>
-          <p>Campus est le premier. Les 5 autres arrivent bientôt.</p>
+          <h2>${pillarsTitle}</h2>
+          <p>${pillarsDesc}</p>
         </div>
         <div class="cl-pillars-grid">
-          ${_CAMPUS_PILLARS.map((p, i) => `
+          ${PILLARS.map(p => `
             <div class="cl-pillar ${p.active ? 'cl-pillar-active' : 'cl-pillar-soon'}">
-              <div class="cl-pillar-num" style="color:${p.color}">${i + 1}</div>
+              <div class="cl-pillar-num" style="color:${p.color}">0${p.num}</div>
               <div class="cl-pillar-icon" style="background:${p.color}18;border-color:${p.color}35">
                 <i class="fas ${p.icon}" style="color:${p.color}"></i>
               </div>
@@ -207,30 +267,24 @@ function _renderCampusFullPage(mainContent, courses, categories, hasAccess) {
         </div>
       </section>
 
-      <!-- ══════════════════════════════════════════════════════
-           BANNIÈRE ACCÈS — seulement si pas d'accès
-      ══════════════════════════════════════════════════════ -->
+      <!-- ══════════ BANNIÈRE ACCÈS ══════════ -->
       ${!hasAccess ? `
       <section class="cl-access-banner">
         <div class="cl-access-banner-inner">
           <div class="cl-access-banner-icon"><i class="fas fa-lock"></i></div>
           <div class="cl-access-banner-text">
-            <strong>Les formations ci-dessous sont verrouillées</strong>
-            <span>L'accès Campus est inclus dans certains packages LEADER. Clique sur une formation pour en savoir plus.</span>
+            <strong>${bannerTitle}</strong>
+            <span>${bannerDesc}</span>
           </div>
           <button class="cl-cta-primary cl-access-banner-btn" onclick="campusGoToPackages()">
-            <i class="fas fa-rocket"></i> Voir les packages
+            <i class="fas fa-rocket"></i> ${bannerCta}
           </button>
         </div>
       </section>
       ` : ''}
 
-      <!-- ══════════════════════════════════════════════════════
-           CATALOGUE — toujours visible, verrouillé si pas accès
-      ══════════════════════════════════════════════════════ -->
+      <!-- ══════════ CATALOGUE ══════════ -->
       <div id="campus-catalog-anchor" class="campus-wrap" style="padding-top:0">
-
-        <!-- Filtres -->
         <div class="campus-filters">
           <div class="campus-filter-tabs">
             <button class="campus-filter-tab active" onclick="campusFilterBy('all')">
@@ -250,7 +304,6 @@ function _renderCampusFullPage(mainContent, courses, categories, hasAccess) {
           </div>
         </div>
 
-        <!-- Grilles par catégorie -->
         <div id="campus-catalog">
           ${[...catMap.values()].filter(cat => cat.courses.length > 0).map(cat => `
             <section class="campus-section" data-cat="${cat.id}">
@@ -268,12 +321,10 @@ function _renderCampusFullPage(mainContent, courses, categories, hasAccess) {
           `).join('')}
         </div>
 
-        <!-- Empty state recherche -->
         <div id="campus-empty" class="campus-empty" style="display:none">
           <i class="fas fa-search"></i>
           <p>Aucune formation trouvée</p>
         </div>
-
       </div>
 
     </div>

@@ -68,10 +68,25 @@ campus.get('/', async (c) => {
     has_access: hasCampusAccess
   }))
 
+  // ── Configs landing Campus depuis landing_config ──────────────────────────
+  const configRows = await db.prepare(`
+    SELECT key, value FROM landing_config WHERE key LIKE 'campus_%'
+  `).all()
+  const cfg: Record<string, string> = {}
+  for (const r of (configRows.results as any[])) cfg[r.key] = r.value
+
+  // ── Logo détouré Campus depuis landing_services (id=1) ───────────────────
+  const campusService = await db.prepare(`
+    SELECT logo_data_uri, logo_url FROM landing_services WHERE id = 1
+  `).first() as any
+  const campusLogoUri = campusService?.logo_data_uri || campusService?.logo_url || null
+
   return c.json({
     categories: categories.results,
     courses: coursesWithProgress,
-    has_campus_access: hasCampusAccess
+    has_campus_access: hasCampusAccess,
+    config: cfg,
+    campus_logo: campusLogoUri
   })
 })
 
