@@ -180,29 +180,6 @@ function _renderCampusFullPage(mainContent, courses, categories, hasAccess, conf
           <p class="cl-hero-slogan">${heroSlogan}</p>
           <p class="cl-hero-desc">${heroDesc}</p>
 
-          <!-- Stats -->
-          <div class="cl-hero-stats">
-            <div class="cl-stat">
-              <div class="cl-stat-num">${statCourses}</div>
-              <div class="cl-stat-label">${cfg('campus_stat_courses_label','Formations')}</div>
-            </div>
-            <div class="cl-stat-divider"></div>
-            <div class="cl-stat">
-              <div class="cl-stat-num">${statHours}</div>
-              <div class="cl-stat-label">${cfg('campus_stat_hours_label','De contenu')}</div>
-            </div>
-            <div class="cl-stat-divider"></div>
-            <div class="cl-stat">
-              <div class="cl-stat-num">${statCats}</div>
-              <div class="cl-stat-label">${cfg('campus_stat_cats_label','Catégories')}</div>
-            </div>
-            <div class="cl-stat-divider"></div>
-            <div class="cl-stat">
-              <div class="cl-stat-num">${statAccess}</div>
-              <div class="cl-stat-label">${cfg('campus_stat_access_label','Accès illimité')}</div>
-            </div>
-          </div>
-
           <!-- CTAs -->
           <div class="cl-cta-group">
             ${hasAccess
