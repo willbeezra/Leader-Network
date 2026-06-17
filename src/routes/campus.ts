@@ -70,7 +70,8 @@ campus.get('/', async (c) => {
 
   return c.json({
     categories: categories.results,
-    courses: coursesWithProgress
+    courses: coursesWithProgress,
+    has_campus_access: hasCampusAccess
   })
 })
 

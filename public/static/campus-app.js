@@ -59,19 +59,10 @@ async function showCampusPage(container) {
   try {
     const res = await campusFetch('/api/campus');
     const data = await res.json();
-    const { categories, courses } = data;
+    const { categories, courses, has_campus_access } = data;
 
-    // Détermine si le membre a accès (au moins un cours avec has_access = true)
-    const hasCampusAccess = courses.length > 0 && courses.some(c => c.has_access !== false);
-
-    // ── PAS D'ACCÈS → landing page premium ───────────────────────────────────
-    if (!hasCampusAccess) {
-      _renderCampusLanding(mainContent, courses, categories);
-      return;
-    }
-
-    // ── ACCÈS → catalogue complet ─────────────────────────────────────────────
-    _renderCampusCatalog(mainContent, courses, categories);
+    // ── TOUJOURS : landing en premier, catalogue en dessous ───────────────────
+    _renderCampusFullPage(mainContent, courses, categories, !!has_campus_access);
 
   } catch (err) {
     console.error('[Campus] Erreur showCampusPage:', err);
@@ -86,18 +77,26 @@ async function showCampusPage(container) {
   }
 }
 
-// ── Landing page Campus (membres sans accès) ──────────────────────────────────
-function _renderCampusLanding(el, courses, categories) {
-  const totalCourses   = courses.length;
-  const totalCats      = categories.length;
-  // Durée totale estimée (mock si pas dispo)
-  const totalHours     = courses.reduce((s, c) => s + (c.total_duration_minutes || 0), 0);
-  const hoursDisplay   = totalHours > 0 ? Math.round(totalHours / 60) : 30;
+// ── Page complète Campus : landing TOUJOURS visible + catalogue en dessous ────
+function _renderCampusFullPage(mainContent, courses, categories, hasAccess) {
+  const totalCourses = courses.length;
+  const totalCats    = categories.length;
+  const totalHours   = courses.reduce((s, c) => s + (c.total_duration_minutes || 0), 0);
+  const hoursDisplay = totalHours > 0 ? Math.round(totalHours / 60) : 30;
 
-  el.innerHTML = `
-    <div class="campus-landing">
+  // Grouper cours par catégorie pour le catalogue
+  const catMap = new Map();
+  for (const cat of categories) catMap.set(cat.id, { ...cat, courses: [] });
+  for (const course of courses) {
+    if (catMap.has(course.category_id)) catMap.get(course.category_id).courses.push(course);
+  }
 
-      <!-- ── HERO ─────────────────────────────────────────────────────────── -->
+  mainContent.innerHTML = `
+    <div class="campus-full-page">
+
+      <!-- ══════════════════════════════════════════════════════
+           LANDING HERO — toujours visible
+      ══════════════════════════════════════════════════════ -->
       <section class="cl-hero">
         <div class="cl-hero-glow"></div>
         <div class="cl-hero-content">
@@ -151,22 +150,36 @@ function _renderCampusLanding(el, courses, categories) {
             </div>
           </div>
 
-          <!-- CTA -->
+          <!-- CTA selon accès -->
           <div class="cl-cta-group">
-            <button class="cl-cta-primary" onclick="campusGoToPackages()">
-              <i class="fas fa-unlock-alt"></i>
-              Obtenir l'accès Campus
-            </button>
-            <button class="cl-cta-secondary" onclick="_campusPreviewCatalog()">
+            ${hasAccess
+              ? `<button class="cl-cta-primary" onclick="_campusScrollToCatalog()">
+                   <i class="fas fa-play-circle"></i>
+                   Accéder à mes formations
+                 </button>`
+              : `<button class="cl-cta-primary" onclick="campusGoToPackages()">
+                   <i class="fas fa-unlock-alt"></i>
+                   Obtenir l'accès Campus
+                 </button>`
+            }
+            <button class="cl-cta-secondary" onclick="_campusScrollToCatalog()">
               <i class="fas fa-eye"></i>
-              Voir les formations
+              Explorer les formations
             </button>
+          </div>
+
+          <!-- Flèche scroll -->
+          <div class="cl-scroll-hint" onclick="_campusScrollToCatalog()">
+            <span>Explorer</span>
+            <i class="fas fa-chevron-down cl-scroll-arrow"></i>
           </div>
 
         </div>
       </section>
 
-      <!-- ── 6 PILIERS ──────────────────────────────────────────────────────── -->
+      <!-- ══════════════════════════════════════════════════════
+           6 PILIERS
+      ══════════════════════════════════════════════════════ -->
       <section class="cl-pillars">
         <div class="cl-pillars-header">
           <h2>Les 6 piliers de l'éducation financière</h2>
@@ -189,149 +202,89 @@ function _renderCampusLanding(el, courses, categories) {
         </div>
       </section>
 
-      <!-- ── APERÇU DES FORMATIONS (verrouillées) ───────────────────────────── -->
-      <section class="cl-preview">
-        <div class="cl-preview-header">
-          <h2>Ce qui t'attend</h2>
-          <p>Un aperçu des formations disponibles avec l'accès Campus</p>
-        </div>
-        <div class="cl-preview-grid">
-          ${courses.slice(0, 6).map(c => `
-            <div class="cl-preview-card">
-              <div class="cl-preview-thumb">
-                ${c.thumbnail_url
-                  ? `<img src="${c.thumbnail_url}" alt="${c.title}" loading="lazy">`
-                  : `<div class="cl-preview-thumb-placeholder" style="background:${c.category_color||'#791E15'}22">
-                       <i class="fas fa-play-circle" style="color:${c.category_color||'#791E15'}"></i>
-                     </div>`
-                }
-                <div class="cl-preview-lock"><i class="fas fa-lock"></i></div>
-              </div>
-              <div class="cl-preview-body">
-                <div class="cl-preview-cat" style="color:${c.category_color||'#c9a84c'}">${c.category_name||''}</div>
-                <div class="cl-preview-title">${c.title}</div>
-                <div class="cl-preview-meta">
-                  <span><i class="fas fa-user-tie"></i> ${c.instructor||'Expert LEADER'}</span>
-                  ${c.total_lessons ? `<span><i class="fas fa-play"></i> ${c.total_lessons} leçons</span>` : ''}
-                </div>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-        ${courses.length > 6 ? `<p class="cl-preview-more">+ ${courses.length - 6} autres formations disponibles avec l'accès</p>` : ''}
-      </section>
-
-      <!-- ── CTA BAS DE PAGE ────────────────────────────────────────────────── -->
-      <section class="cl-bottom-cta">
-        <div class="cl-bottom-cta-inner">
-          <img src="${_CAMPUS_LOGO_URL}" alt="Campus" class="cl-bottom-logo"
-               onerror="this.style.display='none'">
-          <h2>Prêt à rejoindre le club ?</h2>
-          <p>L'accès à Campus LEADER est inclus dans certains packages.<br>Découvre lequel correspond à ton niveau d'engagement.</p>
-          <button class="cl-cta-primary" onclick="campusGoToPackages()">
-            <i class="fas fa-rocket"></i>
-            Voir les packages
+      <!-- ══════════════════════════════════════════════════════
+           BANNIÈRE ACCÈS — seulement si pas d'accès
+      ══════════════════════════════════════════════════════ -->
+      ${!hasAccess ? `
+      <section class="cl-access-banner">
+        <div class="cl-access-banner-inner">
+          <div class="cl-access-banner-icon"><i class="fas fa-lock"></i></div>
+          <div class="cl-access-banner-text">
+            <strong>Les formations ci-dessous sont verrouillées</strong>
+            <span>L'accès Campus est inclus dans certains packages LEADER. Clique sur une formation pour en savoir plus.</span>
+          </div>
+          <button class="cl-cta-primary cl-access-banner-btn" onclick="campusGoToPackages()">
+            <i class="fas fa-rocket"></i> Voir les packages
           </button>
         </div>
       </section>
+      ` : ''}
 
-    </div>
-  `;
-}
+      <!-- ══════════════════════════════════════════════════════
+           CATALOGUE — toujours visible, verrouillé si pas accès
+      ══════════════════════════════════════════════════════ -->
+      <div id="campus-catalog-anchor" class="campus-wrap" style="padding-top:0">
 
-// ── Catalogue Campus (membres avec accès) ─────────────────────────────────────
-function _renderCampusCatalog(mainContent, courses, categories) {
-  // Grouper cours par catégorie
-  const catMap = new Map();
-  for (const cat of categories) {
-    catMap.set(cat.id, { ...cat, courses: [] });
-  }
-  for (const course of courses) {
-    if (catMap.has(course.category_id)) {
-      catMap.get(course.category_id).courses.push(course);
-    }
-  }
-
-  mainContent.innerHTML = `
-    <div class="campus-wrap">
-      <!-- HERO -->
-      <div class="campus-hero">
-        <div class="campus-hero-bg"></div>
-        <div class="campus-hero-content">
-          <div class="campus-hero-logo-row">
-            <img src="${_CAMPUS_LOGO_URL}" alt="Campus LEADER" class="campus-hero-logo-img"
-                 onerror="this.style.display='none'">
-            <div class="campus-hero-badge">
-              <i class="fas fa-graduation-cap"></i>
-              <span>CAMPUS LEADER</span>
-            </div>
-          </div>
-          <h1 class="campus-hero-title">Le savoir au bout des doigts</h1>
-          <p class="campus-hero-sub">${courses.length} formations • ${categories.length} catégories • Accès illimité</p>
-          <div class="campus-hero-stats">
+        <!-- Filtres -->
+        <div class="campus-filters">
+          <div class="campus-filter-tabs">
+            <button class="campus-filter-tab active" onclick="campusFilterBy('all')">
+              <i class="fas fa-th-large"></i> Tout
+            </button>
             ${categories.map(cat => `
-              <div class="campus-hero-stat">
-                <i class="fas ${cat.icon}" style="color:${cat.color}"></i>
-                <span>${catMap.get(cat.id)?.courses?.length || 0} cours</span>
-                <small>${cat.name}</small>
-              </div>
+              <button class="campus-filter-tab" onclick="campusFilterBy('${cat.id}')"
+                      style="--cat-color:${cat.color}">
+                <i class="fas ${cat.icon}"></i> ${cat.name}
+              </button>
             `).join('')}
           </div>
+          <div class="campus-search-wrap">
+            <i class="fas fa-search"></i>
+            <input type="text" id="campus-search-input" placeholder="Rechercher une formation..."
+                   oninput="campusSearch(this.value)" autocomplete="off">
+          </div>
         </div>
-      </div>
 
-      <!-- FILTRES -->
-      <div class="campus-filters">
-        <div class="campus-filter-tabs">
-          <button class="campus-filter-tab active" onclick="campusFilterBy('all')">
-            <i class="fas fa-th-large"></i> Tout
-          </button>
-          ${categories.map(cat => `
-            <button class="campus-filter-tab" onclick="campusFilterBy('${cat.id}')"
-                    style="--cat-color:${cat.color}">
-              <i class="fas ${cat.icon}"></i> ${cat.name}
-            </button>
+        <!-- Grilles par catégorie -->
+        <div id="campus-catalog">
+          ${[...catMap.values()].filter(cat => cat.courses.length > 0).map(cat => `
+            <section class="campus-section" data-cat="${cat.id}">
+              <div class="campus-section-header">
+                <div class="campus-section-badge" style="background:${cat.color}20;border-color:${cat.color}40">
+                  <i class="fas ${cat.icon}" style="color:${cat.color}"></i>
+                  <span style="color:${cat.color}">${cat.name}</span>
+                </div>
+                <span class="campus-section-count">${cat.courses.length} formation${cat.courses.length > 1 ? 's' : ''}</span>
+              </div>
+              <div class="campus-grid">
+                ${cat.courses.map(course => renderCampusCourseCard(course)).join('')}
+              </div>
+            </section>
           `).join('')}
         </div>
-        <div class="campus-search-wrap">
+
+        <!-- Empty state recherche -->
+        <div id="campus-empty" class="campus-empty" style="display:none">
           <i class="fas fa-search"></i>
-          <input type="text" id="campus-search-input" placeholder="Rechercher une formation..."
-                 oninput="campusSearch(this.value)" autocomplete="off">
+          <p>Aucune formation trouvée</p>
         </div>
+
       </div>
 
-      <!-- CATALOGUE -->
-      <div id="campus-catalog">
-        ${[...catMap.values()].filter(cat => cat.courses.length > 0).map(cat => `
-          <section class="campus-section" data-cat="${cat.id}">
-            <div class="campus-section-header">
-              <div class="campus-section-badge" style="background:${cat.color}20;border-color:${cat.color}40">
-                <i class="fas ${cat.icon}" style="color:${cat.color}"></i>
-                <span style="color:${cat.color}">${cat.name}</span>
-              </div>
-              <span class="campus-section-count">${cat.courses.length} formation${cat.courses.length > 1 ? 's' : ''}</span>
-            </div>
-            <div class="campus-grid">
-              ${cat.courses.map(course => renderCampusCourseCard(course)).join('')}
-            </div>
-          </section>
-        `).join('')}
-      </div>
-
-      <!-- EMPTY STATE -->
-      <div id="campus-empty" class="campus-empty" style="display:none">
-        <i class="fas fa-search"></i>
-        <p>Aucune formation trouvée</p>
-      </div>
     </div>
   `;
 }
 
-// Lien "Voir les formations" sur la landing → scroll vers l'aperçu
-function _campusPreviewCatalog() {
-  const preview = document.querySelector('.cl-preview');
-  if (preview) preview.scrollIntoView({ behavior: 'smooth', block: 'start' });
+// Scroll doux vers le catalogue
+function _campusScrollToCatalog() {
+  const anchor = document.getElementById('campus-catalog-anchor');
+  if (anchor) anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
+
+// ── Fonctions legacy supprimées — remplacées par _renderCampusFullPage ────────
+function _renderCampusLanding(el, courses, categories) { _renderCampusFullPage(el, courses, categories, false); }
+function _renderCampusCatalog(el, courses, categories)  { _renderCampusFullPage(el, courses, categories, true);  }
+function _campusPreviewCatalog() { _campusScrollToCatalog(); }
 
 function renderCampusCourseCard(course) {
   const progressBar = course.progress > 0 ? `
