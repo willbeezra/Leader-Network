@@ -44,8 +44,9 @@ const _CAMPUS_PILLARS = [
 ];
 
 async function showCampusPage(container) {
+  console.log('[Campus] showCampusPage appelé — v2025-06-17');
   const mainContent = container || document.getElementById('page-content') || document.getElementById('main-content');
-  if (!mainContent) return;
+  if (!mainContent) { console.error('[Campus] container introuvable'); return; }
 
   mainContent.innerHTML = `
     <div class="campus-loading">
@@ -57,12 +58,16 @@ async function showCampusPage(container) {
   `;
 
   try {
+    console.log('[Campus] fetch /api/campus...');
     const res = await campusFetch('/api/campus');
+    console.log('[Campus] réponse HTTP', res.status);
     const data = await res.json();
     const { categories, courses, has_campus_access } = data;
+    console.log('[Campus] données reçues — courses:', courses?.length, 'cats:', categories?.length, 'access:', has_campus_access);
 
     // ── TOUJOURS : landing en premier, catalogue en dessous ───────────────────
     _renderCampusFullPage(mainContent, courses, categories, !!has_campus_access);
+    console.log('[Campus] rendu terminé');
 
   } catch (err) {
     console.error('[Campus] Erreur showCampusPage:', err);
