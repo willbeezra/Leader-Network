@@ -822,11 +822,12 @@ members.get('/wallet', async (c) => {
 members.get('/services', async (c) => {
   const memberId = c.get('memberId' as any)
 
-  // Tous les services non-inactifs (pour afficher même les non-accessibles avec cadenas)
+  // Tous les services non-inactifs — on lit landing_services qui contient
+  // les logos détourés haute qualité (logo_data_uri travaillés)
   const allServices = await c.env.DB.prepare(`
     SELECT id, name, slug, description, url, logo_url, logo_data_uri,
            status, display_order, category, bg_color, text_color
-    FROM services
+    FROM landing_services
     WHERE status != 'inactive'
     ORDER BY display_order ASC, name ASC
   `).all()

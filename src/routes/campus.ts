@@ -31,14 +31,20 @@ campus.get('/', async (c) => {
     ORDER BY cat.display_order ASC, c.display_order ASC
   `).all()
 
-  // Packages actifs du membre (pour vérifier accès)
-  let memberPackageIds: string[] = []
+  // Vérification accès Campus via package_service_access (service_id = 1 = Campus)
+  // Un membre a accès si au moins un de ses packages validés a is_enabled=1 pour Campus
+  let hasCampusAccess = false
   if (memberId) {
-    const pkgs = await db.prepare(`
-      SELECT DISTINCT package_id FROM package_orders
-      WHERE member_id = ? AND status = 'validated'
-    `).bind(memberId).all()
-    memberPackageIds = (pkgs.results as any[]).map(p => p.package_id)
+    const accessCheck = await db.prepare(`
+      SELECT COUNT(*) AS cnt
+      FROM package_service_access psa
+      JOIN package_orders po ON po.package_id = psa.package_id
+      WHERE po.member_id = ?
+        AND po.status = 'validated'
+        AND psa.service_id = 1
+        AND psa.is_enabled = 1
+    `).bind(memberId).first() as any
+    hasCampusAccess = (accessCheck?.cnt || 0) > 0
   }
 
   // Progress si connecté
@@ -56,18 +62,11 @@ campus.get('/', async (c) => {
     }
   }
 
-  const coursesWithProgress = (courses.results as any[]).map(course => {
-    // Calcul accès membre
-    let hasAccess = true
-    if (course.access_type === 'packages' && course.required_package_id) {
-      hasAccess = memberPackageIds.includes(course.required_package_id)
-    }
-    return {
-      ...course,
-      progress: progressMap[course.id] || 0,
-      has_access: hasAccess
-    }
-  })
+  const coursesWithProgress = (courses.results as any[]).map(course => ({
+    ...course,
+    progress: progressMap[course.id] || 0,
+    has_access: hasCampusAccess
+  }))
 
   return c.json({
     categories: categories.results,
@@ -90,26 +89,23 @@ campus.get('/course/:slug', async (c) => {
 
   if (!course) return c.json({ error: 'Formation non trouvée' }, 404)
 
-  // Vérification accès
-  let hasAccess = true
-  const courseData = course as any
-  if (courseData.access_type === 'packages' && courseData.required_package_id && memberId) {
-    const pkgCheck = await db.prepare(`
-      SELECT COUNT(*) AS cnt FROM package_orders
-      WHERE member_id = ? AND package_id = ? AND status = 'validated'
-    `).bind(memberId, courseData.required_package_id).first() as any
-    hasAccess = (pkgCheck?.cnt || 0) > 0
-  } else if (courseData.access_type === 'packages' && courseData.required_package_id && !memberId) {
-    hasAccess = false
+  // Vérification accès Campus via package_service_access (service_id = 1 = Campus)
+  let hasAccess = false
+  if (memberId) {
+    const accessCheck = await db.prepare(`
+      SELECT COUNT(*) AS cnt
+      FROM package_service_access psa
+      JOIN package_orders po ON po.package_id = psa.package_id
+      WHERE po.member_id = ?
+        AND po.status = 'validated'
+        AND psa.service_id = 1
+        AND psa.is_enabled = 1
+    `).bind(memberId).first() as any
+    hasAccess = (accessCheck?.cnt || 0) > 0
   }
 
-  // Récupérer infos package requis si applicable
+  // Récupérer infos package requis si applicable (conservé pour compatibilité UI)
   let requiredPackage = null
-  if (courseData.required_package_id) {
-    requiredPackage = await db.prepare(`
-      SELECT id, name, slug, price_usd FROM packages WHERE id = ?
-    `).bind(courseData.required_package_id).first()
-  }
 
   const modules = await db.prepare(`
     SELECT m.id, m.title, m.description, m.display_order
