@@ -1806,12 +1806,12 @@ members.post('/packages/order', async (c) => {
     // v2_psp = toutes les passerelles automatiques V2 (Mollie, etc.) — commande abandonnée avant paiement
     // wallet/internal_wallet = commande wallet créée mais paiement non finalisé (wizard fermé, erreur réseau, etc.)
     // 'manual' en 'pending' (pas encore de preuve) → annulé silencieusement pour permettre un nouvel essai
-    const AUTO_CANCEL_METHODS = ['paypal', 'stripe', 'coinpayments', 'v2_psp', 'v2_manual', 'wallet', 'internal_wallet', 'manual', 'bank']
-    // Règle supplémentaire : commande pending sans preuve depuis plus de 72h → auto-annulation
+    // Toute commande pending (quelle que soit la méthode) est annulée silencieusement
+    // Seul 'proof_submitted' bloque réellement (preuve déjà envoyée, en attente de validation)
     const isStaleWithoutProof = existingActive.status === 'pending' &&
       !existingActive.proof_url &&
       new Date(existingActive.created_at).getTime() < Date.now() - 72 * 3600 * 1000
-    if ((AUTO_CANCEL_METHODS.includes(existingActive.payment_method) && existingActive.status === 'pending') || isStaleWithoutProof) {
+    if (existingActive.status === 'pending' || isStaleWithoutProof) {
       // Annuler la commande abandonnée
       await c.env.DB.prepare(
         `UPDATE package_orders
@@ -1987,11 +1987,12 @@ members.post('/packages/upgrade', async (c) => {
     // Commande électronique (PayPal / Stripe / CoinPayments / V2 PSP / wallet) en attente non capturée → annuler silencieusement
     // wallet/internal_wallet = commande wallet créée mais paiement non finalisé (wizard fermé, erreur réseau, etc.)
     // 'manual' en 'pending' (pas encore de preuve soumise) → annulé silencieusement pour permettre un nouvel essai
-    const AUTO_CANCEL_METHODS = ['paypal', 'stripe', 'coinpayments', 'v2_psp', 'v2_manual', 'wallet', 'internal_wallet', 'manual', 'bank']
+    // Toute commande pending (quelle que soit la méthode) est annulée silencieusement
+    // Seul 'proof_submitted' bloque réellement (preuve déjà envoyée, en attente de validation)
     const isStaleUpgradeWithoutProof = existingActiveUpgrade.status === 'pending' &&
       !existingActiveUpgrade.proof_url &&
       new Date(existingActiveUpgrade.created_at).getTime() < Date.now() - 72 * 3600 * 1000
-    if ((AUTO_CANCEL_METHODS.includes(existingActiveUpgrade.payment_method) && existingActiveUpgrade.status === 'pending') || isStaleUpgradeWithoutProof) {
+    if (existingActiveUpgrade.status === 'pending' || isStaleUpgradeWithoutProof) {
       await c.env.DB.prepare(
         `UPDATE package_orders SET status = 'cancelled', rejection_reason = 'Commande abandonnée — annulée automatiquement', updated_at = datetime('now') WHERE id = ?`
       ).bind(existingActiveUpgrade.id).run()
