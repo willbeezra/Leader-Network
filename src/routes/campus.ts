@@ -22,7 +22,7 @@ campus.get('/', async (c) => {
     SELECT c.id, c.category_id, c.title, c.slug, c.subtitle, c.instructor,
            c.thumbnail_url, c.is_free, c.price_usd, c.total_lessons,
            c.total_duration_minutes, c.level, c.language, c.display_order,
-           c.is_featured, c.access_type, c.required_package_id,
+           c.is_featured,
            cat.name AS category_name, cat.color AS category_color,
            cat.slug AS category_slug
     FROM campus_courses c
@@ -397,20 +397,18 @@ campus.post('/admin/courses', async (c) => {
   } = body
   if (!title || !slug) return c.json({ error: 'title et slug requis' }, 400)
 
-  const { access_type, required_package_id } = body
   const id = 'course-' + Math.random().toString(36).substring(2, 12)
   await db.prepare(`
     INSERT INTO campus_courses (id, category_id, title, slug, subtitle, description, instructor, instructor_bio,
-      thumbnail_url, trailer_url, trailer_type, price_usd, is_free, is_featured, display_order, level, language, tags, meta_title, meta_description, access_type, required_package_id)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      thumbnail_url, trailer_url, trailer_type, price_usd, is_free, is_featured, display_order, level, language, tags, meta_title, meta_description)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
   `).bind(
     id, category_id || null, title, slug, subtitle || null, description || null,
     instructor || null, instructor_bio || null, thumbnail_url || null,
     trailer_url || null, trailer_type || 'youtube',
     price_usd || 0, is_free !== false ? 1 : 0, is_featured ? 1 : 0,
     display_order || 0, level || 'all', language || 'fr',
-    tags ? JSON.stringify(tags) : null, meta_title || null, meta_description || null,
-    access_type || 'all', required_package_id || null
+    tags ? JSON.stringify(tags) : null, meta_title || null, meta_description || null
   ).run()
 
   return c.json({ success: true, id })
@@ -427,8 +425,7 @@ campus.put('/admin/courses/:id', async (c) => {
   const allowed = [
     'category_id','title','slug','subtitle','description','instructor','instructor_bio',
     'thumbnail_url','trailer_url','trailer_type','price_usd','is_free','is_featured',
-    'is_active','display_order','level','language','tags','meta_title','meta_description',
-    'access_type','required_package_id'
+    'is_active','display_order','level','language','tags','meta_title','meta_description'
   ]
   for (const key of allowed) {
     if (key in body) {
