@@ -1792,7 +1792,7 @@ members.post('/packages/order', async (c) => {
   // On récupère aussi payment_method, paypal_order_id et linked_license_id
   // pour pouvoir annuler proprement une commande PayPal échouée.
   const existingActive = await c.env.DB.prepare(
-    `SELECT id, status, payment_method, paypal_order_id, linked_license_id, created_at
+    `SELECT id, status, payment_method, paypal_order_id, linked_license_id, created_at, proof_url
      FROM package_orders
      WHERE member_id = ? AND status IN ('pending','proof_submitted') AND activation_done = 0
      LIMIT 1`
@@ -1806,12 +1806,16 @@ members.post('/packages/order', async (c) => {
     // v2_psp = toutes les passerelles automatiques V2 (Mollie, etc.) — commande abandonnée avant paiement
     // wallet/internal_wallet = commande wallet créée mais paiement non finalisé (wizard fermé, erreur réseau, etc.)
     // 'manual' en 'pending' (pas encore de preuve) → annulé silencieusement pour permettre un nouvel essai
-    const AUTO_CANCEL_METHODS = ['paypal', 'stripe', 'coinpayments', 'v2_psp', 'wallet', 'internal_wallet', 'manual']
-    if (AUTO_CANCEL_METHODS.includes(existingActive.payment_method) && existingActive.status === 'pending') {
-      // Annuler la commande électronique non payée
+    const AUTO_CANCEL_METHODS = ['paypal', 'stripe', 'coinpayments', 'v2_psp', 'v2_manual', 'wallet', 'internal_wallet', 'manual', 'bank']
+    // Règle supplémentaire : commande pending sans preuve depuis plus de 72h → auto-annulation
+    const isStaleWithoutProof = existingActive.status === 'pending' &&
+      !existingActive.proof_url &&
+      new Date(existingActive.created_at).getTime() < Date.now() - 72 * 3600 * 1000
+    if ((AUTO_CANCEL_METHODS.includes(existingActive.payment_method) && existingActive.status === 'pending') || isStaleWithoutProof) {
+      // Annuler la commande abandonnée
       await c.env.DB.prepare(
         `UPDATE package_orders
-         SET status = 'cancelled', updated_at = datetime('now')
+         SET status = 'cancelled', rejection_reason = 'Commande abandonnée — annulée automatiquement', updated_at = datetime('now')
          WHERE id = ?`
       ).bind(existingActive.id).run()
 
@@ -1973,7 +1977,7 @@ members.post('/packages/upgrade', async (c) => {
 
   // ── GUARD ANTI-DOUBLON upgrade ────────────────────────────────────────────
   const existingActiveUpgrade = await c.env.DB.prepare(
-    `SELECT id, status, payment_method, paypal_order_id, linked_license_id
+    `SELECT id, status, payment_method, paypal_order_id, linked_license_id, created_at, proof_url
      FROM package_orders
      WHERE member_id = ? AND status IN ('pending','proof_submitted') AND activation_done = 0
      LIMIT 1`
@@ -1983,10 +1987,13 @@ members.post('/packages/upgrade', async (c) => {
     // Commande électronique (PayPal / Stripe / CoinPayments / V2 PSP / wallet) en attente non capturée → annuler silencieusement
     // wallet/internal_wallet = commande wallet créée mais paiement non finalisé (wizard fermé, erreur réseau, etc.)
     // 'manual' en 'pending' (pas encore de preuve soumise) → annulé silencieusement pour permettre un nouvel essai
-    const AUTO_CANCEL_METHODS = ['paypal', 'stripe', 'coinpayments', 'v2_psp', 'wallet', 'internal_wallet', 'manual']
-    if (AUTO_CANCEL_METHODS.includes(existingActiveUpgrade.payment_method) && existingActiveUpgrade.status === 'pending') {
+    const AUTO_CANCEL_METHODS = ['paypal', 'stripe', 'coinpayments', 'v2_psp', 'v2_manual', 'wallet', 'internal_wallet', 'manual', 'bank']
+    const isStaleUpgradeWithoutProof = existingActiveUpgrade.status === 'pending' &&
+      !existingActiveUpgrade.proof_url &&
+      new Date(existingActiveUpgrade.created_at).getTime() < Date.now() - 72 * 3600 * 1000
+    if ((AUTO_CANCEL_METHODS.includes(existingActiveUpgrade.payment_method) && existingActiveUpgrade.status === 'pending') || isStaleUpgradeWithoutProof) {
       await c.env.DB.prepare(
-        `UPDATE package_orders SET status = 'cancelled', updated_at = datetime('now') WHERE id = ?`
+        `UPDATE package_orders SET status = 'cancelled', rejection_reason = 'Commande abandonnée — annulée automatiquement', updated_at = datetime('now') WHERE id = ?`
       ).bind(existingActiveUpgrade.id).run()
       if (existingActiveUpgrade.linked_license_id) {
         await c.env.DB.prepare(
