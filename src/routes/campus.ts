@@ -94,19 +94,32 @@ campus.get('/', async (c) => {
   const coursesWithProgress = (courses.results as any[]).map(course => {
     const allowedPackages = coursePackagesMap[course.id] || []
 
-    // Accès si :
-    // 1. Accès Campus global (tous les cours inclus)
-    // 2. OU un des packages autorisés pour ce cours est possédé par le membre
-    // 3. OU la formation est gratuite
-    let courseAccess = hasCampusAccess || course.is_free === 1
+    // Logique d'accès granulaire :
+    // Si la formation a des packages spécifiques définis (allowedPackages.length > 0) :
+    //   → Accès UNIQUEMENT si le membre possède l'un de ces packages
+    //   → hasCampusAccess global est IGNORÉ (la formation est payante/restreinte)
+    // Si aucun package spécifique n'est défini :
+    //   → Accès via accès Campus global OU si formation gratuite
+    const memberHasLinkedPackage = allowedPackages.length > 0 && memberId
+      ? allowedPackages.some((p: any) => memberPackageIds.has(p.package_id))
+      : false
 
-    if (!courseAccess && allowedPackages.length > 0 && memberId) {
-      courseAccess = allowedPackages.some((p: any) => memberPackageIds.has(p.package_id))
+    let courseAccess: boolean
+    if (allowedPackages.length > 0) {
+      // Formation avec packages spécifiques : ignorer l'accès global Campus
+      courseAccess = memberHasLinkedPackage || course.is_free === 1
+    } else {
+      // Formation sans restriction de package : accès global Campus ou gratuit
+      courseAccess = hasCampusAccess || course.is_free === 1
     }
 
     // access_status : 'included' | 'free' | 'locked' | 'priced'
     let accessStatus = 'locked'
-    if (hasCampusAccess || (allowedPackages.length > 0 && memberId && allowedPackages.some((p: any) => memberPackageIds.has(p.package_id)))) {
+    if (memberHasLinkedPackage) {
+      // Le membre possède un des packages liés à cette formation
+      accessStatus = 'included'
+    } else if (allowedPackages.length === 0 && hasCampusAccess) {
+      // Formation sans restriction de package + accès Campus global
       accessStatus = 'included'
     } else if (course.is_free === 1) {
       accessStatus = 'free'
