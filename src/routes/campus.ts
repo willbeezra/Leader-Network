@@ -62,11 +62,72 @@ campus.get('/', async (c) => {
     }
   }
 
-  const coursesWithProgress = (courses.results as any[]).map(course => ({
-    ...course,
-    progress: progressMap[course.id] || 0,
-    has_access: hasCampusAccess
-  }))
+  // ── Accès par formation via campus_course_packages ──────────────────────
+  // Pour chaque cours, on vérifie si le membre possède un package autorisé
+  // Set des package_ids validés du membre
+  let memberPackageIds: Set<string> = new Set()
+  if (memberId) {
+    const memberPkgs = await db.prepare(`
+      SELECT package_id FROM package_orders
+      WHERE member_id = ? AND status IN ('validated', 'active')
+    `).bind(memberId).all()
+    for (const p of (memberPkgs.results as any[])) {
+      memberPackageIds.add(p.package_id)
+    }
+  }
+
+  // Récupérer tous les packages autorisés par formation (en une seule requête)
+  const coursePackagesRows = await db.prepare(`
+    SELECT ccp.course_id, ccp.package_id, p.name AS package_name, p.price_usd AS package_price
+    FROM campus_course_packages ccp
+    JOIN packages p ON p.id = ccp.package_id
+    ORDER BY ccp.course_id
+  `).all()
+
+  // Map : course_id → liste de packages autorisés
+  const coursePackagesMap: Record<string, any[]> = {}
+  for (const row of (coursePackagesRows.results as any[])) {
+    if (!coursePackagesMap[row.course_id]) coursePackagesMap[row.course_id] = []
+    coursePackagesMap[row.course_id].push(row)
+  }
+
+  const coursesWithProgress = (courses.results as any[]).map(course => {
+    const allowedPackages = coursePackagesMap[course.id] || []
+
+    // Accès si :
+    // 1. Accès Campus global (tous les cours inclus)
+    // 2. OU un des packages autorisés pour ce cours est possédé par le membre
+    // 3. OU la formation est gratuite
+    let courseAccess = hasCampusAccess || course.is_free === 1
+
+    if (!courseAccess && allowedPackages.length > 0 && memberId) {
+      courseAccess = allowedPackages.some((p: any) => memberPackageIds.has(p.package_id))
+    }
+
+    // access_status : 'included' | 'free' | 'locked' | 'priced'
+    let accessStatus = 'locked'
+    if (hasCampusAccess || (allowedPackages.length > 0 && memberId && allowedPackages.some((p: any) => memberPackageIds.has(p.package_id)))) {
+      accessStatus = 'included'
+    } else if (course.is_free === 1) {
+      accessStatus = 'free'
+    } else if (course.price_usd > 0) {
+      accessStatus = 'priced'
+    }
+
+    // Package à acheter si la formation a un prix (premier package autorisé non possédé)
+    const buyPackage = accessStatus === 'priced' && allowedPackages.length > 0
+      ? allowedPackages[0]
+      : null
+
+    return {
+      ...course,
+      progress: progressMap[course.id] || 0,
+      has_access: courseAccess,
+      access_status: accessStatus,
+      allowed_packages: allowedPackages,
+      buy_package: buyPackage,
+    }
+  })
 
   // ── Configs landing Campus depuis landing_config ──────────────────────────
   const configRows = await db.prepare(`
@@ -582,6 +643,100 @@ campus.get('/admin/course-full/:id', async (c) => {
   }))
 
   return c.json({ course, modules: modulesWithLessons })
+})
+
+// ============================================================
+// ADMIN — Packages autorisés par formation (campus_course_packages)
+// ============================================================
+
+// GET /campus/admin/course-packages/:courseId
+// Retourne les packages autorisés pour une formation + liste de tous les packages
+campus.get('/admin/course-packages/:courseId', async (c) => {
+  const db = c.env.DB
+  const courseId = c.req.param('courseId')
+
+  // Packages déjà autorisés pour ce cours
+  const linked = await db.prepare(`
+    SELECT ccp.package_id, p.name, p.price_usd, p.category_id,
+           cat.name AS category_name
+    FROM campus_course_packages ccp
+    JOIN packages p ON p.id = ccp.package_id
+    LEFT JOIN package_categories cat ON cat.id = p.category_id
+    WHERE ccp.course_id = ?
+    ORDER BY p.price_usd ASC
+  `).bind(courseId).all()
+
+  // Tous les packages actifs (pour les cases à cocher)
+  const allPackages = await db.prepare(`
+    SELECT p.id, p.name, p.price_usd, p.category_id,
+           cat.name AS category_name
+    FROM packages p
+    LEFT JOIN package_categories cat ON cat.id = p.category_id
+    WHERE p.is_active = 1 AND (p.slug IS NULL OR p.slug != 'licence')
+    ORDER BY cat.name ASC, p.price_usd ASC
+  `).all()
+
+  const linkedIds = new Set((linked.results as any[]).map((r: any) => r.package_id))
+
+  return c.json({
+    linked: linked.results,
+    all_packages: (allPackages.results as any[]).map((p: any) => ({
+      ...p,
+      is_linked: linkedIds.has(p.id)
+    }))
+  })
+})
+
+// POST /campus/admin/course-packages/:courseId
+// Remplace entièrement la liste des packages autorisés pour une formation
+// Body: { package_ids: string[] }
+campus.post('/admin/course-packages/:courseId', async (c) => {
+  const db = c.env.DB
+  const courseId = c.req.param('courseId')
+  const { package_ids = [] } = await c.req.json()
+
+  // Supprimer toutes les liaisons existantes
+  await db.prepare(`DELETE FROM campus_course_packages WHERE course_id = ?`).bind(courseId).run()
+
+  // Insérer les nouvelles liaisons
+  if (package_ids.length > 0) {
+    for (const pkgId of package_ids) {
+      await db.prepare(`
+        INSERT OR IGNORE INTO campus_course_packages (course_id, package_id)
+        VALUES (?, ?)
+      `).bind(courseId, pkgId).run()
+    }
+  }
+
+  return c.json({ success: true, linked_count: package_ids.length })
+})
+
+// DELETE /campus/admin/course-packages/:courseId/:packageId
+// Supprime un seul lien formation-package
+campus.delete('/admin/course-packages/:courseId/:packageId', async (c) => {
+  const db = c.env.DB
+  const courseId = c.req.param('courseId')
+  const packageId = c.req.param('packageId')
+
+  await db.prepare(`
+    DELETE FROM campus_course_packages WHERE course_id = ? AND package_id = ?
+  `).bind(courseId, packageId).run()
+
+  return c.json({ success: true })
+})
+
+// GET /campus/admin/packages — liste tous les packages actifs (pour les dropdowns)
+campus.get('/admin/packages', async (c) => {
+  const db = c.env.DB
+  const pkgs = await db.prepare(`
+    SELECT p.id, p.name, p.price_usd, p.category_id,
+           cat.name AS category_name
+    FROM packages p
+    LEFT JOIN package_categories cat ON cat.id = p.category_id
+    WHERE p.is_active = 1 AND (p.slug IS NULL OR p.slug != 'licence')
+    ORDER BY cat.name ASC, p.price_usd ASC
+  `).all()
+  return c.json(pkgs.results)
 })
 
 export { campus }

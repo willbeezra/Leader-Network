@@ -11999,15 +11999,44 @@ async function _campusShowCourseModal(course) {
     `<option value="${cat.id}" ${course?.category_id === cat.id ? 'selected' : ''}>${_esc(cat.name)}</option>`
   ).join('');
 
-  // Charger la liste des packages pour le dropdown
-  let pkgOpts = '<option value="">— Aucun —</option>';
+  // Charger la liste des packages + les packages déjà liés à ce cours
+  let allPackages = [];
+  let linkedPackageIds = new Set();
   try {
-    const pkgs = await apiCampusAdmin('GET', '/packages');
-    pkgOpts += (pkgs||[]).map(p =>
-      `<option value="${p.id}" ${course?.required_package_id === p.id ? 'selected' : ''}
-        data-price="${p.price_usd||0}">${_esc(p.name)}${p.price_usd ? ` — $${p.price_usd}` : ' — Gratuit'}</option>`
-    ).join('');
+    if (isEdit && course.id) {
+      const cpData = await apiCampusAdmin('GET', `/course-packages/${course.id}`);
+      allPackages = cpData.all_packages || [];
+      linkedPackageIds = new Set((cpData.linked || []).map(p => p.package_id));
+    } else {
+      allPackages = await apiCampusAdmin('GET', '/packages');
+    }
   } catch(e) {}
+
+  // Grouper les packages par catégorie pour affichage
+  const pkgByCategory = {};
+  for (const p of allPackages) {
+    const cat = p.category_name || 'Autres';
+    if (!pkgByCategory[cat]) pkgByCategory[cat] = [];
+    pkgByCategory[cat].push(p);
+  }
+
+  // HTML des cases à cocher packages
+  const pkgCheckboxesHtml = Object.entries(pkgByCategory).map(([catName, pkgs]) => `
+    <div class="mb-3">
+      <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">${_esc(catName)}</div>
+      <div class="space-y-1.5">
+        ${pkgs.map(p => `
+          <label class="flex items-center gap-2.5 cursor-pointer group">
+            <input type="checkbox" name="cc-pkg-access" value="${p.id}"
+              ${linkedPackageIds.has(p.id) ? 'checked' : ''}
+              class="w-4 h-4 accent-red-500 cursor-pointer flex-shrink-0">
+            <span class="text-sm text-gray-300 group-hover:text-white transition">${_esc(p.name)}</span>
+            ${p.price_usd > 0 ? `<span class="text-xs text-gray-500 ml-auto">$${Number(p.price_usd).toLocaleString('fr-FR')}</span>` : '<span class="text-xs text-green-500 ml-auto">Gratuit</span>'}
+          </label>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
 
   const accessType = course?.access_type || 'all';
 
@@ -12057,34 +12086,52 @@ async function _campusShowCourseModal(course) {
         </div>
 
         <!-- ── SECTION ACCÈS ── -->
-        <div class="bg-dark-750 border border-dark-600 rounded-xl p-4 space-y-3">
+        <div class="bg-dark-750 border border-dark-600 rounded-xl p-4 space-y-4">
           <div class="flex items-center gap-2 mb-1">
-            <i class="fas fa-lock text-yellow-400 text-sm"></i>
+            <i class="fas fa-key text-yellow-400 text-sm"></i>
             <span class="text-sm font-semibold text-white">Accès à la formation</span>
           </div>
-          <div class="flex gap-4">
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input type="radio" name="cc-access-type" id="cc-access-all" value="all"
-                ${accessType === 'all' ? 'checked' : ''}
-                onchange="document.getElementById('cc-pkg-wrap').style.display='none'"
-                class="accent-green-500">
-              <span class="text-sm text-gray-300"><i class="fas fa-globe text-green-400 mr-1"></i> Accès libre (tous les membres)</span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input type="radio" name="cc-access-type" id="cc-access-pkg" value="packages"
-                ${accessType === 'packages' ? 'checked' : ''}
-                onchange="document.getElementById('cc-pkg-wrap').style.display='block'"
-                class="accent-yellow-500">
-              <span class="text-sm text-gray-300"><i class="fas fa-box text-yellow-400 mr-1"></i> Restreint par package</span>
-            </label>
+
+          <!-- Prix de la formation -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs text-gray-400 mb-1 block"><i class="fas fa-tag mr-1 text-yellow-500"></i>Prix ($)</label>
+              <div class="relative">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                <input id="cc-price" type="number" min="0" step="0.01"
+                  value="${course?.price_usd || 0}"
+                  placeholder="0"
+                  class="w-full bg-dark-700 border border-dark-600 rounded-lg pl-7 pr-3 py-2 text-white text-sm focus:border-yellow-500 outline-none">
+              </div>
+              <p class="text-xs text-gray-500 mt-1">0 = gratuit si coché ci-dessous</p>
+            </div>
+            <div class="flex items-end pb-3">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input id="cc-is-free" type="checkbox" ${course?.is_free ? 'checked' : ''}
+                  class="w-4 h-4 accent-green-500 cursor-pointer">
+                <span class="text-sm text-gray-300"><i class="fas fa-star text-yellow-400 mr-1"></i>Formation gratuite</span>
+              </label>
+            </div>
           </div>
-          <div id="cc-pkg-wrap" style="display:${accessType === 'packages' ? 'block' : 'none'}">
-            <label class="text-xs text-gray-400 mb-1 block">Package requis</label>
-            <select id="cc-package" onchange="_campusUpdatePkgPrice(this)"
-              class="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white text-sm focus:border-yellow-500 outline-none">
-              ${pkgOpts}
-            </select>
-            <p id="cc-pkg-price-hint" class="text-xs text-yellow-400 mt-1 hidden"></p>
+
+          <!-- Packages qui donnent accès -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-xs text-gray-400 uppercase tracking-wider font-semibold">
+                <i class="fas fa-box text-yellow-400 mr-1"></i>Packages donnant accès à cette formation
+              </label>
+              <span class="text-xs text-gray-600">(cochez un ou plusieurs)</span>
+            </div>
+            ${allPackages.length > 0 ? `
+            <div class="bg-dark-800 border border-dark-600 rounded-lg p-3 max-h-48 overflow-y-auto space-y-0">
+              ${pkgCheckboxesHtml}
+            </div>
+            <p class="text-xs text-gray-500 mt-1.5">
+              <i class="fas fa-info-circle mr-1"></i>
+              Si aucun package coché et prix = 0 → "Gratuit". Si prix > 0 → badge prix affiché avec bouton achat.
+              Si packages cochés → badge "Inclus" pour les membres possédant ces packages.
+            </p>
+            ` : `<p class="text-xs text-gray-500 bg-dark-800 rounded-lg p-3 border border-dark-600">Aucun package disponible. Créez d'abord des packages dans l'onglet Packages.</p>`}
           </div>
         </div>
 
@@ -12149,8 +12196,15 @@ function _campusUpdatePkgPrice(sel) {
 async function _campusSaveCourse(id) {
   const btn = document.getElementById('btn-save-course');
   const restore = btnSaving(btn);
-  const accessType = document.querySelector('input[name="cc-access-type"]:checked')?.value || 'all';
-  const pkgSel = document.getElementById('cc-package');
+
+  // Récupérer les packages cochés
+  const checkedPkgs = Array.from(document.querySelectorAll('input[name="cc-pkg-access"]:checked')).map(cb => cb.value);
+  const isFree = document.getElementById('cc-is-free')?.checked ? 1 : 0;
+  const priceUsd = parseFloat(document.getElementById('cc-price')?.value || '0') || 0;
+
+  // access_type : 'packages' si des packages sont cochés, sinon 'all'
+  const accessType = checkedPkgs.length > 0 ? 'packages' : 'all';
+
   const body = {
     title:               document.getElementById('cc-title').value.trim(),
     slug:                document.getElementById('cc-slug').value.trim(),
@@ -12163,14 +12217,25 @@ async function _campusSaveCourse(id) {
     language:            document.getElementById('cc-language').value,
     display_order:       parseInt(document.getElementById('cc-order').value) || 0,
     is_featured:         document.getElementById('cc-featured').checked ? 1 : 0,
+    is_free:             isFree,
+    price_usd:           priceUsd,
     access_type:         accessType,
-    required_package_id: accessType === 'packages' && pkgSel?.value ? pkgSel.value : null,
+    required_package_id: null, // géré via campus_course_packages maintenant
     ...(id && document.getElementById('cc-active') ? { is_active: document.getElementById('cc-active').checked ? 1 : 0 } : {}),
   };
   if (!body.title || !body.slug) { restore(); return showToast('Titre et slug requis', 'error'); }
   try {
-    if (id) await apiCampusAdmin('PUT', `/courses/${id}`, body);
-    else     await apiCampusAdmin('POST', '/courses', body);
+    let courseId = id;
+    if (id) {
+      await apiCampusAdmin('PUT', `/courses/${id}`, body);
+    } else {
+      const res = await apiCampusAdmin('POST', '/courses', body);
+      courseId = res.id;
+    }
+    // Sauvegarder les packages liés (même si liste vide — pour permettre de tout décocher)
+    if (courseId) {
+      await apiCampusAdmin('POST', `/course-packages/${courseId}`, { package_ids: checkedPkgs });
+    }
     closeModal();
     showToast(id ? 'Cours mis à jour ✓' : 'Cours créé !', 'success');
     await _campusLoadCourses();

@@ -65,6 +65,9 @@ async function showCampusPage(container) {
     const { categories, courses, has_campus_access, config = {}, campus_logo } = data;
     console.log('[Campus] données reçues — courses:', courses?.length, 'cats:', categories?.length, 'access:', has_campus_access);
 
+    // ── Stocker la config globalement pour renderCampusCourseCard ─────────────
+    window._campusConfig = config;
+
     // ── TOUJOURS : landing en premier, catalogue en dessous ───────────────────
     _renderCampusFullPage(mainContent, courses, categories, !!has_campus_access, config, campus_logo);
     console.log('[Campus] rendu terminé');
@@ -320,6 +323,22 @@ function _renderCampusCatalog(el, courses, categories)  { _renderCampusFullPage(
 function _campusPreviewCatalog() { _campusScrollToCatalog(); }
 
 function renderCampusCourseCard(course) {
+  // ── Configs badges depuis landing_config (100% configurables admin) ──
+  const _cfg = window._campusConfig || {};
+  const badgeIncludedText  = _cfg.campus_badge_included_text  || 'Inclus';
+  const badgeIncludedColor = _cfg.campus_badge_included_color || '#22c55e';
+  const badgeIncludedIcon  = _cfg.campus_badge_included_icon  || 'fa-check-circle';
+  const badgeLockedText    = _cfg.campus_badge_locked_text    || 'Verrouillé';
+  const badgeLockedColor   = _cfg.campus_badge_locked_color   || '#6b7280';
+  const badgeLockedIcon    = _cfg.campus_badge_locked_icon    || 'fa-lock';
+  const badgeFreeText      = _cfg.campus_badge_free_text      || 'Gratuit';
+  const badgeFreeColor     = _cfg.campus_badge_free_color     || '#c9a84c';
+  const badgeFreeIcon      = _cfg.campus_badge_free_icon      || 'fa-star';
+
+  // ── Détermination du statut ──
+  // access_status : 'included' | 'free' | 'priced' | 'locked'
+  const status = course.access_status || (course.has_access ? 'included' : (course.is_free ? 'free' : (course.price_usd > 0 ? 'priced' : 'locked')));
+
   const progressBar = course.progress > 0 ? `
     <div class="campus-card-progress">
       <div class="campus-card-progress-bar" style="width:${course.progress}%"></div>
@@ -327,13 +346,27 @@ function renderCampusCourseCard(course) {
     <span class="campus-card-pct">${course.progress}%</span>
   ` : '';
 
-  const locked = course.has_access === false;
-
-  const badge = locked
-    ? `<span class="campus-badge-locked"><i class="fas fa-lock"></i> Verrouillé</span>`
-    : course.is_free
-      ? `<span class="campus-badge-free">Gratuit</span>`
-      : `<span class="campus-badge-price">$${course.price_usd}</span>`;
+  // ── Badge selon le statut ──
+  let badge = '';
+  if (status === 'included') {
+    badge = `<span class="campus-access-badge campus-access-badge--included" style="background:${badgeIncludedColor}22;border-color:${badgeIncludedColor}55;color:${badgeIncludedColor}">
+      <i class="fas ${badgeIncludedIcon}"></i> ${badgeIncludedText}
+    </span>`;
+  } else if (status === 'free') {
+    badge = `<span class="campus-access-badge campus-access-badge--free" style="background:${badgeFreeColor}22;border-color:${badgeFreeColor}55;color:${badgeFreeColor}">
+      <i class="fas ${badgeFreeIcon}"></i> ${badgeFreeText}
+    </span>`;
+  } else if (status === 'priced') {
+    const price = course.price_usd > 0 ? `$${Number(course.price_usd).toLocaleString('fr-FR')}` : '';
+    badge = `<span class="campus-access-badge campus-access-badge--priced" style="background:#791E1522;border-color:#791E1555;color:#c9a84c">
+      <i class="fas fa-tag"></i> ${price}
+    </span>`;
+  } else {
+    // locked
+    badge = `<span class="campus-access-badge campus-access-badge--locked" style="background:${badgeLockedColor}22;border-color:${badgeLockedColor}44;color:${badgeLockedColor}">
+      <i class="fas ${badgeLockedIcon}"></i> ${badgeLockedText}
+    </span>`;
+  }
 
   const levelBadge = course.level !== 'all' ? `
     <span class="campus-badge-level">${course.level}</span>
@@ -345,16 +378,36 @@ function renderCampusCourseCard(course) {
         <i class="fas fa-play-circle" style="color:${course.category_color || '#791E15'}"></i>
        </div>`;
 
-  // Overlay cadenas si cours verrouillé
+  // Overlay cadenas si cours verrouillé ou payant
+  const locked = (status === 'locked' || status === 'priced');
   const lockOverlay = locked ? `
     <div class="campus-card-lock-overlay">
-      <i class="fas fa-lock"></i>
+      <i class="fas ${status === 'priced' ? 'fa-tag' : 'fa-lock'}"></i>
     </div>
   ` : '';
 
+  // ── Action au clic ──
+  // - included / free → ouvre la formation
+  // - priced → ouvre le wizard d'achat si un package est défini, sinon la formation (qui affichera le banner verrouillé)
+  // - locked → ouvre la formation (qui affichera le banner verrouillé avec lien packages)
+  let onClickAction = `showCampusCourse('${course.slug}')`;
+  if (status === 'priced' && course.buy_package) {
+    const pkg = course.buy_package;
+    const pkgName = encodeURIComponent(pkg.package_name || pkg.name || '');
+    onClickAction = `openCoursePaymentWizard('${pkg.package_id}','${pkgName}',${pkg.package_price || 0})`;
+  }
+
+  // ── Texte footer ──
+  const footerRight = (status === 'included' || status === 'free')
+    ? `<span class="campus-card-lessons"><i class="fas fa-play-circle"></i> ${course.total_lessons || 0} ${_t(course.total_lessons > 1 ? 'leçons' : 'leçon')}</span>`
+    : status === 'priced'
+      ? `<span class="campus-card-unlock" style="color:#c9a84c"><i class="fas fa-shopping-cart"></i> Acquérir</span>`
+      : `<span class="campus-card-unlock"><i class="fas fa-unlock-alt"></i> Débloquer</span>`;
+
   return `
-    <article class="campus-card ${locked ? 'campus-card-locked' : ''}" onclick="showCampusCourse('${course.slug}')" 
-             data-title="${course.title.toLowerCase()}" data-cat="${course.category_id}">
+    <article class="campus-card ${locked ? 'campus-card-locked' : ''}" onclick="${onClickAction}"
+             data-title="${course.title.toLowerCase()}" data-cat="${course.category_id}"
+             data-status="${status}">
       <div class="campus-card-thumb">
         ${thumb}
         ${badge}
@@ -374,14 +427,24 @@ function renderCampusCourseCard(course) {
           <span class="campus-card-instructor">
             <i class="fas fa-user-tie"></i> ${_t(course.instructor || 'Équipe LEADER')}
           </span>
-          ${locked
-            ? `<span class="campus-card-unlock"><i class="fas fa-unlock-alt"></i> Débloquer</span>`
-            : `<span class="campus-card-lessons"><i class="fas fa-play-circle"></i> ${course.total_lessons || 0} ${_t(course.total_lessons > 1 ? 'leçons' : 'leçon')}</span>`
-          }
+          ${footerRight}
         </div>
       </div>
     </article>
   `;
+}
+
+// ── Ouvre le wizard d'achat packages depuis une carte formation ──────────────
+// Réutilise exactement le même wizard que l'onglet Packages
+function openCoursePaymentWizard(packageId, packageNameEncoded, priceUsd) {
+  const packageName = decodeURIComponent(packageNameEncoded);
+  // wizardStart est défini dans member-app.js — même wizard que les packages
+  if (typeof wizardStart === 'function') {
+    wizardStart(packageId, packageNameEncoded, priceUsd, 0, false, 0, 0);
+  } else {
+    // Fallback : aller vers l'onglet packages
+    if (typeof showPage === 'function') showPage('packages');
+  }
 }
 
 function campusFilterBy(catId) {
