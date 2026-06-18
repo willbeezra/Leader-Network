@@ -2084,12 +2084,13 @@ members.post('/packages/order/:id/proof', async (c) => {
 })
 
 // POST /api/members/packages/submit-proof — Soumettre preuve (v2 wizard simplifié)
-// Accepte : { order_id, reference?, proof_data_url? }
-// proof_data_url = data:image/...;base64,... (optionnel si preuve déjà uploadée)
+// Accepte : { order_id, reference?, proof_url?, proof_data_url? }
+// proof_url = URL hébergée (prioritaire — evite D1 SQLITE_TOOBIG)
+// proof_data_url = data:image/...;base64,... (legacy — éviter pour les gros fichiers)
 members.post('/packages/submit-proof', async (c) => {
   const memberId = c.get('memberId' as any)
   const body = await c.req.json() as any
-  const { order_id, reference, proof_data_url } = body
+  const { order_id, reference, proof_url: proofUrlInput, proof_data_url } = body
 
   if (!order_id) return c.json({ error: 'order_id requis' }, 400)
 
@@ -2102,10 +2103,12 @@ members.post('/packages/submit-proof', async (c) => {
     return c.json({ error: `Commande en statut "${order.status}" — non modifiable.` }, 409)
   }
 
-  // Si une image est fournie en data URL → stocker comme proof_url directement
+  // Priorité : proof_url (URL hébergée) > proof_data_url (base64 legacy) > existant
   let proofUrl: string = order.proof_url || ''
-  if (proof_data_url && proof_data_url.startsWith('data:')) {
-    proofUrl = proof_data_url  // Stocké tel quel (base64 data URL)
+  if (proofUrlInput && !proofUrlInput.startsWith('data:')) {
+    proofUrl = proofUrlInput  // URL hébergée — priorité absolue
+  } else if (proof_data_url && proof_data_url.startsWith('data:')) {
+    proofUrl = proof_data_url  // Base64 legacy (déconseillé — risque SQLITE_TOOBIG)
   }
 
   await c.env.DB.prepare(

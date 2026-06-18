@@ -1654,16 +1654,7 @@ async function wizardStep5V2Manual(){
       ${instrText?`<p class="text-xs text-gray-400 mt-2 pt-2 border-t border-dark-600">${instrText}</p>`:""}
       <p class="text-xs text-gray-500 pt-2 border-t border-dark-600">R\u00e9f\u00e9rence : votre identifiant unique LEADER</p>
     </div>
-    <div>
-      <div class="text-sm font-medium text-white mb-2"><i class="fas fa-upload text-emerald-400 mr-2"></i>Preuve de paiement</div>
-      <label class="border-2 border-dashed border-dark-500 rounded-xl p-4 text-center cursor-pointer hover:border-emerald-400 transition flex flex-col items-center gap-2 bg-dark-700/50">
-        <i class="fas fa-image text-2xl text-gray-500"></i>
-        <span class="text-sm text-gray-400">Cliquez pour s\u00e9lectionner votre capture d\u2019\u00e9cran ou re\u00e7u</span>
-        <span class="text-xs text-gray-600">JPG, PNG, PDF accept\u00e9s</span>
-        <input type="file" id="v2manual-proof-input" accept="image/*,application/pdf" class="hidden" onchange="document.getElementById(\'v2manual-file-name\').textContent=this.files[0]?.name||\'\';document.getElementById(\'v2manual-file-name\').classList.remove(\'hidden\')">
-      </label>
-      <p id="v2manual-file-name" class="hidden text-xs text-emerald-400 mt-1"></p>
-    </div>
+    <div id="v2manual-upload-zone"></div>
     <div>
       <label class="text-xs text-gray-400 block mb-1">R\u00e9f\u00e9rence / N\u00b0 de transaction (optionnel)</label>
       <input id="v2manual-ref-input" type="text" placeholder="Ex: TXN123456789" class="w-full bg-dark-700 border border-dark-500 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-emerald-400">
@@ -1674,14 +1665,28 @@ async function wizardStep5V2Manual(){
       <button id="v2manual-submit-btn" onclick="_submitV2ManualProof(\'${orderId||""}\')" class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition text-sm"><i class="fas fa-paper-plane mr-2"></i>Soumettre la preuve</button>
     </div>
   </div>`);
+  // Initialiser la zone upload après rendu du HTML
+  setTimeout(()=>{
+    window._v2manualProofUrl="";
+    window._v2manualUploadUid=createUploadZone({
+      containerId:"v2manual-upload-zone",
+      accept:"image/*,application/pdf",
+      purpose:"proof",
+      apiPrefix:"/api/members",
+      label:'Justificatif de paiement <span class="text-red-400">*</span>',
+      onUrl:url=>{window._v2manualProofUrl=url||"";},
+      getToken:()=>memberToken||localStorage.getItem("leader_member_token")
+    });
+  },50);
 }
 async function _submitV2ManualProof(orderId){
   const btn=document.getElementById("v2manual-submit-btn");
   const errDiv=document.getElementById("v2manual-error");
-  const proofInput=document.getElementById("v2manual-proof-input");
   const refInput=document.getElementById("v2manual-ref-input");
-  if(!proofInput||!proofInput.files||!proofInput.files[0]){
-    if(errDiv){errDiv.textContent="Veuillez s\u00e9lectionner une preuve de paiement.";errDiv.classList.remove("hidden");}
+  // Lire l'URL uploadée via upload-zone (evite base64 -> D1 SQLITE_TOOBIG)
+  const proofUrl=window._v2manualProofUrl||(window._v2manualUploadUid?uzGetUrl(window._v2manualUploadUid):"");
+  if(!proofUrl){
+    if(errDiv){errDiv.textContent="Veuillez uploader une preuve de paiement.";errDiv.classList.remove("hidden");}
     return;
   }
   if(btn){btn.disabled=true;btn.innerHTML="<i class=\"fas fa-spinner fa-spin mr-2\"></i>Envoi...";}
@@ -1690,10 +1695,7 @@ async function _submitV2ManualProof(orderId){
     if(_wizardData.isTopup){
       // MODE RECHARGE WALLET — soumettre preuve de recharge
       const topupId=_wizardData.topupId||orderId;
-      // Convertir le fichier en base64 pour l'upload
-      const file=proofInput.files[0];
-      const dataUrl=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=e=>resolve(e.target.result);r.onerror=reject;r.readAsDataURL(file);});
-      await api("POST","/payment/topup/submit-proof",{topup_id:topupId,proof_url:dataUrl,reference:refInput?.value?.trim()||null});
+      await api("POST","/payment/topup/submit-proof",{topup_id:topupId,proof_url:proofUrl,reference:refInput?.value?.trim()||null});
       _wizardShow(`
       <div class="p-8 text-center space-y-5">
         <div class="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mx-auto">
@@ -1701,8 +1703,8 @@ async function _submitV2ManualProof(orderId){
         </div>
         <div>
           <p class="text-white font-bold text-xl">Recharge soumise !</p>
-          <p class="text-green-400 text-sm mt-1">Votre preuve de paiement a \u00e9t\u00e9 envoy\u00e9e. La recharge sera valid\u00e9e sous 24\u201348h.</p>
-          <p class="text-gray-500 text-xs mt-2">R\u00e9f. : ${(topupId||"").substring(0,16)}\u2026</p>
+          <p class="text-green-400 text-sm mt-1">Votre preuve de paiement a été envoyée. La recharge sera validée sous 24–48h.</p>
+          <p class="text-gray-500 text-xs mt-2">Réf. : ${(topupId||"").substring(0,16)}…</p>
         </div>
         <button onclick="wizardClose()" class="w-full py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl transition">
           <i class="fas fa-check mr-2"></i>Fermer
@@ -1710,16 +1712,16 @@ async function _submitV2ManualProof(orderId){
       </div>`);
       _wizardReset();
     }else if(_wizardData.isPhysicalCard){
-      await api("POST","/members/physical-card/submit-proof",{order_id:orderId,reference:refInput?.value?.trim()||null});
+      await api("POST","/members/physical-card/submit-proof",{order_id:orderId,proof_url:proofUrl,reference:refInput?.value?.trim()||null});
       _wizardShow(`
       <div class="p-8 text-center space-y-5">
         <div class="w-20 h-20 rounded-full bg-amber-500/20 flex items-center justify-center mx-auto">
           <i class="fas fa-check-circle text-amber-400 text-4xl"></i>
         </div>
         <div>
-          <p class="text-white font-bold text-xl">Commande enregistr\u00e9e !</p>
-          <p class="text-amber-400 text-sm mt-1">Votre preuve a \u00e9t\u00e9 envoy\u00e9e. Votre carte sera fabriqu\u00e9e et exp\u00e9di\u00e9e apr\u00e8s validation sous 24\u201348h.</p>
-          <p class="text-gray-500 text-xs mt-2">R\u00e9f. commande : ${(orderId||"").substring(0,16)}\u2026</p>
+          <p class="text-white font-bold text-xl">Commande enregistrée !</p>
+          <p class="text-amber-400 text-sm mt-1">Votre preuve a été envoyée. Votre carte sera fabriquée et expédiée après validation sous 24–48h.</p>
+          <p class="text-gray-500 text-xs mt-2">Réf. commande : ${(orderId||"").substring(0,16)}…</p>
         </div>
         <button onclick="wizardClose();showPage('member-card')" class="w-full py-3 bg-amber-500 text-dark-900 font-bold rounded-xl hover:bg-amber-400 transition">
           <i class="fas fa-credit-card mr-2"></i>Voir ma carte
@@ -1727,13 +1729,8 @@ async function _submitV2ManualProof(orderId){
       </div>`);
       _wizardReset();
     }else{
-      // Convertir le fichier en base64 data URL pour la preuve
-      let pkgProofDataUrl=null;
-      if(proofInput&&proofInput.files&&proofInput.files[0]){
-        const f2=proofInput.files[0];
-        pkgProofDataUrl=await new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsDataURL(f2);});
-      }
-      await api("POST","/members/packages/submit-proof",{order_id:orderId,reference:refInput?.value?.trim()||null,proof_data_url:pkgProofDataUrl});
+      // COMMANDE PACKAGE — preuve URL (pas de base64)
+      await api("POST","/members/packages/submit-proof",{order_id:orderId,reference:refInput?.value?.trim()||null,proof_url:proofUrl});
       _wizardShow(`
       <div class="p-8 text-center space-y-5">
         <div class="w-20 h-20 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto">
@@ -1741,10 +1738,10 @@ async function _submitV2ManualProof(orderId){
         </div>
         <div>
           <p class="text-white font-bold text-xl">Preuve soumise !</p>
-          <p class="text-emerald-400 text-sm mt-1">Votre paiement sera valid\u00e9 par l\'\u00e9quipe sous 24\u201348h.</p>
-          <p class="text-gray-500 text-xs mt-2">R\u00e9f. commande : ${(orderId||"").substring(0,16)}\u2026</p>
+          <p class="text-emerald-400 text-sm mt-1">Votre paiement sera validé par l'équipe sous 24–48h.</p>
+          <p class="text-gray-500 text-xs mt-2">Réf. commande : ${(orderId||"").substring(0,16)}…</p>
         </div>
-        <button onclick="wizardClose();showPage(\'packages\')" class="w-full py-3 bg-rouge-500 text-dark-900 font-bold rounded-xl hover:bg-rouge-500 transition">
+        <button onclick="wizardClose();showPage('packages')" class="w-full py-3 bg-rouge-500 text-dark-900 font-bold rounded-xl hover:bg-rouge-500 transition">
           <i class="fas fa-check mr-2"></i>Fermer
         </button>
       </div>`);
@@ -1754,7 +1751,8 @@ async function _submitV2ManualProof(orderId){
     if(btn){btn.disabled=false;btn.innerHTML="<i class=\"fas fa-paper-plane mr-2\"></i>Soumettre la preuve";}
     if(errDiv){errDiv.textContent=err.error||err.message||"Erreur lors de la soumission";errDiv.classList.remove("hidden");}
   }
-}async function wizardStep5V2(){_wizardShow('<div class="p-10 flex flex-col items-center gap-4"><div class="loader"></div><p class="text-gray-400 text-sm">Création de votre commande…</p></div>');const t=_wizardData.v2MethodId;const n=_wizardData.totalAmt;let orderId=null;let licenseId=null;try{let orderResp;if(_wizardData.isTopup){orderResp=await api("POST","/payment/topup/create",{payment_method_id:t,amount:n});_wizardData.topupId=orderResp.topup_id;orderId=orderResp.topup_id;_wizardData.orderId=orderId;}else if(_wizardData.licenseOnly){orderResp=await api("POST","/members/license/order",{payment_method:"v2_psp"});licenseId=orderResp.license_id||null;_wizardData.licenseId=licenseId;_wizardData.orderId=licenseId;orderId=licenseId;}else if(_wizardData.isUpgrade){orderResp=await api("POST","/members/packages/upgrade",{target_package_id:_wizardData.pkgId,payment_method:"v2_psp"});orderId=orderResp.order_id;_wizardData.orderId=orderId;}else if(_wizardData.isPhysicalCard){orderResp=await api("POST","/members/physical-card/order",{payment_method:"v2_psp",shipping_address:_wizardData.shippingAddress||{}});orderId=orderResp.order_id;_wizardData.orderId=orderId;}else{const body={package_id:_wizardData.pkgId,payment_method:"v2_psp"};if(_wizardData.addLicense)body.add_license=true;orderResp=await api("POST","/members/packages/order",body);orderId=orderResp.order_id;_wizardData.orderId=orderId;}}catch(err){if(err.existing_order_id){orderId=err.existing_order_id;_wizardData.orderId=orderId;}else{_wizardShow(`<div class="p-8 text-center space-y-4"><i class="fas fa-exclamation-circle text-red-400 text-3xl"></i><p class="text-red-400">Erreur lors de la création de commande.<br><span class="text-xs text-gray-500">${err.error||err.message||""}</span></p><button onclick="wizardStep4()" class="py-2 px-6 bg-dark-700 text-gray-300 rounded-xl text-sm"><i class="fas fa-arrow-left mr-1"></i>Retour</button></div>`);return;}}_wizardShow('<div class="p-10 flex flex-col items-center gap-4"><div class="loader"></div><p class="text-gray-400 text-sm">Redirection vers ${_wizardData.v2DisplayName}…</p></div>');try{const pspBody={payment_method_id:t,amount:n,return_url:window.location.href};if(_wizardData.isTopup)pspBody.topup_id=orderId;else if(licenseId)pspBody.license_id=licenseId;else pspBody.order_id=orderId;const pspResp=await api("POST","/psp/initiate",pspBody);if(pspResp.redirect_url){window.location.href=pspResp.redirect_url;}else{throw {error:"URL de redirection manquante"};}}catch(pspErr){_wizardShow(`<div class="p-8 text-center space-y-4"><i class="fas fa-exclamation-circle text-red-400 text-3xl"></i><p class="text-red-400">Erreur de paiement ${_wizardData.v2DisplayName}.<br><span class="text-xs text-gray-500">${pspErr.error||pspErr.message||""}</span></p><button onclick="wizardStep4()" class="py-2 px-6 bg-dark-700 text-gray-300 rounded-xl text-sm"><i class="fas fa-arrow-left mr-1"></i>Retour</button></div>`);}}async function wizardStep5(){const e=_gw,t=_wizardData.paymentMethod,n=_wizardData.totalAmt;_wizardData.orderId=null,_wizardShow('\n  <div class="p-10 flex flex-col items-center gap-4">\n    <div class="loader"></div>\n    <p class="text-gray-400 text-sm">Création de votre commande…</p>\n  </div>');try{let _apiResp;if(_wizardData.isTopup){
+}
+async function wizardStep5V2(){_wizardShow('<div class="p-10 flex flex-col items-center gap-4"><div class="loader"></div><p class="text-gray-400 text-sm">Création de votre commande…</p></div>');const t=_wizardData.v2MethodId;const n=_wizardData.totalAmt;let orderId=null;let licenseId=null;try{let orderResp;if(_wizardData.isTopup){orderResp=await api("POST","/payment/topup/create",{payment_method_id:t,amount:n});_wizardData.topupId=orderResp.topup_id;orderId=orderResp.topup_id;_wizardData.orderId=orderId;}else if(_wizardData.licenseOnly){orderResp=await api("POST","/members/license/order",{payment_method:"v2_psp"});licenseId=orderResp.license_id||null;_wizardData.licenseId=licenseId;_wizardData.orderId=licenseId;orderId=licenseId;}else if(_wizardData.isUpgrade){orderResp=await api("POST","/members/packages/upgrade",{target_package_id:_wizardData.pkgId,payment_method:"v2_psp"});orderId=orderResp.order_id;_wizardData.orderId=orderId;}else if(_wizardData.isPhysicalCard){orderResp=await api("POST","/members/physical-card/order",{payment_method:"v2_psp",shipping_address:_wizardData.shippingAddress||{}});orderId=orderResp.order_id;_wizardData.orderId=orderId;}else{const body={package_id:_wizardData.pkgId,payment_method:"v2_psp"};if(_wizardData.addLicense)body.add_license=true;orderResp=await api("POST","/members/packages/order",body);orderId=orderResp.order_id;_wizardData.orderId=orderId;}}catch(err){if(err.existing_order_id){orderId=err.existing_order_id;_wizardData.orderId=orderId;}else{_wizardShow(`<div class="p-8 text-center space-y-4"><i class="fas fa-exclamation-circle text-red-400 text-3xl"></i><p class="text-red-400">Erreur lors de la création de commande.<br><span class="text-xs text-gray-500">${err.error||err.message||""}</span></p><button onclick="wizardStep4()" class="py-2 px-6 bg-dark-700 text-gray-300 rounded-xl text-sm"><i class="fas fa-arrow-left mr-1"></i>Retour</button></div>`);return;}}_wizardShow('<div class="p-10 flex flex-col items-center gap-4"><div class="loader"></div><p class="text-gray-400 text-sm">Redirection vers ${_wizardData.v2DisplayName}…</p></div>');try{const pspBody={payment_method_id:t,amount:n,return_url:window.location.href};if(_wizardData.isTopup)pspBody.topup_id=orderId;else if(licenseId)pspBody.license_id=licenseId;else pspBody.order_id=orderId;const pspResp=await api("POST","/psp/initiate",pspBody);if(pspResp.redirect_url){window.location.href=pspResp.redirect_url;}else{throw {error:"URL de redirection manquante"};}}catch(pspErr){_wizardShow(`<div class="p-8 text-center space-y-4"><i class="fas fa-exclamation-circle text-red-400 text-3xl"></i><p class="text-red-400">Erreur de paiement ${_wizardData.v2DisplayName}.<br><span class="text-xs text-gray-500">${pspErr.error||pspErr.message||""}</span></p><button onclick="wizardStep4()" class="py-2 px-6 bg-dark-700 text-gray-300 rounded-xl text-sm"><i class="fas fa-arrow-left mr-1"></i>Retour</button></div>`);}}async function wizardStep5(){const e=_gw,t=_wizardData.paymentMethod,n=_wizardData.totalAmt;_wizardData.orderId=null,_wizardShow('\n  <div class="p-10 flex flex-col items-center gap-4">\n    <div class="loader"></div>\n    <p class="text-gray-400 text-sm">Création de votre commande…</p>\n  </div>');try{let _apiResp;if(_wizardData.isTopup){
   // MODE RECHARGE WALLET — méthode legacy (bank, paypal, crypto, stripe, coinpayments, wallet, manual)
   // On crée le topup maintenant avec legacy_method pour que topupId soit disponible dans wizardSubmitProof
   _apiResp=await api("POST","/payment/topup/create",{legacy_method:t,amount:n});
