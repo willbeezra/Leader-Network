@@ -10,5 +10,11 @@
       "database_name": "leader-network-production",
       "database_id": "9f446266-de38-4dd1-8201-9cec9ec682c8"
     }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "FILES_KV",
+      "id": "e630c855226d41b59d4f5f4a229c3a26"
+    }
   ]
 }
