@@ -280,10 +280,11 @@ paymentRouter.post('/topup/submit-proof', async (c) => {
 
   if (!topup_id || !proof_url) return c.json({ error: 'topup_id et proof_url requis' }, 400)
 
+  // Accepte les statuts 'pending' ET 'proof_submitted' (re-soumission autorisée)
   const topup = await c.env.DB.prepare(
-    `SELECT * FROM wallet_topups WHERE id = ? AND member_id = ? AND status = 'pending'`
+    `SELECT * FROM wallet_topups WHERE id = ? AND member_id = ? AND status IN ('pending','proof_submitted')`
   ).bind(topup_id, memberId).first() as any
-  if (!topup) return c.json({ error: 'Demande de recharge introuvable' }, 404)
+  if (!topup) return c.json({ error: 'Demande de recharge introuvable ou déjà traitée' }, 404)
 
   await c.env.DB.prepare(`
     UPDATE wallet_topups SET status='proof_submitted', proof_url=?, reference=?, updated_at=datetime('now') WHERE id=?

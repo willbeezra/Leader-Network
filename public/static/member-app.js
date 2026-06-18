@@ -1349,6 +1349,220 @@ function doWithdrawConfirm(){const cfg=window._wdWithdrawConfig||{minWd:50,kycMa
 async function doWithdraw(){const p=window._wdCurrentPayload;if(!p)return;const btn=document.getElementById("wd-confirm-btn");const errEl=document.getElementById("wd-confirm-error");if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>Envoi...';}if(errEl)errEl.classList.add("hidden");try{await api("POST","/members/withdraw",p);closeModal();showToast("Demande de retrait soumise ! Traitement sous 24-48h.","success");showPage("wallet");}catch(e){if(errEl){errEl.textContent=e.error||"Erreur lors de la soumission";errEl.classList.remove("hidden");}if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-check mr-2"></i>Valider';}}}
 
 let _wdActiveMethod="paypal";window._wdActiveMethod="paypal";function wdSwitchMethod(method){window._wdActiveMethod=method;_wdActiveMethod=method;const methods=["paypal","bank_transfer","crypto"];methods.forEach(m=>{const tab=document.getElementById("wd-tab-"+m);const panel=document.getElementById("wd-panel-"+m);if(tab){if(m===method){tab.classList.add("bg-rouge-500","text-dark-900","border-rouge-500");tab.classList.remove("bg-dark-700","text-gray-400","border-dark-600");}else{tab.classList.remove("bg-rouge-500","text-dark-900","border-rouge-500");tab.classList.add("bg-dark-700","text-gray-400","border-dark-600");}}if(panel){panel.style.display=m===method?"block":"none";}});}function wdInitForm(){const info=window._memberPayoutInfo||{};const method=info.payout_method||"paypal";wdSwitchMethod(method);const setVal=(id,v)=>{if(v){const el=document.getElementById(id);if(el)el.value=v;}};setVal("wd-paypal",info.payout_paypal_email);setVal("wd-bank-holder",info.payout_bank_holder);setVal("wd-bank-iban",info.payout_bank_iban);setVal("wd-bank-bic",info.payout_bank_bic);setVal("wd-bank-name",info.payout_bank_name);setVal("wd-bank-account",info.payout_bank_account);setVal("wd-bank-address",info.payout_bank_address);setVal("wd-bank-city",info.payout_bank_city);setVal("wd-bank-country",info.payout_bank_country);setVal("wd-bank-swift",info.payout_bank_swift);setVal("wd-crypto-address",info.payout_crypto_address);setVal("wd-crypto-network",info.payout_crypto_network);setVal("wd-crypto-currency",info.payout_crypto_currency);}async function doConvertDreamiles(){let e=null;try{e=await api("GET","/members/dreamiles")}catch(e){return void showToast("Impossible de charger le solde Dreamiles","error")}const t=e?.wallet?.dreamiles||0;t<=0?showToast("Aucun Dreamile disponible à convertir","error"):showModal(`\n  <div class="p-6 space-y-5 max-w-sm mx-auto">\n    <div class="flex justify-between items-center">\n      <div class="flex items-center gap-3">\n        <div class="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center">\n          <i class="fas fa-sync text-yellow-400"></i>\n        </div>\n        <div>\n          <h3 class="font-bold text-white">Convertir des Dreamiles</h3>\n          <p class="text-xs text-gray-500">1 Dreamile = 1 $ dans votre wallet principal</p>\n        </div>\n      </div>\n      <button onclick="closeModal()" class="text-gray-400 hover:text-white"><i class="fas fa-times"></i></button>\n    </div>\n\n    <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-3 text-center">\n      <div class="text-xs text-gray-400 mb-1">Solde disponible</div>\n      <div class="text-2xl font-bold text-yellow-400">${t.toLocaleString()} <span class="text-base">DRM</span></div>\n      <div class="text-xs text-yellow-600 mt-0.5">≈ ${fmt$(t)}</div>\n    </div>\n\n    <div>\n      <label class="form-label">Nombre de Dreamiles à convertir</label>\n      <input id="drm-convert-amount" type="number" min="1" max="${t}" step="1"\n        class="form-input" value="${t}" placeholder="Ex: 100">\n      <button onclick="document.getElementById('drm-convert-amount').value='${t}'"\n        class="text-xs text-yellow-400 hover:underline mt-1">Tout convertir (${t.toLocaleString()} DRM)</button>\n    </div>\n\n    <div id="drm-convert-error" class="text-red-400 text-sm hidden"></div>\n\n    <div class="flex gap-3">\n      <button onclick="closeModal()" class="flex-1 py-3 bg-dark-700 text-gray-300 rounded-xl hover:bg-dark-600 transition text-sm">Annuler</button>\n      <button onclick="confirmConvertDreamiles(${t})"\n        class="flex-1 py-3 bg-yellow-500 text-dark-900 font-bold rounded-xl hover:bg-yellow-400 transition text-sm">\n        <i class="fas fa-sync mr-2"></i>Convertir\n      </button>\n    </div>\n  </div>`)}async function confirmConvertDreamiles(e){const t=parseInt(document.getElementById("drm-convert-amount").value),n=document.getElementById("drm-convert-error");if(n.classList.add("hidden"),!t||t<=0)return n.textContent="Montant invalide",void n.classList.remove("hidden");if(t>e)return n.textContent=`Maximum disponible : ${e} DRM`,void n.classList.remove("hidden");try{const e=await api("POST","/members/dreamiles/convert",{dreamiles:t});closeModal(),showToast(`${t.toLocaleString()} Dreamiles convertis → ${fmt$(e.usd_credited)} crédités dans votre wallet !`),showPage("wallet")}catch(e){n.textContent=e.error||"Erreur lors de la conversion",n.classList.remove("hidden")}}const TX_TYPE_CONFIG={prime_leadership_daily:{label:"Prime Leadership",badge:"bg-emerald-500/15 text-emerald-400",icon:"fa-crown",group:"Versement journalier"},fast_start_daily:{label:"Fast Start",badge:"bg-emerald-500/15 text-emerald-400",icon:"fa-rocket",group:"Versement journalier"},valorisation_recommandation_daily:{label:"Valorisation Reco.",badge:"bg-emerald-500/15 text-emerald-400",icon:"fa-handshake",group:"Versement journalier"},bonus_influence_daily:{label:"Bonus Influence",badge:"bg-purple-500/15 text-purple-400",icon:"fa-sitemap",group:"Versement journalier"},bonus_rayonnement_daily:{label:"Bonus Rayonnement",badge:"bg-cyan-500/15 text-cyan-400",icon:"fa-sun",group:"Versement journalier"},credit_daily:{label:"Versement journalier",badge:"bg-emerald-500/15 text-emerald-400",icon:"fa-calendar-day",group:"Versement journalier"},prime_leadership:{label:"Prime Leadership",badge:"bg-rouge-500/15 text-rouge-400",icon:"fa-crown",group:"Commission créditée"},fast_start:{label:"Fast Start Bonus",badge:"bg-green-500/15 text-green-400",icon:"fa-rocket",group:"Commission créditée"},valorisation_recommandation:{label:"Valorisation Reco.",badge:"bg-blue-500/15 text-blue-400",icon:"fa-handshake",group:"Commission créditée"},bonus_influence:{label:"Bonus d'Influence",badge:"bg-purple-500/15 text-purple-400",icon:"fa-sitemap",group:"Commission créditée"},bonus_rayonnement:{label:"Bonus de Rayonnement",badge:"bg-cyan-500/15 text-cyan-400",icon:"fa-sun",group:"Commission créditée"},reserve_strategique:{label:"Réserve Stratégique",badge:"bg-amber-500/15 text-amber-400",icon:"fa-piggy-bank",group:"Commission créditée"},credit_croissance:{label:"Crédit de Croissance",badge:"bg-teal-500/15 text-teal-400",icon:"fa-chart-line",group:"Commission créditée"},commission:{label:"Commission",badge:"bg-green-500/15 text-green-400",icon:"fa-coins",group:"Commission créditée"},dreamiles_conversion:{label:"Conversion Luxia",badge:"bg-yellow-500/15 text-yellow-400",icon:"fa-gem",group:"Conversion"},retrait:{label:"Retrait demandé",badge:"bg-red-500/15 text-red-400",icon:"fa-paper-plane",group:"Retrait"},debit_withdrawal:{label:"Retrait exécuté",badge:"bg-red-500/15 text-red-400",icon:"fa-arrow-up-right-from-square",group:"Retrait"},withdrawal:{label:"Retrait",badge:"bg-red-500/15 text-red-400",icon:"fa-paper-plane",group:"Retrait"},retrait_paypal:{label:"Retrait PayPal",badge:"bg-red-500/15 text-red-400",icon:"fa-paper-plane",group:"Retrait"},package_purchase:{label:"Achat Package",badge:"bg-blue-500/15 text-blue-400",icon:"fa-box-open",group:"Achat"},package_upgrade:{label:"Upgrade Package",badge:"bg-indigo-500/15 text-indigo-400",icon:"fa-arrow-up",group:"Achat"},license_purchase:{label:"Achat Licence",badge:"bg-orange-500/15 text-orange-400",icon:"fa-id-card",group:"Achat"},withdrawal:{label:"Retrait",badge:"bg-red-500/15 text-red-400",icon:"fa-paper-plane",group:"Retrait"}},TX_DETAIL_LABELS={prime_leadership:{title:"Prime de Leadership",color:"text-rouge-400",icon:"fa-crown",desc:"Prime mensuelle basée sur le volume de réseau (BV) généré par les deux jambes."},fast_start:{title:"Fast Start Bonus",color:"text-green-400",icon:"fa-rocket",desc:"Bonus de démarrage rapide attribué selon le BV accumulé dans les premiers jours."},valorisation_recommandation:{title:"Valorisation Recommandation",color:"text-blue-400",icon:"fa-handshake",desc:"Bonus versé pour chaque parrainage direct ayant activé un package."},bonus_influence:{title:"Bonus d'Influence",color:"text-purple-400",icon:"fa-sitemap",desc:"Bonus calculé sur la Prime de Leadership d'un membre de la downline (chaîne sponsor, 5 niveaux)."},bonus_rayonnement:{title:"Bonus de Rayonnement",color:"text-cyan-400",icon:"fa-sun",desc:"10% de la Prime de Leadership de chaque filleul direct ayant validé les conditions du mois."},reserve_strategique:{title:"Réserve Stratégique",color:"text-amber-400",icon:"fa-piggy-bank",desc:"Épargne constituée sur 3 ans, abondée par le réseau. Libération progressive au terme."},credit_croissance:{title:"Crédit de Croissance",color:"text-teal-400",icon:"fa-chart-line",desc:"Crédit différé utilisable pour l'activation ou le renouvellement de packages."}},INFLUENCE_LEVEL_PCT={1:5,2:4,3:3,4:2,5:1};function _parseTxInfluenceLevel(e){if(!e)return null;const t=e.match(/Niveau\s+(\d)/i);return t?parseInt(t[1]):null}function _parseTxRayonnementName(e){if(!e)return null;const t=e.match(/Bonus de Rayonnement\s+—\s+(.+?)\s+—/);return t?t[1].trim():null}function _buildSourceSection(e){const t=e.transaction_type||e.tx_type||"";if(!["bonus_influence","bonus_rayonnement","valorisation_recommandation"].includes(t))return"";let n=e.source_name||null,a=e.source_unique_id||null,s=e.source_rank||null;n||"bonus_rayonnement"!==t||(n=_parseTxRayonnementName(e.description));let r="",i="",l="";if("bonus_influence"===t){const t=_parseTxInfluenceLevel(e.description),n=t&&INFLUENCE_LEVEL_PCT[t]||null;t&&(r=`<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 text-xs font-semibold">\n                      <i class="fas fa-layer-group text-[10px]"></i> Niveau ${t}\n                    </span>`),n&&(i=`<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 text-xs font-medium">\n                    ${n}%\n                  </span>`),n&&e.amount&&(l=`\n        <div class="flex justify-between items-center py-1.5 border-t border-dark-600 mt-2">\n          <span class="text-xs text-gray-500">Prime de base (source)</span>\n          <span class="text-xs font-semibold text-gray-200">${fmt$(Math.abs(e.amount)/(n/100))}</span>\n        </div>`)}"bonus_rayonnement"===t&&(i='<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 text-xs font-medium">\n                  10%\n                </span>',e.amount)&&(l=`\n        <div class="flex justify-between items-center py-1.5 border-t border-dark-600 mt-2">\n          <span class="text-xs text-gray-500">Prime de base (filleul)</span>\n          <span class="text-xs font-semibold text-gray-200">${fmt$(Math.abs(e.amount)/.1)}</span>\n        </div>`);const d=n||"—";return`\n    <div class="bg-dark-700 rounded-xl p-4 mt-3 border border-dark-600/60">\n      <div class="text-xs text-gray-400 mb-3 uppercase tracking-wide font-semibold flex items-center gap-2">\n        <i class="fas fa-user-circle text-gray-500"></i>\n        ${{bonus_influence:"Membre source (downline)",bonus_rayonnement:"Filleul direct",valorisation_recommandation:"Filleul parrainé"}[t]||"Généré par"}\n      </div>\n      <div class="flex items-center gap-3">\n        <div class="w-10 h-10 rounded-full ${{bonus_influence:"text-purple-400 bg-purple-500/15",bonus_rayonnement:"text-cyan-400 bg-cyan-500/15",valorisation_recommandation:"text-blue-400 bg-blue-500/15"}[t]||"text-gray-400 bg-dark-600"} flex items-center justify-center text-sm font-bold flex-shrink-0">\n          ${"—"!==d?d.charAt(0).toUpperCase():"?"}\n        </div>\n        <div class="flex-1 min-w-0">\n          <div class="font-semibold text-white text-sm truncate">${d}</div>\n          <div class="text-xs text-gray-400 mt-0.5 flex items-center gap-2 flex-wrap">\n            ${a?`<span class="font-mono">${a}</span>`:""}\n            ${s?`<span class="inline-flex items-center gap-1"><i class="fas fa-medal text-[10px] text-rouge-400"></i>${s}</span>`:""}\n          </div>\n        </div>\n        <div class="flex flex-col items-end gap-1 flex-shrink-0">\n          ${r}\n          ${i}\n        </div>\n      </div>\n      ${l}\n    </div>`}let _txModalData=null;function showTxDetail(e){const t="string"==typeof e?JSON.parse(e):e;_txModalData=t;const n=TX_TYPE_CONFIG[t.transaction_type||t.tx_type]||TX_TYPE_CONFIG.commission,a=TX_DETAIL_LABELS[t.transaction_type]||null,s=(t.amount??0)>=0,r=_buildSourceSection(t),i=t.comm_period?`\n    <div class="flex justify-between items-center py-2 border-b border-dark-600">\n      <span class="text-xs text-gray-400">Période</span>\n      <span class="text-sm font-medium text-white">${t.comm_period}</span>\n    </div>`:"";document.getElementById("tx-detail-modal")?.remove();const l=document.createElement("div");l.id="tx-detail-modal",l.className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4",l.innerHTML=`\n    \x3c!-- Overlay --\x3e\n    <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeTxModal()"></div>\n    \x3c!-- Panel --\x3e\n    <div class="relative w-full max-w-md bg-dark-800 border border-dark-600 rounded-2xl shadow-2xl overflow-hidden animate-slide-up">\n      \x3c!-- Header coloré selon type --\x3e\n      <div class="px-5 py-4 border-b border-dark-600 flex items-center justify-between gap-3">\n        <div class="flex items-center gap-3">\n          <div class="w-10 h-10 rounded-full flex items-center justify-center ${s?"bg-emerald-500/20":"bg-red-500/20"}">\n            <i class="fas ${n?.icon||"fa-circle"} ${s?"text-emerald-400":"text-red-400"}"></i>\n          </div>\n          <div>\n            <div class="font-bold text-white text-sm">${n?.label||t.transaction_type}</div>\n            <div class="text-xs text-gray-400">${n?.group||"Transaction"}</div>\n          </div>\n        </div>\n        <button onclick="closeTxModal()" class="w-8 h-8 rounded-lg bg-dark-700 hover:bg-dark-600 flex items-center justify-center text-gray-400 hover:text-white transition">\n          <i class="fas fa-times text-sm"></i>\n        </button>\n      </div>\n\n      \x3c!-- Corps --\x3e\n      <div class="p-5 space-y-1 max-h-[75vh] overflow-y-auto">\n        \x3c!-- Montant principal --\x3e\n        <div class="text-center py-4">\n          <div class="text-3xl font-black ${s?"text-emerald-400":"text-red-400"}">\n            ${s?"+":"−"}${fmt$(Math.abs(t.amount??0))}\n          </div>\n          <div class="text-xs text-gray-400 mt-1">${{principal:"Principal (disponible)",pending:"En attente (M+1)",dreamiles:"Luxia (Dreamiles)"}[t.wallet_type]||t.wallet_type||"Wallet"}</div>\n        </div>\n\n        \x3c!-- Données de mouvement --\x3e\n        <div class="bg-dark-700 rounded-xl p-4 space-y-0">\n          <div class="flex justify-between items-center py-2 border-b border-dark-600">\n            <span class="text-xs text-gray-400">Date</span>\n            <span class="text-sm font-medium text-white">${fmtDate(t.created_at)}</span>\n          </div>\n          ${i}\n          <div class="flex justify-between items-center py-2 border-b border-dark-600">\n            <span class="text-xs text-gray-400">Solde avant</span>\n            <span class="text-sm text-gray-300">${null!=t.balance_before?fmt$(Math.abs(t.balance_before)):"—"}</span>\n          </div>\n          <div class="flex justify-between items-center py-2">\n            <span class="text-xs text-gray-400">Solde après</span>\n            <span class="text-sm font-semibold text-white">${null!=t.balance_after?fmt$(Math.abs(t.balance_after)):"—"}</span>\n          </div>\n        </div>\n\n        \x3c!-- Membre source (section enrichie) --\x3e\n        ${r}\n\n        \x3c!-- Explication du type --\x3e\n        ${a?`\n        <div class="bg-dark-700/50 border border-dark-600 rounded-xl p-4 mt-2">\n          <div class="flex items-center gap-2 mb-2">\n            <i class="fas ${a.icon} ${a.color} text-sm"></i>\n            <span class="text-xs font-semibold ${a.color}">${a.title}</span>\n          </div>\n          <p class="text-xs text-gray-400 leading-relaxed">${a.desc}</p>\n        </div>`:""}\n      </div>\n\n      \x3c!-- Footer --\x3e\n      <div class="px-5 pb-5 pt-3 border-t border-dark-600">\n        <button onclick="closeTxModal()" class="w-full bg-dark-700 hover:bg-dark-600 text-gray-300 font-semibold py-3 rounded-xl transition text-sm">\n          Fermer\n        </button>\n      </div>\n    </div>`,document.body.appendChild(l)}function closeTxModal(){document.getElementById("tx-detail-modal")?.remove(),_txModalData=null}async function renderTransactions(e,page,perPage){page=page||window._txPage||1;perPage=perPage||window._txPerPage||25;window._txPage=page;window._txPerPage=perPage;e.innerHTML='<div class="flex items-center justify-center py-16"><div class="loader"></div></div>';try{const resp=await api("GET","/members/transactions?page="+page+"&per_page="+perPage);const t=resp.transactions||[],total=resp.total||t.length;const statusBadgeTx=function(s){const map={validated:"bg-emerald-500/15 text-emerald-400",pending:"bg-amber-500/15 text-amber-400",approved:"bg-emerald-500/15 text-emerald-400",rejected:"bg-red-500/15 text-red-400",cancelled:"bg-gray-500/15 text-gray-400",processing:"bg-blue-500/15 text-blue-400"};const lbl={validated:"Validé",pending:"En attente",approved:"Approuvé",rejected:"Rejeté",cancelled:"Annulé",processing:"En cours"};return'<span class="text-[10px] px-1.5 py-0.5 rounded-full '+(map[s]||"bg-gray-500/15 text-gray-400")+'">'+(lbl[s]||s||"—")+"</span>";};let rows="";for(const row of t){const isCredit=(row.amount??0)>=0;const txType=row.tx_type||row.transaction_type||"";const cfg=TX_TYPE_CONFIG[txType]||TX_TYPE_CONFIG.commission;const desc=row.description||"—";const balAfter=null!=row.balance_after?fmt$(Math.abs(row.balance_after)):"—";const srcLine=row.source_name?'<div class="text-[10px] text-gray-500 mt-0.5 truncate max-w-[180px]">de '+row.source_name+"</div>":" ";const pkgLine=row.package_name?'<div class="text-[10px] text-indigo-400/70 mt-0.5">'+row.package_name+"</div>":" ";const encoded=encodeURIComponent(JSON.stringify(row));rows+='<tr class="cursor-pointer hover:bg-dark-700/60 transition-colors group" onclick="showTxDetail(decodeURIComponent(\x27'+encoded+'\x27))"><td class="text-gray-400 text-xs whitespace-nowrap">'+fmtDate(row.created_at)+'</td><td><span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full '+(cfg?.badge||"bg-gray-500/15 text-gray-400")+'"><i class="fas '+(cfg?.icon||"fa-circle")+' text-[10px]"></i>'+(cfg?.label||txType||"—")+"</span></td>"+'<td class="text-gray-300 text-sm max-w-[220px]"><div class="truncate" title="'+desc+'">'+desc+"</div>"+srcLine+pkgLine+"</td>"+"<td>"+statusBadgeTx(row.status)+"</td>"+'<td class="text-right font-bold whitespace-nowrap '+(isCredit?"text-green-400":"text-red-400")+'">'+(isCredit?"+":"−")+fmt$(Math.abs(row.amount??0))+"</td>"+'<td class="text-right font-medium text-white text-sm whitespace-nowrap">'+balAfter+'</td><td class="text-center"><i class="fas fa-chevron-right text-gray-600 group-hover:text-gray-400 text-[10px] transition-colors"></i></td></tr>';}const emptyState='<div class="bg-dark-800 border border-dark-600 rounded-2xl p-12 text-center"><div class="w-16 h-16 rounded-full bg-dark-700 flex items-center justify-center mx-auto mb-4"><i class="fas fa-receipt text-gray-600 text-2xl"></i></div><h3 class="text-gray-400 font-medium mb-2">Aucune transaction pour le moment</h3><p class="text-gray-600 text-sm">Vos bonus, achats de packages, licences et retraits apparaîtront ici.</p></div>';const tableHtml=0===t.length?emptyState:'<div class="text-xs text-gray-500 flex items-center gap-2 mb-2"><i class="fas fa-hand-pointer text-gray-600"></i>Cliquez sur une ligne pour voir le détail</div><div class="bg-dark-800 border border-dark-600 rounded-2xl overflow-hidden"><div class="overflow-x-auto"><table class="data-table w-full"><thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Statut</th><th class="text-right">Montant</th><th class="text-right">Solde après</th><th class="text-center w-8"></th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';e.innerHTML='<div class="space-y-5"><div class="flex items-center justify-between flex-wrap gap-2"><div><h2 class="text-xl font-bold text-white">Toutes les transactions</h2><p class="text-xs text-gray-500 mt-0.5">'+total+' opération'+(total>1?"s":"")+" au total</p></div>"+'<button onclick="showPage(\'wallet\')" class="text-xs text-rouge-400 hover:underline"><i class="fas fa-wallet mr-1"></i>Voir le portefeuille</button></div>'+tableHtml+'</div><div id="tx-pagination" class="px-4 py-3 border-t border-dark-600"></div>';renderPagination("tx-pagination",total,page,perPage,"(function(p){renderTransactions(document.getElementById(\'page-content\'),p,window._txPerPage)})","(function(pp,p){renderTransactions(document.getElementById(\'page-content\'),p,pp)})");}catch(err){e.innerHTML='<div class="p-4 text-red-400"><i class="fas fa-exclamation-circle mr-2"></i>Erreur : '+(err.error||err.message||String(err)||'Erreur inconnue')+"</div>";}}
+// ════════════════════════════════════════════════════════════════════════════════
+// FONCTIONS MANQUANTES : _showTopupModal, _showTransferModal, _walletPayOrder
+// ════════════════════════════════════════════════════════════════════════════════
+
+// _showTopupModal — Ouvrir le wizard en mode recharge wallet (topup)
+async function _showTopupModal(){
+  _wizardReset();
+  _wizardData.isTopup=true;
+  // Charger les gateways si pas encore disponibles
+  if(!_gw||!Object.keys(_gw).length){
+    _wizardShow('<div class="p-10 flex flex-col items-center gap-4"><div class="loader"></div><p class="text-gray-400 text-sm">Chargement des moyens de paiement…</p></div>');
+    try{
+      const r=await api("GET","/members/packages");
+      _gw=_buildGw(r.gateways||{});
+      _adminFeeInfo=r.adminFee||{amount:0,active:false,paid:true};
+    }catch(e){
+      _wizardShow(`<div class="p-8 text-center space-y-4"><i class="fas fa-exclamation-circle text-red-400 text-3xl"></i><p class="text-red-400">Impossible de charger les modes de paiement.<br><span class="text-xs text-gray-500">${e.error||e.message||""}</span></p><button onclick="wizardClose()" class="py-2 px-6 bg-dark-700 text-gray-300 rounded-xl text-sm">Fermer</button></div>`);
+      return;
+    }
+  }
+  // Afficher le sélecteur de montant avant de passer au choix de paiement
+  _wizardShow(`
+  <div class="px-6 pt-5 pb-3 border-b border-dark-600">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-xs font-semibold text-green-400 uppercase tracking-wider">Recharger mon Wallet</span>
+      <button onclick="wizardClose()" class="text-gray-400 hover:text-white w-7 h-7 flex items-center justify-center rounded-lg hover:bg-dark-700 text-lg">×</button>
+    </div>
+  </div>
+  <div class="p-6 space-y-5">
+    <div>
+      <h3 class="text-lg font-bold text-white">Montant de la recharge</h3>
+      <p class="text-sm text-gray-400 mt-1">Saisissez le montant que vous souhaitez ajouter à votre wallet.</p>
+    </div>
+    <div>
+      <label class="block text-sm text-gray-400 mb-2">Montant ($)</label>
+      <div class="relative">
+        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-green-400 font-bold text-lg">$</span>
+        <input id="topup-amount-input" type="number" min="10" step="1" placeholder="Ex : 100"
+          class="w-full bg-dark-700 border border-dark-500 rounded-xl pl-10 pr-4 py-3 text-white text-lg font-bold focus:border-green-400 focus:outline-none"
+          oninput="document.getElementById('topup-amount-err').classList.add('hidden')">
+      </div>
+      <div id="topup-amount-err" class="hidden mt-2 text-red-400 text-xs"></div>
+    </div>
+    <div class="grid grid-cols-4 gap-2">
+      ${[50,100,200,500].map(v=>`<button onclick="document.getElementById('topup-amount-input').value=${v}" class="py-2.5 bg-dark-700 hover:bg-green-900/30 border border-dark-500 hover:border-green-500/50 rounded-xl text-sm text-gray-300 hover:text-green-300 font-medium transition">$${v}</button>`).join('')}
+    </div>
+    <div class="flex gap-3">
+      <button onclick="wizardClose()" class="flex-1 py-3 bg-dark-700 text-gray-300 rounded-xl hover:bg-dark-600 transition text-sm">Annuler</button>
+      <button onclick="_topupConfirmAmount()" class="flex-1 py-3 bg-green-600 text-white font-bold rounded-xl hover:bg-green-500 transition text-sm">
+        <i class="fas fa-arrow-right mr-2"></i>Choisir le paiement
+      </button>
+    </div>
+  </div>`);
+}
+
+async function _topupConfirmAmount(){
+  const inp=document.getElementById('topup-amount-input');
+  const errEl=document.getElementById('topup-amount-err');
+  const amount=parseFloat(inp?.value||'0');
+  if(!amount||amount<10){
+    if(errEl){errEl.textContent='Montant minimum : $10';errEl.classList.remove('hidden');}
+    return;
+  }
+  // Vérifier le montant minimum depuis l'API
+  try{
+    const cfg=await api("GET","/payment/topup/config");
+    const minAmt=cfg.min_amount||10;
+    if(amount<minAmt){
+      if(errEl){errEl.textContent=`Montant minimum de recharge : $${minAmt}`;errEl.classList.remove('hidden');}
+      return;
+    }
+  }catch(e){}
+  _wizardData.totalAmt=amount;
+  wizardStep4();
+}
+
+// _showTransferModal — Ouvrir le modal de transfert wallet membre à membre
+async function _showTransferModal(){
+  // Charger config transfert
+  let transferCfg={min_amount:10,fee_type:'fixed',fee_value:0};
+  let walletBalance=0;
+  try{
+    const [cfgResp,walletResp]=await Promise.all([
+      api("GET","/payment/transfer/config"),
+      api("GET","/members/wallet")
+    ]);
+    transferCfg=cfgResp||transferCfg;
+    walletBalance=walletResp?.wallet?.balance||walletResp?.member?.wallet_balance||0;
+  }catch(e){}
+  const fee=transferCfg.fee_type==='percent'
+    ?`${transferCfg.fee_value}%`
+    :(transferCfg.fee_value>0?`$${transferCfg.fee_value} fixe`:'Aucun frais');
+  showModal(`
+  <div class="p-6 space-y-5 max-w-md mx-auto">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
+          <i class="fas fa-exchange-alt text-blue-400"></i>
+        </div>
+        <div>
+          <h3 class="font-bold text-white">Transfert vers un membre</h3>
+          <p class="text-xs text-gray-400">Solde disponible : <span class="text-green-400 font-semibold">$${Number(walletBalance).toLocaleString('en-US',{minimumFractionDigits:2})}</span></p>
+        </div>
+      </div>
+      <button onclick="closeModal()" class="text-gray-400 hover:text-white w-8 h-8 flex items-center justify-center rounded-lg hover:bg-dark-700 text-xl">×</button>
+    </div>
+
+    <div>
+      <label class="block text-sm text-gray-400 mb-1.5">ID LEADER du destinataire <span class="text-red-400">*</span></label>
+      <div class="flex gap-2">
+        <input id="tr-recipient-id" type="text" placeholder="Ex: LEAD123456"
+          class="flex-1 bg-dark-700 border border-dark-500 rounded-xl px-4 py-3 text-white uppercase placeholder-gray-500 focus:border-blue-400 focus:outline-none text-sm"
+          oninput="this.value=this.value.toUpperCase();document.getElementById('tr-recipient-info').innerHTML=''">
+        <button onclick="_transferLookup()" class="px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-medium transition">
+          <i class="fas fa-search"></i>
+        </button>
+      </div>
+      <div id="tr-recipient-info" class="mt-2"></div>
+    </div>
+
+    <div>
+      <label class="block text-sm text-gray-400 mb-1.5">Montant ($) <span class="text-red-400">*</span></label>
+      <div class="relative">
+        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-blue-400 font-bold">$</span>
+        <input id="tr-amount" type="number" min="${transferCfg.min_amount}" step="1" placeholder="Ex : 50"
+          class="w-full bg-dark-700 border border-dark-500 rounded-xl pl-9 pr-4 py-3 text-white font-bold focus:border-blue-400 focus:outline-none text-sm">
+      </div>
+      <p class="text-xs text-gray-500 mt-1">Minimum : $${transferCfg.min_amount} · Frais : ${fee}</p>
+    </div>
+
+    <div>
+      <label class="block text-sm text-gray-400 mb-1.5">PIN de sécurité <span class="text-red-400">*</span></label>
+      <input id="tr-pin" type="password" maxlength="6" placeholder="Votre PIN (4-6 chiffres)"
+        class="w-full bg-dark-700 border border-dark-500 rounded-xl px-4 py-3 text-white focus:border-blue-400 focus:outline-none text-sm tracking-widest">
+    </div>
+
+    <div>
+      <label class="block text-sm text-gray-400 mb-1.5">Note (optionnel)</label>
+      <input id="tr-note" type="text" placeholder="Motif du transfert…"
+        class="w-full bg-dark-700 border border-dark-500 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:border-blue-400 focus:outline-none text-sm">
+    </div>
+
+    <div id="tr-error" class="hidden bg-red-900/20 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm"></div>
+
+    <div class="flex gap-3">
+      <button onclick="closeModal()" class="flex-1 py-3 bg-dark-700 text-gray-300 rounded-xl hover:bg-dark-600 transition text-sm">Annuler</button>
+      <button onclick="_doTransfer()" id="tr-submit-btn" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-500 transition text-sm">
+        <i class="fas fa-paper-plane mr-2"></i>Envoyer
+      </button>
+    </div>
+  </div>`);
+}
+
+async function _transferLookup(){
+  const uid=document.getElementById('tr-recipient-id')?.value?.trim().toUpperCase();
+  const infoEl=document.getElementById('tr-recipient-info');
+  if(!uid||uid.length<4){if(infoEl)infoEl.innerHTML='<p class="text-red-400 text-xs">Identifiant requis (min 4 caractères)</p>';return;}
+  if(infoEl)infoEl.innerHTML='<div class="flex items-center gap-2 text-xs text-gray-400"><div class="loader-sm"></div>Recherche…</div>';
+  try{
+    const r=await api("POST","/payment/transfer/lookup",{unique_id:uid});
+    if(infoEl)infoEl.innerHTML=`<div class="flex items-center gap-2 mt-1 bg-green-900/20 border border-green-500/30 rounded-lg px-3 py-2"><i class="fas fa-check-circle text-green-400 text-sm"></i><span class="text-green-300 text-sm font-medium">${r.recipient.name} <span class="text-gray-400 font-normal">(${r.recipient.unique_id})</span></span></div>`;
+  }catch(e){
+    if(infoEl)infoEl.innerHTML=`<p class="text-red-400 text-xs mt-1"><i class="fas fa-times-circle mr-1"></i>${e.error||'Membre introuvable'}</p>`;
+  }
+}
+
+async function _doTransfer(){
+  const uid=document.getElementById('tr-recipient-id')?.value?.trim().toUpperCase();
+  const amount=parseFloat(document.getElementById('tr-amount')?.value||'0');
+  const pin=document.getElementById('tr-pin')?.value||'';
+  const note=document.getElementById('tr-note')?.value?.trim()||'';
+  const errEl=document.getElementById('tr-error');
+  const btn=document.getElementById('tr-submit-btn');
+  const hideErr=()=>errEl?.classList.add('hidden');
+  const showErr=(msg)=>{if(errEl){errEl.textContent=msg;errEl.classList.remove('hidden');}};
+  hideErr();
+  if(!uid)return showErr('Identifiant du destinataire requis');
+  if(!amount||amount<=0)return showErr('Montant invalide');
+  if(!pin||pin.length<4)return showErr('PIN requis (4-6 chiffres)');
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>Envoi…';}
+  try{
+    const r=await api("POST","/payment/transfer/send",{recipient_unique_id:uid,amount,pin,note:note||undefined});
+    closeModal();
+    showToast(`$${Number(r.amount_sent||amount).toLocaleString('en-US',{minimumFractionDigits:2})} envoyés avec succès !`,'success');
+    // Rafraîchir la page wallet
+    setTimeout(()=>{const el=document.getElementById('page-content');if(el)renderWallet(el);},800);
+  }catch(e){
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-paper-plane mr-2"></i>Envoyer';}
+    showErr(e.error||e.message||'Erreur lors du transfert');
+  }
+}
+
+// _walletPayOrder — Payer une commande package via le wallet LEADER
+async function _walletPayOrder(){
+  const btn=document.getElementById('wallet-pay-btn');
+  const orderId=_wizardData.orderId;
+  if(!orderId)return showToast('Identifiant de commande manquant','error');
+  if(btn){btn.disabled=true;btn.innerHTML='<div class="loader-sm mx-auto"></div>';}
+  try{
+    const r=await api("POST","/payment/wallet/pay-order",{order_id:orderId});
+    // Mettre à jour le solde affiché dans le header
+    if(r.new_balance!==undefined){
+      window._memberWalletBalance=r.new_balance;
+      const hb=document.getElementById('header-balance');
+      if(hb){hb.innerHTML='<span class="text-gray-400">Solde : </span><span class="text-rouge-400 font-bold">$'+Number(r.new_balance).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+'</span>';}
+    }
+    _wizardData.confirmationMsg=r.message||'Paiement effectué et commande activée !';
+    wizardStep7();
+  }catch(e){
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-wallet text-sm"></i> Confirmer le paiement';}
+    showToast(e.error||e.message||'Erreur lors du paiement','error');
+  }
+}
+
 let _wizardData={};let cp_enabled=!1,_cpCoins="USDT.TRC20,USDT.ERC20,BTC,ETH";function _wizardReset(){_wizardData={};_tw={};}let _gw={},_adminFeeInfo={amount:0,active:!1,paid:!0},_ppClientId=null,_ppSdkLoaded=!1,_ppSdkLoading=!1;async function _loadPayPalSdk(){if(!_ppClientId)try{const e=await api("GET","/members/paypal/config");if(!e.enabled)return!1;_ppClientId=e.client_id}catch(e){return!1}if(!_ppClientId)return!1;if(_ppSdkLoaded)return!0;if(_ppSdkLoading){for(let e=0;e<80;e++)if(await new Promise(e=>setTimeout(e,100)),_ppSdkLoaded)return!0;return!1}return _ppSdkLoading=!0,new Promise(e=>{const t=document.createElement("script");t.src=`https://www.paypal.com/sdk/js?client-id=${_ppClientId}&currency=USD&components=buttons&enable-funding=card,paylater&disable-funding=venmo`,t.onload=()=>{_ppSdkLoaded=!0,_ppSdkLoading=!1,e(!0)},t.onerror=()=>{_ppSdkLoading=!1,e(!1)},document.head.appendChild(t)})}async function _renderPayPalButtons(e,t,n,a){await _loadPayPalSdk()&&"undefined"!=typeof paypal?paypal.Buttons({style:{layout:"vertical",color:"gold",shape:"rect",label:"pay",height:45},createOrder:t,onApprove:async t=>{document.getElementById(e).innerHTML='<div class="flex flex-col items-center gap-3 py-4"><div class="loader"></div><p class="text-gray-400 text-sm">Confirmation du paiement…</p></div>';try{const e=await api("POST","/members/paypal/capture-order",{paypal_order_id:t.orderID});n(e)}catch(e){a(e?.error||e?.message||"Erreur lors de la capture du paiement")}},onError:e=>{a("Une erreur PayPal est survenue. Réessayez ou choisissez une autre méthode.")},onCancel:()=>{document.getElementById(e).innerHTML='<div class="text-yellow-400 text-sm text-center py-2"><i class="fas fa-times-circle mr-1"></i>Paiement annulé. Cliquez sur « Retour » pour recommencer.</div>'}}).render(`#${e}`):document.getElementById(e).innerHTML='<div class="text-red-400 text-sm text-center py-2"><i class="fas fa-exclamation-triangle mr-1"></i>SDK PayPal indisponible. Rechargez ou utilisez une autre méthode.</div>'}function _buildGw(e){return{paypal_email:e.paypal?.email||"",paypal_instructions:e.paypal?.instructions||"",paypal_active:"true"===e.paypal?.active,bank_name:e.bank?.name||"",bank_beneficiary:e.bank?.beneficiary||"",bank_iban:e.bank?.iban||"",bank_swift:e.bank?.swift||"",bank_instructions:e.bank?.instructions||"",bank_active:"true"===e.bank?.active,crypto_address:e.crypto?.address||"",crypto_network:e.crypto?.network||"",crypto_instructions:e.crypto?.instructions||"",crypto_active:"true"===e.crypto?.active,wallet_active:"true"===e.wallet?.active,wallet_balance:0,instructions:e.manual?.instructions||"",contact_email:e.manual?.contact_email||"",contact_phone:e.manual?.contact_phone||"",manual_active:"true"===e.manual?.active}}const CAT_THEME={"cat-synex":{gradient:"from-blue-950 via-dark-900 to-dark-900",border:"border-blue-500/30",cardBorder:"border-blue-500/25",accent:"text-blue-400",accentBg:"bg-blue-500/10",priceColor:"text-blue-300",btnClass:"bg-blue-600 hover:bg-blue-500",badgeBg:"bg-blue-500/15 border-blue-500/30 text-blue-300",checkColor:"text-blue-400",headerBg:"from-blue-900/50 to-dark-900",gridCols:"xl:grid-cols-4",catCardBg:"from-blue-950/80 to-dark-900",catCardHover:"hover:border-blue-400/60 hover:shadow-blue-900/40"},"cat-ezra":{gradient:"from-emerald-950 via-dark-900 to-dark-900",border:"border-emerald-500/30",cardBorder:"border-emerald-500/25",accent:"text-emerald-400",accentBg:"bg-emerald-500/10",priceColor:"text-emerald-300",btnClass:"bg-emerald-600 hover:bg-emerald-500",badgeBg:"bg-emerald-500/15 border-emerald-500/30 text-emerald-300",checkColor:"text-emerald-400",headerBg:"from-emerald-900/50 to-dark-900",gridCols:"xl:grid-cols-3",catCardBg:"from-emerald-950/80 to-dark-900",catCardHover:"hover:border-emerald-400/60 hover:shadow-emerald-900/40"},"cat-luxia":{gradient:"from-amber-950 via-dark-900 to-dark-900",border:"border-amber-500/30",cardBorder:"border-amber-500/25",accent:"text-amber-400",accentBg:"bg-amber-500/10",priceColor:"text-amber-300",btnClass:"bg-amber-600 hover:bg-amber-500",badgeBg:"bg-amber-500/15 border-amber-500/30 text-amber-300",checkColor:"text-amber-400",headerBg:"from-amber-900/50 to-dark-900",gridCols:"xl:grid-cols-2",catCardBg:"from-amber-950/80 to-dark-900",catCardHover:"hover:border-amber-400/60 hover:shadow-amber-900/40"},"cat-club":{gradient:"from-indigo-950 via-dark-900 to-dark-900",border:"border-indigo-500/30",cardBorder:"border-indigo-500/25",accent:"text-indigo-400",accentBg:"bg-indigo-500/10",priceColor:"text-indigo-300",btnClass:"bg-indigo-600 hover:bg-indigo-500",badgeBg:"bg-indigo-500/15 border-indigo-500/30 text-indigo-300",checkColor:"text-indigo-400",headerBg:"from-indigo-900/50 to-dark-900",gridCols:"xl:grid-cols-2",catCardBg:"from-indigo-950/80 to-dark-900",catCardHover:"hover:border-indigo-400/60 hover:shadow-indigo-900/40"},"cat-synex-triomarkets":{gradient:"from-orange-950 via-dark-900 to-dark-900",border:"border-orange-500/30",cardBorder:"border-orange-500/25",accent:"text-orange-400",accentBg:"bg-orange-500/10",priceColor:"text-orange-300",btnClass:"bg-orange-600 hover:bg-orange-500",badgeBg:"bg-orange-500/15 border-orange-500/30 text-orange-300",checkColor:"text-orange-400",headerBg:"from-orange-900/50 to-dark-900",gridCols:"xl:grid-cols-4",catCardBg:"from-orange-950/80 to-dark-900",catCardHover:"hover:border-orange-400/60 hover:shadow-orange-900/40"},_none:{gradient:"from-dark-800 to-dark-900",border:"border-dark-600",cardBorder:"border-dark-600",accent:"text-rouge-400",accentBg:"bg-rouge-500/10",priceColor:"text-rouge-400",btnClass:"bg-rouge-600 hover:bg-rouge-500",badgeBg:"bg-rouge-500/15 border-rouge-500/25 text-rouge-400",checkColor:"text-rouge-400",headerBg:"from-dark-700 to-dark-900",gridCols:"xl:grid-cols-3",catCardBg:"from-dark-800 to-dark-900",catCardHover:"hover:border-rouge-500/30"}},CAT_META_FALLBACK={_none:{icon:"[+]",desc:"Autres packages disponibles.",tag:""}};function getCatMeta(e,t){const n=t[e]||{},a=CAT_META_FALLBACK[e]||CAT_META_FALLBACK._none;return{icon:n.icon||a.icon,desc:n.desc||a.desc,tag:n.tag||a.tag}}function renderPkgCard(e,t,n){let a=[];try{a=JSON.parse(e.features||"[]")}catch{}const s="monthly"===e.pricing_type||"subscription"===e.payment_mode,r=`${"EUR"===e.currency?"€":"$"}${Number(e.price_usd).toLocaleString("fr-FR")}`,i=s?'<span class="text-base font-normal text-gray-400">/mois</span>':"",l=e.dreamiles_per_payment||0,d=[];let o=null;for(const e of a){const t=e.match(/^([A-ZÀÂÉÈÊËÎÏÔÙÛÜÇ ''&]+)\s*—\s*(.+)/u);if(t){const e=t[1].trim();o&&o.label===e||(o={label:e,items:[]},d.push(o)),o.items.push(t[2].trim())}else o||(o={label:"",items:[]},d.push(o)),o.items.push(e)}const c={"S'ÉDUQUER":"fa-book-open","CRÉER":"fa-hammer","PROTÉGER":"fa-shield-halved",MULTIPLIER:"fa-arrow-trend-up",PROFITER:"fa-star","IDÉAL POUR":"fa-bullseye"},x=d.map(e=>`\n    ${e.label?`\n    <div class="mt-5 mb-2">\n      <div class="flex items-center gap-2">\n        <i class="fas ${c[e.label]||"fa-circle-dot"} ${t.accent} text-xs"></i>\n        <span class="text-xs font-bold uppercase tracking-widest ${t.accent}">${e.label}</span>\n        <div class="flex-1 h-px bg-white/5"></div>\n      </div>\n    </div>`:""}\n    ${e.items.map(e=>`\n    <div class="flex items-start gap-2 py-1">\n      <i class="fas fa-check ${t.checkColor} text-xs mt-0.5 shrink-0"></i>\n      <span class="text-sm text-gray-300 leading-snug">${e}</span>\n    </div>`).join("")}\n  `).join("");return`\n  <div class="rounded-2xl border ${t.cardBorder} bg-gradient-to-b ${t.gradient} flex flex-col overflow-hidden hover:shadow-2xl hover:-translate-y-0.5 transition-all duration-300">\n    \x3c!-- En-tête prix --\x3e\n    <div class="bg-gradient-to-b ${t.headerBg} px-6 pt-6 pb-5 border-b ${t.cardBorder}">\n      <div class="flex items-start justify-between gap-2 mb-2">\n        <h3 class="text-xl font-extrabold text-white tracking-tight leading-tight">${e.name}</h3>\n        <span class="shrink-0 text-xs px-2.5 py-1 rounded-full border ${t.badgeBg} font-semibold whitespace-nowrap">\n          ${s?"Abonnement":"Unique"}\n        </span>\n      </div>\n      ${e.description?`<p class="text-xs text-gray-400 leading-relaxed mb-4 italic">${e.description}</p>`:""}\n      <div class="flex items-baseline gap-1 mb-4">\n        <span class="text-4xl font-black ${t.priceColor}">${r}</span>\n        ${i}\n      </div>\n      <div class="flex flex-wrap gap-2">\n        <span class="text-xs px-2.5 py-1 rounded-full ${t.accentBg} ${t.accent} border ${t.cardBorder} font-medium">\n          <i class="fas fa-chart-bar mr-1 text-xs"></i>${e.bv_value} BV\n        </span>\n        \x3c!-- Point 6 : direct_commission_rate masqué côté membre (confidentiel admin) --\x3e\n        ${l>0?`\n        <span class="text-xs px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">\n          <i class="fas fa-star mr-1 text-xs"></i>${l} Dreamiles/mois\n        </span>`:""}\n      </div>\n    </div>\n    \x3c!-- Features --\x3e\n    <div class="px-6 py-4 flex-1">\n      ${x}\n    </div>\n    \x3c!-- CTA --\x3e\n    <div class="px-6 pb-6 pt-3">\n      ${(()=>{const sameOwned=n.find(o=>o.package_id===e.id&&(o.status==='active'||o.status==='validated'));const superiorInCat=e.category_id&&n.find(o=>(o.status==='active'||o.status==='validated')&&o.category===e.category_id&&o.package_id!==e.id&&Number(o.bv_value)>=e.bv_value);const activeOrder=e.category_id&&n.find(o=>(o.status==='active'||o.status==='validated')&&o.category===e.category_id&&o.package_id!==e.id&&Number(o.bv_value)<e.bv_value);if(e.payment_mode==='broker'){
   var _brRegs=window._brokerRegs||[];
   var _brReg=_brRegs.find(function(r){return r.package_id===e.id;});
