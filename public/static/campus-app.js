@@ -68,7 +68,10 @@ async function showCampusPage(container) {
     // ── Stocker la config globalement pour renderCampusCourseCard ─────────────
     window._campusConfig = config;
 
-    // ── TOUJOURS : landing en premier, catalogue en dessous ───────────────────
+    // ── Mettre en cache les données pour la page catalogue ───────────────────
+    window._campusLastData = { courses, categories, has_campus_access, config, campus_logo };
+
+    // ── TOUJOURS : afficher la landing ────────────────────────────────────────
     _renderCampusFullPage(mainContent, courses, categories, !!has_campus_access, config, campus_logo);
     console.log('[Campus] rendu terminé');
 
@@ -186,19 +189,19 @@ function _renderCampusFullPage(mainContent, courses, categories, hasAccess, conf
           <!-- CTAs -->
           <div class="cl-cta-group">
             ${hasAccess
-              ? `<button class="cl-cta-primary" onclick="_campusScrollToCatalog()">
+              ? `<button class="cl-cta-primary" onclick="showCampusCatalogPage()">
                    <i class="fas fa-play-circle"></i> ${ctaAccess}
                  </button>`
               : `<button class="cl-cta-primary" onclick="campusGoToPackages()">
                    <i class="fas fa-unlock-alt"></i> ${ctaGetAccess}
                  </button>`
             }
-            <button class="cl-cta-secondary" onclick="_campusScrollToCatalog()">
+            <button class="cl-cta-secondary" onclick="showCampusCatalogPage()">
               <i class="fas fa-eye"></i> ${ctaExplore}
             </button>
           </div>
 
-          <div class="cl-scroll-hint" onclick="_campusScrollToCatalog()">
+          <div class="cl-scroll-hint" onclick="showCampusCatalogPage()">
             <span>${ctaScroll}</span>
             <i class="fas fa-chevron-down cl-scroll-arrow"></i>
           </div>
@@ -247,65 +250,27 @@ function _renderCampusFullPage(mainContent, courses, categories, hasAccess, conf
         </div>
       </section>
 
-      <!-- ══════════ BANNIÈRE ACCÈS ══════════ -->
-      ${!hasAccess ? `
-      <section class="cl-access-banner">
-        <div class="cl-access-banner-inner">
-          <div class="cl-access-banner-icon"><i class="fas fa-lock"></i></div>
-          <div class="cl-access-banner-text">
-            <strong>${bannerTitle}</strong>
-            <span>${bannerDesc}</span>
-          </div>
-          <button class="cl-cta-primary cl-access-banner-btn" onclick="campusGoToPackages()">
-            <i class="fas fa-rocket"></i> ${bannerCta}
-          </button>
-        </div>
+      <!-- ══════════ CTA FINAL ══════════ -->
+      <section class="cl-final-cta">
+        ${hasAccess
+          ? `<button class="cl-cta-primary cl-cta-large" onclick="showCampusCatalogPage()">
+               <i class="fas fa-play-circle"></i> ${ctaAccess}
+             </button>`
+          : `<div class="cl-final-cta-locked">
+               <div class="cl-access-banner-icon"><i class="fas fa-lock"></i></div>
+               <div class="cl-access-banner-text">
+                 <strong>${bannerTitle}</strong>
+                 <span>${bannerDesc}</span>
+               </div>
+               <button class="cl-cta-primary" onclick="campusGoToPackages()">
+                 <i class="fas fa-rocket"></i> ${bannerCta}
+               </button>
+               <button class="cl-cta-secondary" style="margin-top:8px" onclick="showCampusCatalogPage()">
+                 <i class="fas fa-eye"></i> ${ctaExplore}
+               </button>
+             </div>`
+        }
       </section>
-      ` : ''}
-
-      <!-- ══════════ CATALOGUE ══════════ -->
-      <div id="campus-catalog-anchor" class="campus-wrap" style="padding-top:0">
-        <div class="campus-filters">
-          <div class="campus-filter-tabs">
-            <button class="campus-filter-tab active" onclick="campusFilterBy('all')">
-              <i class="fas fa-th-large"></i> Tout
-            </button>
-            ${categories.map(cat => `
-              <button class="campus-filter-tab" onclick="campusFilterBy('${cat.id}')"
-                      style="--cat-color:${cat.color}">
-                <i class="fas ${cat.icon}"></i> ${cat.name}
-              </button>
-            `).join('')}
-          </div>
-          <div class="campus-search-wrap">
-            <i class="fas fa-search"></i>
-            <input type="text" id="campus-search-input" placeholder="Rechercher une formation..."
-                   oninput="campusSearch(this.value)" autocomplete="off">
-          </div>
-        </div>
-
-        <div id="campus-catalog">
-          ${[...catMap.values()].filter(cat => cat.courses.length > 0).map(cat => `
-            <section class="campus-section" data-cat="${cat.id}">
-              <div class="campus-section-header">
-                <div class="campus-section-badge" style="background:${cat.color}20;border-color:${cat.color}40">
-                  <i class="fas ${cat.icon}" style="color:${cat.color}"></i>
-                  <span style="color:${cat.color}">${cat.name}</span>
-                </div>
-                <span class="campus-section-count">${cat.courses.length} formation${cat.courses.length > 1 ? 's' : ''}</span>
-              </div>
-              <div class="campus-grid">
-                ${cat.courses.map(course => renderCampusCourseCard(course)).join('')}
-              </div>
-            </section>
-          `).join('')}
-        </div>
-
-        <div id="campus-empty" class="campus-empty" style="display:none">
-          <i class="fas fa-search"></i>
-          <p>Aucune formation trouvée</p>
-        </div>
-      </div>
 
     </div>
   `;
@@ -320,7 +285,135 @@ function _campusScrollToCatalog() {
 // ── Fonctions legacy supprimées — remplacées par _renderCampusFullPage ────────
 function _renderCampusLanding(el, courses, categories) { _renderCampusFullPage(el, courses, categories, false); }
 function _renderCampusCatalog(el, courses, categories)  { _renderCampusFullPage(el, courses, categories, true);  }
-function _campusPreviewCatalog() { _campusScrollToCatalog(); }
+function _campusPreviewCatalog() { showCampusCatalogPage(); }
+
+// ── Page catalogue autonome (séparée de la landing) ───────────────────────────
+async function showCampusCatalogPage(container) {
+  const mainContent = container || document.getElementById('page-content') || document.getElementById('main-content');
+  if (!mainContent) return;
+
+  // Si les données sont en cache, on les utilise directement
+  const cached = window._campusLastData;
+  if (cached) {
+    _renderCampusCatalogOnly(mainContent, cached.courses, cached.categories, !!cached.has_campus_access, cached.config || {});
+    return;
+  }
+
+  // Sinon on recharge
+  mainContent.innerHTML = `
+    <div class="campus-loading">
+      <div class="campus-loading-inner">
+        <i class="fas fa-graduation-cap campus-loading-icon"></i>
+        <p>Chargement des formations...</p>
+      </div>
+    </div>
+  `;
+  try {
+    const res = await campusFetch('/api/campus');
+    const data = await res.json();
+    const { categories, courses, has_campus_access, config = {} } = data;
+    window._campusConfig = config;
+    window._campusLastData = { courses, categories, has_campus_access, config, campus_logo: data.campus_logo };
+    _renderCampusCatalogOnly(mainContent, courses, categories, !!has_campus_access, config);
+  } catch (err) {
+    mainContent.innerHTML = `
+      <div class="campus-error">
+        <i class="fas fa-exclamation-circle"></i>
+        <p>Erreur de chargement</p>
+        <button onclick="showCampusCatalogPage()">Réessayer</button>
+      </div>
+    `;
+  }
+}
+
+function _renderCampusCatalogOnly(mainContent, courses, categories, hasAccess, config = {}) {
+  const cfg = (key, fallback) => (config[key] !== undefined && config[key] !== '') ? config[key] : fallback;
+  const bannerTitle = cfg('campus_banner_title', 'Les formations ci-dessous sont verrouillées');
+  const bannerDesc  = cfg('campus_banner_desc',  'L\'accès Campus est inclus dans certains packages LEADER.');
+  const bannerCta   = cfg('campus_banner_cta',   'Voir les packages');
+
+  // Grouper par catégorie
+  const catMap = new Map();
+  for (const cat of categories) catMap.set(cat.id, { ...cat, courses: [] });
+  for (const course of courses) {
+    if (catMap.has(course.category_id)) catMap.get(course.category_id).courses.push(course);
+  }
+
+  mainContent.innerHTML = `
+    <div class="campus-catalog-page">
+
+      <!-- ── Header avec bouton retour ── -->
+      <div class="campus-catalog-header">
+        <button class="campus-back-btn" onclick="showCampusPage()">
+          <i class="fas fa-arrow-left"></i> Retour à la présentation
+        </button>
+        <h2 class="campus-catalog-title">
+          <i class="fas fa-graduation-cap"></i> Mes Formations
+        </h2>
+      </div>
+
+      <!-- ── Bannière si pas d'accès ── -->
+      ${!hasAccess ? `
+      <div class="cl-access-banner" style="margin-bottom:20px">
+        <div class="cl-access-banner-inner">
+          <div class="cl-access-banner-icon"><i class="fas fa-lock"></i></div>
+          <div class="cl-access-banner-text">
+            <strong>${bannerTitle}</strong>
+            <span>${bannerDesc}</span>
+          </div>
+          <button class="cl-cta-primary cl-access-banner-btn" onclick="campusGoToPackages()">
+            <i class="fas fa-rocket"></i> ${bannerCta}
+          </button>
+        </div>
+      </div>
+      ` : ''}
+
+      <!-- ── Filtres + recherche ── -->
+      <div class="campus-filters">
+        <div class="campus-filter-tabs">
+          <button class="campus-filter-tab active" onclick="campusFilterBy('all')">
+            <i class="fas fa-th-large"></i> Tout
+          </button>
+          ${categories.map(cat => `
+            <button class="campus-filter-tab" onclick="campusFilterBy('${cat.id}')"
+                    style="--cat-color:${cat.color}">
+              <i class="fas ${cat.icon}"></i> ${cat.name}
+            </button>
+          `).join('')}
+        </div>
+        <div class="campus-search-wrap">
+          <i class="fas fa-search"></i>
+          <input type="text" id="campus-search-input" placeholder="Rechercher une formation..."
+                 oninput="campusSearch(this.value)" autocomplete="off">
+        </div>
+      </div>
+
+      <!-- ── Catalogue ── -->
+      <div id="campus-catalog">
+        ${[...catMap.values()].filter(cat => cat.courses.length > 0).map(cat => `
+          <section class="campus-section" data-cat="${cat.id}">
+            <div class="campus-section-header">
+              <div class="campus-section-badge" style="background:${cat.color}20;border-color:${cat.color}40">
+                <i class="fas ${cat.icon}" style="color:${cat.color}"></i>
+                <span style="color:${cat.color}">${cat.name}</span>
+              </div>
+              <span class="campus-section-count">${cat.courses.length} formation${cat.courses.length > 1 ? 's' : ''}</span>
+            </div>
+            <div class="campus-grid">
+              ${cat.courses.map(course => renderCampusCourseCard(course)).join('')}
+            </div>
+          </section>
+        `).join('')}
+      </div>
+
+      <div id="campus-empty" class="campus-empty" style="display:none">
+        <i class="fas fa-search"></i>
+        <p>Aucune formation trouvée</p>
+      </div>
+
+    </div>
+  `;
+}
 
 function renderCampusCourseCard(course) {
   // ── Configs badges depuis landing_config (100% configurables admin) ──
@@ -367,10 +460,6 @@ function renderCampusCourseCard(course) {
       <i class="fas ${badgeLockedIcon}"></i> ${badgeLockedText}
     </span>`;
   }
-
-  const levelBadge = course.level !== 'all' ? `
-    <span class="campus-badge-level">${course.level}</span>
-  ` : '';
 
   const thumb = course.thumbnail_url
     ? `<img src="${course.thumbnail_url}" alt="${course.title}" loading="lazy">`
@@ -419,7 +508,6 @@ function renderCampusCourseCard(course) {
           <span class="campus-card-cat" style="color:${course.category_color || '#791E15'}">
             ${course.category_name || ''}
           </span>
-          ${levelBadge}
         </div>
         <h3 class="campus-card-title">${_t(course.title)}</h3>
         ${course.subtitle ? `<p class="campus-card-sub">${_t(course.subtitle)}</p>` : ''}
@@ -1242,20 +1330,9 @@ function adminCampusNewCourse() {
             </select>
           </div>
         </div>
-        <div class="campus-form-row-2">
-          <div class="campus-form-row">
-            <label>Niveau</label>
-            <select name="level" class="campus-select">
-              <option value="all">Tous niveaux</option>
-              <option value="beginner">Débutant</option>
-              <option value="intermediate">Intermédiaire</option>
-              <option value="advanced">Avancé</option>
-            </select>
-          </div>
-          <div class="campus-form-row">
-            <label>Ordre d'affichage</label>
-            <input type="number" name="display_order" value="0" min="0">
-          </div>
+        <div class="campus-form-row">
+          <label>Ordre d'affichage</label>
+          <input type="number" name="display_order" value="0" min="0">
         </div>
         <div class="campus-form-row">
           <label>URL miniature</label>
