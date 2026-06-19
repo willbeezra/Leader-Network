@@ -12135,13 +12135,7 @@ async function _campusShowCourseModal(course) {
           </div>
         </div>
 
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div>
-            <label class="text-xs text-gray-400 mb-1 block">Niveau</label>
-            <select id="cc-level" class="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white text-sm focus:border-red-500 outline-none">
-              ${['all','beginner','intermediate','advanced'].map(l=>`<option value="${l}" ${course?.level===l?'selected':''}>${l}</option>`).join('')}
-            </select>
-          </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
             <label class="text-xs text-gray-400 mb-1 block">Langue</label>
             <select id="cc-language" class="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white text-sm focus:border-red-500 outline-none">
@@ -12213,7 +12207,6 @@ async function _campusSaveCourse(id) {
     subtitle:            document.getElementById('cc-subtitle').value.trim() || null,
     description:         document.getElementById('cc-description').value.trim() || null,
     thumbnail_url:       document.getElementById('cc-thumbnail').value.trim() || null,
-    level:               document.getElementById('cc-level').value,
     language:            document.getElementById('cc-language').value,
     display_order:       parseInt(document.getElementById('cc-order').value) || 0,
     is_featured:         document.getElementById('cc-featured').checked ? 1 : 0,
