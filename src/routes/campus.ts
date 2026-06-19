@@ -94,42 +94,61 @@ campus.get('/', async (c) => {
   const coursesWithProgress = (courses.results as any[]).map(course => {
     const allowedPackages = coursePackagesMap[course.id] || []
 
-    // Logique d'accès granulaire :
-    // Si la formation a des packages spécifiques définis (allowedPackages.length > 0) :
-    //   → Accès UNIQUEMENT si le membre possède l'un de ces packages
-    //   → hasCampusAccess global est IGNORÉ (la formation est payante/restreinte)
-    // Si aucun package spécifique n'est défini :
-    //   → Accès via accès Campus global OU si formation gratuite
+    // ── Règles d'accès (priorité décroissante) ──────────────────────────────
+    //
+    // 1. GRATUITE  : is_free = 1  → tout le monde accède (status: 'free')
+    //
+    // 2. PAYANTE   : is_free = 0 ET price_usd > 0
+    //    a) Si packages liés définis → accès SEULEMENT si membre possède un de ces packages
+    //       Sinon → status 'priced' (achat requis)
+    //    b) Si AUCUN package lié → formation payante à l'unité :
+    //       - L'accès Campus global NE donne PAS accès (formation hors catalogue inclus)
+    //       - status 'priced' toujours (sauf si achat individuel futur)
+    //
+    // 3. VERROUILLÉE : is_free = 0 ET price_usd = 0 ET pas de package lié possédé
+    //    → status 'locked'
+    //
+    // 4. INCLUSE (accès global Campus) : is_free = 0, price_usd = 0, aucun package lié
+    //    → le membre avec hasCampusAccess y accède (formation comprise dans Campus)
+    //
+    // Résumé : si price_usd > 0 → jamais inclus via accès global seul
+    // ──────────────────────────────────────────────────────────────────────
+
     const memberHasLinkedPackage = allowedPackages.length > 0 && memberId
       ? allowedPackages.some((p: any) => memberPackageIds.has(p.package_id))
       : false
 
-    let courseAccess: boolean
-    if (allowedPackages.length > 0) {
-      // Formation avec packages spécifiques : ignorer l'accès global Campus
-      courseAccess = memberHasLinkedPackage || course.is_free === 1
-    } else {
-      // Formation sans restriction de package : accès global Campus ou gratuit
-      courseAccess = hasCampusAccess || course.is_free === 1
-    }
+    // Est-ce une formation payante (prix explicitement défini) ?
+    const isPriced = course.is_free !== 1 && course.price_usd > 0
 
-    // access_status : 'included' | 'free' | 'locked' | 'priced'
-    let accessStatus = 'locked'
-    if (memberHasLinkedPackage) {
-      // Le membre possède un des packages liés à cette formation
-      accessStatus = 'included'
-    } else if (allowedPackages.length === 0 && hasCampusAccess) {
-      // Formation sans restriction de package + accès Campus global
-      accessStatus = 'included'
-    } else if (course.is_free === 1) {
+    // access_status : 'included' | 'free' | 'priced' | 'locked'
+    let accessStatus: string
+
+    if (course.is_free === 1) {
+      // Cas 1 : formation gratuite
       accessStatus = 'free'
-    } else if (course.price_usd > 0) {
+    } else if (memberHasLinkedPackage) {
+      // Cas 2a : membre possède un package lié → inclus
+      accessStatus = 'included'
+    } else if (isPriced) {
+      // Cas 2b : formation payante, membre n'a pas le bon package → achat requis
       accessStatus = 'priced'
+    } else if (allowedPackages.length === 0 && hasCampusAccess) {
+      // Cas 4 : formation gratuite dans Campus (price=0, is_free=0) + accès global
+      accessStatus = 'included'
+    } else {
+      // Cas 3 : verrouillée
+      accessStatus = 'locked'
     }
 
-    // Package à acheter si la formation a un prix (premier package autorisé non possédé)
+    const courseAccess = accessStatus === 'included' || accessStatus === 'free'
+
+    // Package à acheter si la formation est payante et a des packages définis
+    // → on prend le moins cher des packages non possédés
     const buyPackage = accessStatus === 'priced' && allowedPackages.length > 0
-      ? allowedPackages[0]
+      ? allowedPackages
+          .filter((p: any) => !memberPackageIds.has(p.package_id))
+          .sort((a: any, b: any) => (a.package_price || 0) - (b.package_price || 0))[0] || allowedPackages[0]
       : null
 
     return {
@@ -179,8 +198,8 @@ campus.get('/course/:slug', async (c) => {
 
   if (!course) return c.json({ error: 'Formation non trouvée' }, 404)
 
-  // Vérification accès Campus via package_service_access (service_id = 1 = Campus)
-  let hasAccess = false
+  // Vérification accès Campus global (service_id = 1)
+  let hasCampusAccessDetail = false
   if (memberId) {
     const accessCheck = await db.prepare(`
       SELECT COUNT(*) AS cnt
@@ -191,7 +210,39 @@ campus.get('/course/:slug', async (c) => {
         AND psa.service_id = 1
         AND psa.is_enabled = 1
     `).bind(memberId).first() as any
-    hasAccess = (accessCheck?.cnt || 0) > 0
+    hasCampusAccessDetail = (accessCheck?.cnt || 0) > 0
+  }
+
+  // Packages liés à cette formation + packages du membre
+  let memberPackageIdsDetail: Set<string> = new Set()
+  if (memberId) {
+    const memberPkgs = await db.prepare(
+      `SELECT package_id FROM package_orders WHERE member_id = ? AND status IN ('validated','active')`
+    ).bind(memberId).all()
+    for (const p of (memberPkgs.results as any[])) memberPackageIdsDetail.add(p.package_id)
+  }
+  const courseLinkedPkgs = await db.prepare(
+    `SELECT ccp.package_id FROM campus_course_packages ccp WHERE ccp.course_id = ?`
+  ).bind((course as any).id).all()
+  const courseLinkedPkgIds = (courseLinkedPkgs.results as any[]).map((r: any) => r.package_id)
+
+  const memberHasLinkedPkgDetail = courseLinkedPkgIds.length > 0 && memberId
+    ? courseLinkedPkgIds.some((pid: string) => memberPackageIdsDetail.has(pid))
+    : false
+  const isPricedDetail = (course as any).is_free !== 1 && (course as any).price_usd > 0
+
+  // Même logique que le catalogue
+  let hasAccess: boolean
+  if ((course as any).is_free === 1) {
+    hasAccess = true
+  } else if (memberHasLinkedPkgDetail) {
+    hasAccess = true
+  } else if (isPricedDetail) {
+    hasAccess = false  // formation payante sans le bon package
+  } else if (courseLinkedPkgIds.length === 0 && hasCampusAccessDetail) {
+    hasAccess = true   // formation gratuite dans Campus (price=0) + accès global
+  } else {
+    hasAccess = false
   }
 
   // Récupérer infos package requis si applicable (conservé pour compatibilité UI)

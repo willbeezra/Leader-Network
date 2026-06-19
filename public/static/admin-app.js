@@ -12128,8 +12128,12 @@ async function _campusShowCourseModal(course) {
             </div>
             <p class="text-xs text-gray-500 mt-1.5">
               <i class="fas fa-info-circle mr-1"></i>
-              Si aucun package coché et prix = 0 → "Gratuit". Si prix > 0 → badge prix affiché avec bouton achat.
-              Si packages cochés → badge "Inclus" pour les membres possédant ces packages.
+              Règles d'affichage (par priorité) :<br>
+              1. "Formation gratuite" cochée → <b>Gratuit</b> pour tous.<br>
+              2. Package(s) coché(s) + membre possède ce package → <b>Inclus</b>.<br>
+              3. Prix > 0 + membre n'a pas le package → <b>Payant $XX</b> (bouton achat).<br>
+              4. Prix = 0 + aucun package coché + accès Campus global → <b>Inclus</b>.<br>
+              ⚠️ Un membre avec accès Campus ne voit "Inclus" que si prix = 0 OU s'il possède un package coché.
             </p>
             ` : `<p class="text-xs text-gray-500 bg-dark-800 rounded-lg p-3 border border-dark-600">Aucun package disponible. Créez d'abord des packages dans l'onglet Packages.</p>`}
           </div>
