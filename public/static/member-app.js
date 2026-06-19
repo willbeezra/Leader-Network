@@ -1787,40 +1787,67 @@ async function wizardStep5V2(){_wizardShow('<div class="p-10 flex flex-col items
     proofUrl = uzGetUrl(window._wizProofUploadUid) || '';
   }
   if(!proofUrl){
-    // Fallback : chercher directement l'input caché dans le container
     const hiddenInput = document.querySelector('#wiz-proof-upload-zone input[type="hidden"]');
     if(hiddenInput) proofUrl = hiddenInput.value || '';
   }
   const t=document.getElementById("wiz-proof-note")?.value.trim();
   const n=document.getElementById("wiz-submit-btn");
-  if(proofUrl){
-    n&&(n.disabled=!0,n.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>Envoi…');
-    try{
-      const licId=_wizardData.licenseId||null;
-      let proofEndpoint,proofBody;
-      if(_wizardData.isTopup){
-        const topupId=_wizardData.topupId||_wizardData.orderId;
-        proofEndpoint="/payment/topup/submit-proof";
-        proofBody={topup_id:topupId,proof_url:proofUrl,reference:t||null};
-      }else if(_wizardData.licenseOnly&&licId){
-        proofEndpoint=`/members/license/${licId}/proof`;
-        proofBody={proof_url:proofUrl,note:t||""};
-      }else{
-        proofEndpoint=`/members/packages/order/${_wizardData.orderId}/proof`;
-        proofBody={proof_url:proofUrl,note:t||""};
-      }
-      await api("POST",proofEndpoint,proofBody);
-      wizardStep7();
-    }catch(err){
-      // Si déjà proof_submitted → aller quand même à l'écran de succès
-      if(err.status===409||err.error?.includes('proof_submitted')||err.error?.includes('déjà')){
-        return void wizardStep7();
-      }
-      n&&(n.disabled=!1,n.innerHTML='<i class="fas fa-upload mr-2"></i>Soumettre la preuve');
-      showToast(err.error||"Erreur lors de l'envoi","error");
+  // Afficher une erreur inline dans le wizard (plus fiable que showToast derrière le modal)
+  function _showWizErr(msg){
+    let errDiv=document.getElementById("wiz-proof-error");
+    if(!errDiv){
+      errDiv=document.createElement("div");
+      errDiv.id="wiz-proof-error";
+      errDiv.className="bg-red-900/30 border border-red-500/40 rounded-xl px-4 py-3 text-red-300 text-sm flex items-start gap-2";
+      const btnRow=n?.parentElement;
+      if(btnRow)btnRow.parentElement.insertBefore(errDiv,btnRow);
     }
-  }else{
-    showToast("Veuillez uploader ou fournir un justificatif de paiement","error");
+    errDiv.innerHTML='<i class="fas fa-exclamation-circle mt-0.5 shrink-0"></i><span>'+msg+'</span>';
+    errDiv.style.display="flex";
+    setTimeout(()=>{if(errDiv)errDiv.style.display="none";},8000);
+  }
+  if(!proofUrl){
+    _showWizErr("Veuillez uploader ou fournir un justificatif de paiement");
+    return;
+  }
+  n&&(n.disabled=!0,n.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>Envoi…');
+  try{
+    const licId=_wizardData.licenseId||null;
+    let proofEndpoint,proofBody;
+    if(_wizardData.isTopup){
+      const topupId=_wizardData.topupId||_wizardData.orderId;
+      proofEndpoint="/payment/topup/submit-proof";
+      proofBody={topup_id:topupId,proof_url:proofUrl,reference:t||null};
+    }else if(_wizardData.licenseOnly&&licId){
+      proofEndpoint=`/members/license/${licId}/proof`;
+      proofBody={proof_url:proofUrl,note:t||""};
+    }else{
+      if(!_wizardData.orderId){
+        // orderId manquant : tenter de récupérer depuis la commande en cours
+        try{
+          const _chk=await api("GET","/members/orders");
+          const _pending=(_chk.orders||[]).find(o=>o.status==="pending"||o.status==="proof_submitted");
+          if(_pending)_wizardData.orderId=_pending.id;
+        }catch(_e){}
+      }
+      if(!_wizardData.orderId){
+        n&&(n.disabled=!1,n.innerHTML='<i class="fas fa-upload mr-2"></i>Soumettre la preuve');
+        _showWizErr("Commande introuvable. Veuillez fermer et rouvrir le wizard.");
+        return;
+      }
+      proofEndpoint=`/members/packages/order/${_wizardData.orderId}/proof`;
+      proofBody={proof_url:proofUrl,note:t||""};
+    }
+    await api("POST",proofEndpoint,proofBody);
+    wizardStep7();
+  }catch(err){
+    // Tout code 409 ou message indiquant statut non modifiable = déjà traité → succès
+    const errMsg=err.error||err.message||"";
+    const isAlreadyHandled=errMsg.includes("proof_submitted")||errMsg.includes("déjà")||errMsg.includes("activée")||errMsg.includes("validated")||errMsg.includes("cancelled")||errMsg.includes("rejected");
+    if(isAlreadyHandled){return void wizardStep7();}
+    n&&(n.disabled=!1,n.innerHTML='<i class="fas fa-upload mr-2"></i>Soumettre la preuve');
+    _showWizErr(errMsg||"Erreur lors de l'envoi. Réessayez.");
+    showToast(errMsg||"Erreur lors de l'envoi","error");
   }
 }
 function wizardStep7(){_wizardShow(`\n  ${_wizardProgress(7,7)}\n  <div class="p-6 space-y-6 text-center">\n    <div class="w-20 h-20 rounded-full bg-green-500/20 border-2 border-green-500/40 flex items-center justify-center mx-auto">\n      <i class="fas fa-check text-green-400 text-4xl"></i>\n    </div>\n    <div>\n      <h3 class="text-2xl font-bold text-white">${_wizardData.isTopup?"Recharge soumise !":"Commande confirmée !"}</h3>\n      <p class="text-gray-400 mt-2">${_wizardData.isTopup?"Votre recharge sera validée sous 24-48h.":"Votre preuve de paiement a été soumise avec succès."}</p>\n    </div>\n    <div class="bg-dark-700 border border-dark-500 rounded-xl p-4 text-sm space-y-2">\n      <div class="flex justify-between">\n        <span class="text-gray-400">${_wizardData.isTopup?"Montant":"Package"}</span>\n        <span class="font-medium text-white">${_wizardData.isTopup?"$"+(_wizardData.totalAmt||0).toLocaleString("en-US",{minimumFractionDigits:2}):_wizardData.pkgName}</span>\n      </div>\n      ${_wizardData.addLicense?'<div class="flex justify-between"><span class="text-gray-400">Licence</span><span class="text-rouge-400">Incluse</span></div>':""}\n      <div class="flex justify-between">\n        <span class="text-gray-400">Montant</span>\n        <span class="font-bold text-rouge-400">$${_wizardData.totalAmt?.toLocaleString("en-US",{minimumFractionDigits:2})}</span>\n      </div>\n      <div class="flex justify-between">\n        <span class="text-gray-400">Réf. commande</span>\n        <span class="font-mono text-xs text-gray-300">${_wizardData.orderId?.substring(0,16)}…</span>\n      </div>\n    </div>\n    <div class="bg-blue-900/10 border border-blue-500/20 rounded-xl p-4 text-sm text-gray-400">\n      <i class="fas fa-clock text-blue-400 mr-2"></i>\n      Votre commande sera validée par un administrateur sous <strong>24–48h</strong>.\n      Vous recevrez une notification une fois activée.\n    </div>\n    <button onclick="wizardClose(); renderPackages(document.getElementById('page-content'))"\n      class="w-full py-3 bg-rouge-500 text-dark-900 font-bold rounded-xl hover:bg-rouge-500 transition">\n      <i class="fas fa-home mr-2"></i>Retour à mes packages\n    </button>\n  </div>`),_wizardReset()}function wizardProofOnly(e){_wizardReset(),_wizardData.orderId=e,wizardStep6()}function showProofModal(e){wizardProofOnly(e)}function closeProofModal(){wizardClose()}function closeOrderModal(){wizardClose()}async function renderLicense(e){e.innerHTML='<div class="flex items-center justify-center py-16"><div class="loader"></div></div>';try{const t=await api("GET","/members/license"),n=t.member,a=new Date,s=n?.license_expires_at?new Date(n.license_expires_at):null,r=s?Math.ceil((s-a)/864e5):null,i=t.license_alert_days||7,_renewEarly=t.license_renew_early_days||30,_price=t.license_price||97,l=n?.license_active&&null!==r&&r<=i&&r>0,_canRenew=!n?.license_active||(null!==r&&r<=_renewEarly),d=n?.license_active||null!==s?n?.license_active&&!l?`
