@@ -525,16 +525,24 @@ function renderCampusCourseCard(course) {
 // ── Ouvre le wizard d'achat formation depuis une carte formation ──────────────
 // Réutilise exactement le même wizard que les packages — flag isCoursePayment
 function openCoursePaymentWizard(courseId, courseTitleEncoded, priceUsd) {
-  if (typeof wizardStart === 'function') {
-    // wizardStart(pkgId, name, price, bv, isUpgrade, curPrice, curBV, extraData)
-    // On passe courseId comme identifiant, bv=0, pas d'upgrade
-    // Le flag _wizardData.isCoursePayment + courseId sont définis juste après
-    wizardStart(courseId, courseTitleEncoded, priceUsd, 0, false, 0, 0);
-    // Marquer comme achat formation (lu par wizardSubmitProof dans member-app.js)
-    if (window._wizardData) {
-      window._wizardData.isCoursePayment = true;
-      window._wizardData.courseId = courseId;
-    }
+  if (typeof _wizardReset === 'function' && typeof wizardStep4 === 'function') {
+    // Initialiser _wizardData directement sans passer par wizardStart
+    // (wizardStart afficherait l'étape 1 "package" qui n'a pas de sens pour une formation)
+    _wizardReset();
+    const title = decodeURIComponent(courseTitleEncoded || '');
+    window._wizardData.isCoursePayment = true;
+    window._wizardData.courseId = courseId;
+    window._wizardData.pkgName = title;       // affiché dans l'étape 7 (confirmation)
+    window._wizardData.price = Number(priceUsd) || 0;
+    window._wizardData.totalAmt = Number(priceUsd) || 0;  // pas de frais admin
+    window._wizardData.addLicense = false;
+    window._wizardData.bv = 0;
+    window._wizardData.diffPrice = Number(priceUsd) || 0;
+    window._wizardData.diffBV = 0;
+    // Ouvrir le wizard directement à l'étape 4 (choix du mode de paiement)
+    const overlay = document.getElementById('wizard-overlay');
+    if (overlay) overlay.style.display = 'flex';
+    wizardStep4();
   } else {
     if (typeof showPage === 'function') showPage('campus');
   }
