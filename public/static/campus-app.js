@@ -1718,7 +1718,7 @@ async function campusModalConfirm() {
 // showToast — utilise la fonction globale si disponible, sinon fallback
 function _campusToast(message, type) {
   if (typeof showToast === 'function') {
-    _campusToast(message, type);
+    showToast(message, type);
     return;
   }
   if (typeof window.showNotification === 'function') {
@@ -1750,7 +1750,6 @@ function campusGoToPackages() {
   }
 }
 
-// ── Init immédiate : event delegation globale pour cartes priced ─────────────
-// Appelée dès le chargement du script (pas besoin de DOMContentLoaded car
-// campus-app.js est chargé en fin de <body>)
-_initCampusPricedDelegate();
+// NOTE: _initCampusPricedDelegate() supprimée — les cartes priced
+// utilisent désormais des onclick inline directs sur l'article et le bouton.
+// Cela évite le double-appel delegate + onclick qui causait le RangeError.
