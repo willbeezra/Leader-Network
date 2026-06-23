@@ -1729,6 +1729,25 @@ async function _submitV2ManualProof(orderId){
         </button>
       </div>`);
       _wizardReset();
+    }else if(_wizardData.isCoursePayment){
+      // ACHAT DIRECT FORMATION CAMPUS
+      const courseOrderId=_wizardData.orderId||orderId;
+      await api("POST",`/campus/course-order/${courseOrderId}/proof`,{proof_url:proofUrl,note:refInput?.value?.trim()||""});
+      _wizardShow(`
+      <div class="p-8 text-center space-y-5">
+        <div class="w-20 h-20 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto">
+          <i class="fas fa-check-circle text-emerald-400 text-4xl"></i>
+        </div>
+        <div>
+          <p class="text-white font-bold text-xl">Preuve soumise !</p>
+          <p class="text-emerald-400 text-sm mt-1">Votre accès à la formation sera débloqué sous 24–48h après validation.</p>
+          <p class="text-gray-500 text-xs mt-2">Réf. : ${(courseOrderId||"").substring(0,16)}…</p>
+        </div>
+        <button onclick="wizardClose()" class="w-full py-3 bg-rouge-500 text-dark-900 font-bold rounded-xl hover:bg-rouge-500 transition">
+          <i class="fas fa-check mr-2"></i>Fermer
+        </button>
+      </div>`);
+      _wizardReset();
     }else{
       // COMMANDE PACKAGE — preuve URL (pas de base64)
       await api("POST","/members/packages/submit-proof",{order_id:orderId,reference:refInput?.value?.trim()||null,proof_url:proofUrl});
