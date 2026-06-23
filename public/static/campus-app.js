@@ -413,7 +413,25 @@ function _renderCampusCatalogOnly(mainContent, courses, categories, hasAccess, c
 
     </div>
   `;
+
+  // ── Event delegation pour les cartes 'priced' ──────────────────────────────
+  // Gère les clics sur les cartes payantes via data-course-id / data-course-price
+  // (plus robuste que onclick inline pour les titres avec caractères spéciaux)
+  const catalog = document.getElementById('campus-catalog');
+  if (catalog) {
+    catalog.addEventListener('click', function _campusPricedDelegate(e) {
+      const card = e.target.closest('article.campus-card[data-status="priced"]');
+      if (!card) return;
+      const courseId    = card.dataset.courseId;
+      const coursePrice = parseFloat(card.dataset.coursePrice || '0');
+      const courseTitle = card.querySelector('.campus-card-title')?.textContent?.trim() || '';
+      if (courseId && typeof window._wizardOpenForCourse === 'function') {
+        window._wizardOpenForCourse(courseId, courseTitle, coursePrice);
+      }
+    }, { once: false });
+  }
 }
+
 
 function renderCampusCourseCard(course) {
   // ── Configs badges depuis landing_config (100% configurables admin) ──
@@ -482,8 +500,9 @@ function renderCampusCourseCard(course) {
   let onClickAction = `showCampusCourse('${course.slug}')`;
   if (status === 'priced') {
     // Achat direct formation — wizard existant avec flag isCoursePayment
-    const courseTitle = encodeURIComponent(course.title || '');
-    onClickAction = `openCoursePaymentWizard('${course.id}','${courseTitle}',${course.price_usd || 0})`;
+    // Note : onclick géré par event delegation (voir _campusCardClickDelegate)
+    // pour éviter tout problème de quotes dans les titres ou conflits de scope
+    onClickAction = '';
   }
 
   // ── Texte footer ──
@@ -493,10 +512,16 @@ function renderCampusCourseCard(course) {
       ? `<span class="campus-card-unlock" style="color:#c9a84c"><i class="fas fa-shopping-cart"></i> Acquérir</span>`
       : `<span class="campus-card-unlock"><i class="fas fa-unlock-alt"></i> Débloquer</span>`;
 
+  // Pour status='priced' : on stocke courseId + price dans data-* et on gère via delegation
+  // (évite les problèmes de quotes dans les titres / conflits inline onclick)
+  const pricedData = status === 'priced'
+    ? ` data-course-id="${course.id}" data-course-price="${course.price_usd || 0}"`
+    : '';
+
   return `
-    <article class="campus-card ${locked ? 'campus-card-locked' : ''}" onclick="${onClickAction}"
-             data-title="${course.title.toLowerCase()}" data-cat="${course.category_id}"
-             data-status="${status}">
+    <article class="campus-card ${locked ? 'campus-card-locked' : ''}" ${onClickAction ? `onclick="${onClickAction}"` : ''}
+             data-title="${(course.title || '').toLowerCase().replace(/"/g, '')}" data-cat="${course.category_id}"
+             data-status="${status}"${pricedData}>
       <div class="campus-card-thumb">
         ${thumb}
         ${badge}

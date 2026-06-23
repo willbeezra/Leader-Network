@@ -1288,6 +1288,7 @@
   align-items: center;
   justify-content: center;
   backdrop-filter: blur(2px);
+  pointer-events: none; /* laisse passer les clics vers l'article parent */
 }
 .campus-card-lock-overlay i {
   font-size: 32px;
