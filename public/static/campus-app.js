@@ -515,22 +515,19 @@ function renderCampusCourseCard(course) {
   ` : '';
 
   // ── Action au clic ──
-  // - included / free → ouvre la formation
-  // - priced → ouvre le wizard d'achat si un package est défini, sinon la formation (qui affichera le banner verrouillé)
-  // - locked → ouvre la formation (qui affichera le banner verrouillé avec lien packages)
   let onClickAction = `showCampusCourse('${course.slug}')`;
   if (status === 'priced') {
-    // Achat direct formation — wizard existant avec flag isCoursePayment
-    // Note : onclick géré par event delegation (voir _campusCardClickDelegate)
-    // pour éviter tout problème de quotes dans les titres ou conflits de scope
-    onClickAction = '';
+    onClickAction = `_campusOpenPricedWizard('${course.id}', ${course.price_usd || 0}, this)`;
   }
 
   // ── Texte footer ──
   const footerRight = (status === 'included' || status === 'free')
     ? `<span class="campus-card-lessons"><i class="fas fa-play-circle"></i> ${course.total_lessons || 0} ${_t(course.total_lessons > 1 ? 'leçons' : 'leçon')}</span>`
     : status === 'priced'
-      ? `<span class="campus-card-unlock" style="color:#c9a84c"><i class="fas fa-shopping-cart"></i> Acquérir</span>`
+      ? `<button class="campus-card-unlock" style="color:#c9a84c;background:none;border:none;cursor:pointer;padding:0;font:inherit;"
+           onclick="event.stopPropagation(); _campusOpenPricedWizard('${course.id}', ${course.price_usd || 0}, this)">
+           <i class="fas fa-shopping-cart"></i> Acquérir
+         </button>`
       : `<span class="campus-card-unlock"><i class="fas fa-unlock-alt"></i> Débloquer</span>`;
 
   // Pour status='priced' : on stocke courseId + price dans data-* et on gère via delegation
@@ -540,7 +537,7 @@ function renderCampusCourseCard(course) {
     : '';
 
   return `
-    <article class="campus-card ${locked ? 'campus-card-locked' : ''}" ${onClickAction ? `onclick="${onClickAction}"` : ''}
+    <article class="campus-card ${locked ? 'campus-card-locked' : ''}" onclick="${onClickAction}"
              style="${status === 'priced' ? 'cursor:pointer;' : ''}"
              data-title="${(course.title || '').toLowerCase().replace(/"/g, '')}" data-cat="${course.category_id}"
              data-status="${status}"${pricedData}>
@@ -569,15 +566,19 @@ function renderCampusCourseCard(course) {
   `;
 }
 
-// ── Ouvre le wizard d'achat formation depuis une carte formation ──────────────
-// Réutilise exactement le même wizard que les packages — flag isCoursePayment
-function openCoursePaymentWizard(courseId, courseTitleEncoded, priceUsd) {
-  const title = decodeURIComponent(courseTitleEncoded || '');
+// ── Ouvre le wizard d'achat pour une formation payante ───────────────────────
+// Appelée depuis onclick inline sur la carte ET sur le bouton "Acquérir".
+// Lit le courseId et price directement depuis les paramètres (pas de data-*).
+function _campusOpenPricedWizard(courseId, priceUsd, el) {
+  // Récupère le titre depuis la carte parente
+  const card = el && el.closest ? el.closest('article.campus-card') : null;
+  const courseTitle = card ? (card.querySelector('.campus-card-title')?.textContent?.trim() || '') : '';
+  console.log('[Campus] _campusOpenPricedWizard — id:', courseId, 'price:', priceUsd, 'title:', courseTitle);
   if (typeof window._wizardOpenForCourse === 'function') {
-    // Utilise la fonction dédiée exposée par member-app.js
-    window._wizardOpenForCourse(courseId, title, priceUsd);
-  } else if (typeof showPage === 'function') {
-    showPage('campus');
+    window._wizardOpenForCourse(courseId, courseTitle, priceUsd);
+  } else {
+    console.error('[Campus] window._wizardOpenForCourse non défini !');
+    alert('Le module de paiement n\'est pas disponible. Rechargez la page.');
   }
 }
 
