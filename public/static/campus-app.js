@@ -480,10 +480,10 @@ function renderCampusCourseCard(course) {
   // - priced → ouvre le wizard d'achat si un package est défini, sinon la formation (qui affichera le banner verrouillé)
   // - locked → ouvre la formation (qui affichera le banner verrouillé avec lien packages)
   let onClickAction = `showCampusCourse('${course.slug}')`;
-  if (status === 'priced' && course.buy_package) {
-    const pkg = course.buy_package;
-    const pkgName = encodeURIComponent(pkg.package_name || pkg.name || '');
-    onClickAction = `openCoursePaymentWizard('${pkg.package_id}','${pkgName}',${pkg.package_price || 0})`;
+  if (status === 'priced') {
+    // Achat direct formation — wizard existant avec flag isCoursePayment
+    const courseTitle = encodeURIComponent(course.title || '');
+    onClickAction = `openCoursePaymentWizard('${course.id}','${courseTitle}',${course.price_usd || 0})`;
   }
 
   // ── Texte footer ──
@@ -522,16 +522,21 @@ function renderCampusCourseCard(course) {
   `;
 }
 
-// ── Ouvre le wizard d'achat packages depuis une carte formation ──────────────
-// Réutilise exactement le même wizard que l'onglet Packages
-function openCoursePaymentWizard(packageId, packageNameEncoded, priceUsd) {
-  const packageName = decodeURIComponent(packageNameEncoded);
-  // wizardStart est défini dans member-app.js — même wizard que les packages
+// ── Ouvre le wizard d'achat formation depuis une carte formation ──────────────
+// Réutilise exactement le même wizard que les packages — flag isCoursePayment
+function openCoursePaymentWizard(courseId, courseTitleEncoded, priceUsd) {
   if (typeof wizardStart === 'function') {
-    wizardStart(packageId, packageNameEncoded, priceUsd, 0, false, 0, 0);
+    // wizardStart(pkgId, name, price, bv, isUpgrade, curPrice, curBV, extraData)
+    // On passe courseId comme identifiant, bv=0, pas d'upgrade
+    // Le flag _wizardData.isCoursePayment + courseId sont définis juste après
+    wizardStart(courseId, courseTitleEncoded, priceUsd, 0, false, 0, 0);
+    // Marquer comme achat formation (lu par wizardSubmitProof dans member-app.js)
+    if (window._wizardData) {
+      window._wizardData.isCoursePayment = true;
+      window._wizardData.courseId = courseId;
+    }
   } else {
-    // Fallback : aller vers l'onglet packages
-    if (typeof showPage === 'function') showPage('packages');
+    if (typeof showPage === 'function') showPage('campus');
   }
 }
 

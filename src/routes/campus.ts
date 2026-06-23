@@ -62,6 +62,18 @@ campus.get('/', async (c) => {
     }
   }
 
+  // ── Accès par achat direct formation (campus_course_orders validées) ────
+  let memberPurchasedCourseIds: Set<string> = new Set()
+  if (memberId) {
+    const purchasedCourses = await db.prepare(`
+      SELECT course_id FROM campus_course_orders
+      WHERE member_id = ? AND status = 'validated'
+    `).bind(memberId).all()
+    for (const p of (purchasedCourses.results as any[])) {
+      memberPurchasedCourseIds.add(p.course_id)
+    }
+  }
+
   // ── Accès par formation via campus_course_packages ──────────────────────
   // Pour chaque cours, on vérifie si le membre possède un package autorisé
   // Set des package_ids validés du membre
@@ -127,6 +139,9 @@ campus.get('/', async (c) => {
     if (course.is_free === 1) {
       // Cas 1 : formation gratuite
       accessStatus = 'free'
+    } else if (memberPurchasedCourseIds.has(course.id)) {
+      // Cas 0 : achat direct validé → inclus (priorité absolue)
+      accessStatus = 'included'
     } else if (memberHasLinkedPackage) {
       // Cas 2a : membre possède un package lié → inclus
       accessStatus = 'included'
@@ -221,6 +236,16 @@ campus.get('/course/:slug', async (c) => {
     ).bind(memberId).all()
     for (const p of (memberPkgs.results as any[])) memberPackageIdsDetail.add(p.package_id)
   }
+
+  // Achat direct formation validé ?
+  let hasPurchasedCourseDetail = false
+  if (memberId) {
+    const purchased = await db.prepare(
+      `SELECT id FROM campus_course_orders WHERE member_id = ? AND course_id = ? AND status = 'validated' LIMIT 1`
+    ).bind(memberId, (course as any).id).first()
+    hasPurchasedCourseDetail = !!purchased
+  }
+
   const courseLinkedPkgs = await db.prepare(
     `SELECT ccp.package_id FROM campus_course_packages ccp WHERE ccp.course_id = ?`
   ).bind((course as any).id).all()
@@ -235,6 +260,8 @@ campus.get('/course/:slug', async (c) => {
   let hasAccess: boolean
   if ((course as any).is_free === 1) {
     hasAccess = true
+  } else if (hasPurchasedCourseDetail) {
+    hasAccess = true  // achat direct validé
   } else if (memberHasLinkedPkgDetail) {
     hasAccess = true
   } else if (isPricedDetail) {
@@ -798,6 +825,159 @@ campus.get('/admin/packages', async (c) => {
     ORDER BY cat.name ASC, p.price_usd ASC
   `).all()
   return c.json(pkgs.results)
+})
+
+// ============================================================
+// ROUTES ACHAT DIRECT FORMATION (campus_course_orders)
+// Vente simple — pas de BV, pas de guard catégorie packages
+// ============================================================
+
+// POST /campus/course/:courseId/order — créer une commande formation
+campus.post('/course/:courseId/order', async (c) => {
+  const db = c.env.DB
+  const memberId = (c.get('memberId' as any) as string) || null
+  if (!memberId) return c.json({ error: 'Non authentifié' }, 401)
+
+  const courseId = c.req.param('courseId')
+  const { payment_method = 'manual' } = await c.req.json()
+
+  // Vérifier que la formation existe et est payante
+  const course = await db.prepare(
+    `SELECT id, title, price_usd, is_free FROM campus_courses WHERE id = ? AND is_active = 1`
+  ).bind(courseId).first() as any
+  if (!course) return c.json({ error: 'Formation introuvable' }, 404)
+  if (course.is_free === 1 || !course.price_usd || course.price_usd <= 0) {
+    return c.json({ error: 'Cette formation est gratuite — aucun achat requis' }, 400)
+  }
+
+  // Vérifier que la formation n'est pas déjà achetée (validée)
+  const existing = await db.prepare(
+    `SELECT id, status FROM campus_course_orders
+     WHERE member_id = ? AND course_id = ? AND status IN ('validated','pending','proof_submitted')
+     LIMIT 1`
+  ).bind(memberId, courseId).first() as any
+  if (existing) {
+    if (existing.status === 'validated') {
+      return c.json({ error: 'Vous avez déjà accès à cette formation', code: 'ALREADY_OWNED' }, 409)
+    }
+    // Commande en cours → retourner l'id existant pour reprendre le wizard
+    return c.json({ order_id: existing.id, status: existing.status, existing: true })
+  }
+
+  // Créer la commande
+  const orderId = crypto.randomUUID().replace(/-/g, '').substring(0, 16)
+  await db.prepare(
+    `INSERT INTO campus_course_orders (id, member_id, course_id, amount_usd, status, payment_method)
+     VALUES (?, ?, ?, ?, 'pending', ?)`
+  ).bind(orderId, memberId, courseId, course.price_usd, payment_method).run()
+
+  return c.json({ order_id: orderId, amount_usd: course.price_usd, course_title: course.title })
+})
+
+// POST /campus/course-order/:orderId/proof — soumettre la preuve de paiement
+campus.post('/course-order/:orderId/proof', async (c) => {
+  const db = c.env.DB
+  const memberId = (c.get('memberId' as any) as string) || null
+  if (!memberId) return c.json({ error: 'Non authentifié' }, 401)
+
+  const orderId = c.req.param('orderId')
+  const { proof_url, note = '' } = await c.req.json()
+  if (!proof_url) return c.json({ error: 'proof_url requis' }, 400)
+
+  const order = await db.prepare(
+    `SELECT id, status, member_id FROM campus_course_orders WHERE id = ?`
+  ).bind(orderId).first() as any
+  if (!order) return c.json({ error: 'Commande introuvable' }, 404)
+  if (order.member_id !== memberId) return c.json({ error: 'Accès refusé' }, 403)
+  if (order.status === 'validated') return c.json({ error: 'Commande déjà validée' }, 409)
+  if (order.status === 'proof_submitted') return c.json({ error: 'Preuve déjà soumise — en attente de validation' }, 409)
+
+  await db.prepare(
+    `UPDATE campus_course_orders SET status = 'proof_submitted', proof_url = ?, note = ?, updated_at = datetime('now') WHERE id = ?`
+  ).bind(proof_url, note, orderId).run()
+
+  return c.json({ success: true, message: 'Preuve soumise — validation sous 24–48h' })
+})
+
+// GET /campus/my-course-orders — mes commandes formations
+campus.get('/my-course-orders', async (c) => {
+  const db = c.env.DB
+  const memberId = (c.get('memberId' as any) as string) || null
+  if (!memberId) return c.json({ orders: [] })
+
+  const rows = await db.prepare(`
+    SELECT cco.id, cco.course_id, cco.amount_usd, cco.status, cco.created_at,
+           cc.title AS course_title, cc.slug AS course_slug
+    FROM campus_course_orders cco
+    JOIN campus_courses cc ON cc.id = cco.course_id
+    WHERE cco.member_id = ?
+    ORDER BY cco.created_at DESC
+  `).bind(memberId).all()
+
+  return c.json({ orders: rows.results })
+})
+
+// ============================================================
+// ROUTES ADMIN — gestion commandes formations
+// ============================================================
+
+// GET /campus/admin/course-orders — liste toutes les commandes formations
+campus.get('/admin/course-orders', async (c) => {
+  const db = c.env.DB
+  const status = (c.req.query('status') as string) || ''
+  const whereStatus = status ? `AND cco.status = '${status}'` : ''
+
+  const rows = await db.prepare(`
+    SELECT cco.id, cco.amount_usd, cco.status, cco.proof_url, cco.note,
+           cco.rejection_reason, cco.created_at, cco.updated_at,
+           cc.title AS course_title, cc.slug AS course_slug,
+           m.first_name || ' ' || m.last_name AS member_name,
+           m.unique_id AS member_uid, m.id AS member_id
+    FROM campus_course_orders cco
+    JOIN campus_courses cc ON cc.id = cco.course_id
+    JOIN members m ON m.id = cco.member_id
+    WHERE 1=1 ${whereStatus}
+    ORDER BY cco.created_at DESC
+    LIMIT 200
+  `).all()
+
+  return c.json({ orders: rows.results })
+})
+
+// POST /campus/admin/course-orders/:orderId/validate — valider une commande formation
+campus.post('/admin/course-orders/:orderId/validate', async (c) => {
+  const db = c.env.DB
+  const orderId = c.req.param('orderId')
+
+  const order = await db.prepare(
+    `SELECT * FROM campus_course_orders WHERE id = ?`
+  ).bind(orderId).first() as any
+  if (!order) return c.json({ error: 'Commande introuvable' }, 404)
+  if (order.status === 'validated') return c.json({ error: 'Déjà validée' }, 409)
+
+  await db.prepare(
+    `UPDATE campus_course_orders SET status = 'validated', updated_at = datetime('now') WHERE id = ?`
+  ).bind(orderId).run()
+
+  return c.json({ success: true, message: 'Commande validée — membre a maintenant accès à la formation' })
+})
+
+// POST /campus/admin/course-orders/:orderId/reject — rejeter une commande formation
+campus.post('/admin/course-orders/:orderId/reject', async (c) => {
+  const db = c.env.DB
+  const orderId = c.req.param('orderId')
+  const { reason = 'Preuve de paiement non valide' } = await c.req.json()
+
+  const order = await db.prepare(
+    `SELECT id, status FROM campus_course_orders WHERE id = ?`
+  ).bind(orderId).first() as any
+  if (!order) return c.json({ error: 'Commande introuvable' }, 404)
+
+  await db.prepare(
+    `UPDATE campus_course_orders SET status = 'rejected', rejection_reason = ?, updated_at = datetime('now') WHERE id = ?`
+  ).bind(reason, orderId).run()
+
+  return c.json({ success: true })
 })
 
 export { campus }

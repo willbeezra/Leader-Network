@@ -11822,6 +11822,16 @@ async function showAdminCampus(el) {
           </button>
         </div>
       </div>
+      <div class="flex gap-1 mb-5 border-b border-dark-700" id="campus-tabs">
+        <button id="campus-tab-courses" onclick="_campusTabSwitch('courses')"
+          class="px-5 py-2 text-sm font-medium border-b-2 border-red-500 text-red-400 -mb-px transition">
+          <i class="fas fa-graduation-cap mr-2"></i>Formations
+        </button>
+        <button id="campus-tab-orders" onclick="_campusTabSwitch('orders')"
+          class="px-5 py-2 text-sm font-medium border-b-2 border-transparent text-gray-400 hover:text-white -mb-px transition">
+          <i class="fas fa-shopping-cart mr-2"></i>Commandes
+        </button>
+      </div>
       <div id="campus-content"></div>
     </div>`;
 
@@ -11830,6 +11840,24 @@ async function showAdminCampus(el) {
   } catch(e) { _campus.categories = []; }
 
   await _campusLoadCourses();
+}
+
+// ── Switch onglets campus ─────────────────────────────────────
+function _campusTabSwitch(tab) {
+  const tCourses = document.getElementById('campus-tab-courses');
+  const tOrders  = document.getElementById('campus-tab-orders');
+  if (!tCourses || !tOrders) return;
+  const activeClass   = ['border-red-500','text-red-400'];
+  const inactiveClass = ['border-transparent','text-gray-400','hover:text-white'];
+  if (tab === 'courses') {
+    tCourses.classList.add(...activeClass);    tCourses.classList.remove(...inactiveClass.filter(c=>!activeClass.includes(c)));
+    tOrders.classList.remove(...activeClass);  tOrders.classList.add(...inactiveClass);
+    _campusLoadCourses();
+  } else {
+    tOrders.classList.add(...activeClass);    tOrders.classList.remove(...inactiveClass.filter(c=>!activeClass.includes(c)));
+    tCourses.classList.remove(...activeClass); tCourses.classList.add(...inactiveClass);
+    _campusLoadCourseOrders();
+  }
 }
 
 // ── Breadcrumb dynamique ──────────────────────────────────────
@@ -11867,6 +11895,11 @@ function _campusBreadcrumb() {
       </button>
       <button onclick="_campusNewLesson()" class="btn-red px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
         <i class="fas fa-plus"></i> Nouvelle leçon</button>`;
+  } else if (_campus.view === 'orders') {
+    bc.innerHTML = `<i class="fas fa-shopping-cart text-xl text-red-400"></i>
+      <span class="text-white font-bold text-lg">Campus — Commandes formations</span>`;
+    ac.innerHTML = `<button onclick="_campusLoadCourseOrders()" class="bg-dark-700 hover:bg-dark-600 text-gray-300 px-3 py-2 rounded-lg text-sm flex items-center gap-2 transition">
+      <i class="fas fa-sync-alt"></i> Actualiser</button>`;
   }
 }
 
@@ -11878,6 +11911,13 @@ async function _campusLoadCourses() {
   _campus.courseId = null;
   _campus.moduleId = null;
   _campusBreadcrumb();
+  // Remettre visuellement le tab "Formations" actif
+  const tCourses = document.getElementById('campus-tab-courses');
+  const tOrders  = document.getElementById('campus-tab-orders');
+  if (tCourses && tOrders) {
+    tCourses.className = 'px-5 py-2 text-sm font-medium border-b-2 border-red-500 text-red-400 -mb-px transition';
+    tOrders.className  = 'px-5 py-2 text-sm font-medium border-b-2 border-transparent text-gray-400 hover:text-white -mb-px transition';
+  }
 
   const el = document.getElementById('campus-content');
   el.innerHTML = `<div class="text-center py-12"><i class="fas fa-spinner fa-spin text-3xl text-red-400"></i></div>`;
@@ -12690,4 +12730,134 @@ async function _campusDeleteLesson(id) {
     showToast('Leçon supprimée', 'success');
     await _campusLoadLessons(_campus.moduleId, _campus.moduleTitle);
   } catch(e) { showToast('Erreur: ' + (e.error||e.message||''), 'error'); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// COMMANDES FORMATIONS (campus_course_orders)
+// ══════════════════════════════════════════════════════════════
+async function _campusLoadCourseOrders(statusFilter) {
+  _campus.view = 'orders';
+  _campusBreadcrumb();
+  // Mettre à jour l'état visuel des tabs
+  const tCourses = document.getElementById('campus-tab-courses');
+  const tOrders  = document.getElementById('campus-tab-orders');
+  if (tCourses && tOrders) {
+    tCourses.className = 'px-5 py-2 text-sm font-medium border-b-2 border-transparent text-gray-400 hover:text-white -mb-px transition';
+    tOrders.className  = 'px-5 py-2 text-sm font-medium border-b-2 border-red-500 text-red-400 -mb-px transition';
+  }
+
+  const el = document.getElementById('campus-content');
+  el.innerHTML = `<div class="text-center py-12"><i class="fas fa-spinner fa-spin text-3xl text-red-400"></i></div>`;
+
+  const statusOptions = ['all','pending','proof_submitted','validated','rejected','cancelled'];
+  const active = statusFilter || 'proof_submitted';
+  _campus._ordersFilter = active;
+
+  try {
+    const qs = active === 'all' ? '' : `?status=${active}`;
+    const resp = await apiCampusAdmin('GET', `/course-orders${qs}`);
+    const orders = (resp && resp.orders) ? resp.orders : [];
+
+    const statusLabel = { pending:'En attente', proof_submitted:'Preuve soumise', validated:'Validé', rejected:'Rejeté', cancelled:'Annulé' };
+    const statusCls   = { pending:'bg-yellow-900/40 text-yellow-300', proof_submitted:'bg-blue-900/40 text-blue-300', validated:'bg-green-900/40 text-green-300', rejected:'bg-red-900/40 text-red-400', cancelled:'bg-gray-800 text-gray-500' };
+
+    let filterHtml = `<div class="flex gap-2 flex-wrap mb-4">`;
+    for (const s of statusOptions) {
+      const cls = s === active
+        ? 'px-3 py-1 rounded-full text-xs font-medium bg-red-600 text-white cursor-pointer'
+        : 'px-3 py-1 rounded-full text-xs font-medium bg-dark-700 text-gray-400 hover:text-white cursor-pointer transition';
+      filterHtml += `<span class="${cls}" onclick="_campusLoadCourseOrders('${s}')">${s === 'all' ? 'Toutes' : (statusLabel[s]||s)}</span>`;
+    }
+    filterHtml += `</div>`;
+
+    if (!orders.length) {
+      el.innerHTML = filterHtml + `<div class="text-center py-16 text-gray-500">
+        <i class="fas fa-shopping-cart text-5xl mb-4 opacity-30"></i>
+        <p>Aucune commande pour ce filtre.</p></div>`;
+      return;
+    }
+
+    let tableHtml = `
+      <div class="overflow-x-auto rounded-xl border border-dark-700">
+        <table class="w-full text-sm">
+          <thead class="bg-dark-800 text-gray-400 text-xs uppercase tracking-wider">
+            <tr>
+              <th class="px-4 py-3 text-left">Membre</th>
+              <th class="px-4 py-3 text-left">Formation</th>
+              <th class="px-4 py-3 text-right">Montant</th>
+              <th class="px-4 py-3 text-center">Statut</th>
+              <th class="px-4 py-3 text-center">Preuve</th>
+              <th class="px-4 py-3 text-left">Date</th>
+              <th class="px-4 py-3 text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-dark-700">`;
+
+    for (const o of orders) {
+      const sLabel = statusLabel[o.status] || o.status;
+      const sCls   = statusCls[o.status]   || 'bg-gray-800 text-gray-400';
+      const dateStr = o.created_at ? new Date(o.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+      const priceStr = o.amount_usd ? `$${parseFloat(o.amount_usd).toFixed(0)}` : 'Gratuit';
+      const proofHtml = o.proof_url
+        ? `<a href="${_esc(o.proof_url)}" target="_blank" class="text-blue-400 hover:text-blue-300 underline text-xs">Voir</a>`
+        : `<span class="text-gray-600 text-xs">—</span>`;
+
+      let actionsHtml = '';
+      if (o.status === 'proof_submitted') {
+        actionsHtml = `
+          <button onclick="_campusCourseOrderAction('${o.id}','validate')"
+            class="px-3 py-1 bg-green-700 hover:bg-green-600 text-white text-xs rounded-lg mr-1 transition">
+            <i class="fas fa-check mr-1"></i>Valider
+          </button>
+          <button onclick="_campusCourseOrderAction('${o.id}','reject')"
+            class="px-3 py-1 bg-red-700 hover:bg-red-600 text-white text-xs rounded-lg transition">
+            <i class="fas fa-times mr-1"></i>Rejeter
+          </button>`;
+      } else if (o.status === 'pending') {
+        actionsHtml = `
+          <button onclick="_campusCourseOrderAction('${o.id}','validate')"
+            class="px-3 py-1 bg-green-700 hover:bg-green-600 text-white text-xs rounded-lg mr-1 transition">
+            <i class="fas fa-check mr-1"></i>Valider
+          </button>`;
+      } else if (o.status === 'validated') {
+        actionsHtml = `<span class="text-green-500 text-xs"><i class="fas fa-check-circle mr-1"></i>Validé</span>`;
+      } else {
+        actionsHtml = `<span class="text-gray-600 text-xs">—</span>`;
+      }
+
+      tableHtml += `
+        <tr class="bg-dark-900 hover:bg-dark-800/60 transition">
+          <td class="px-4 py-3 text-white text-xs">${_esc(o.member_name||o.member_id||'—')}</td>
+          <td class="px-4 py-3 text-gray-300 text-xs max-w-[160px] truncate" title="${_esc(o.course_title||o.course_id||'—')}">${_esc(o.course_title||o.course_id||'—')}</td>
+          <td class="px-4 py-3 text-right text-gray-300 text-xs font-mono">${priceStr}</td>
+          <td class="px-4 py-3 text-center"><span class="px-2 py-0.5 rounded-full text-xs ${sCls}">${sLabel}</span></td>
+          <td class="px-4 py-3 text-center">${proofHtml}</td>
+          <td class="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">${dateStr}</td>
+          <td class="px-4 py-3 text-center whitespace-nowrap">${actionsHtml}</td>
+        </tr>`;
+    }
+
+    tableHtml += `</tbody></table></div>`;
+    el.innerHTML = filterHtml + tableHtml;
+
+  } catch(e) {
+    el.innerHTML = `<div class="text-center py-12 text-red-400"><i class="fas fa-exclamation-triangle text-4xl mb-3"></i><p>${e.error||e.message||'Erreur de chargement'}</p></div>`;
+  }
+}
+
+async function _campusCourseOrderAction(orderId, action) {
+  const label = action === 'validate' ? 'Valider' : 'Rejeter';
+  let reason = '';
+  if (action === 'reject') {
+    reason = prompt('Motif de rejet (optionnel) :') || '';
+  }
+  if (!confirm(`${label} cette commande ?`)) return;
+  try {
+    const body = action === 'reject' && reason ? { reason } : {};
+    await apiCampusAdmin('POST', `/course-orders/${orderId}/${action}`, body);
+    showToast(`Commande ${action === 'validate' ? 'validée ✓' : 'rejetée'}`, 'success');
+    await _campusLoadCourseOrders(_campus._ordersFilter || 'proof_submitted');
+  } catch(e) {
+    showToast('Erreur: ' + (e.error||e.message||''), 'error');
+  }
 }
