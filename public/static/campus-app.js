@@ -423,12 +423,23 @@ function _initCampusPricedDelegate() {
   // Annuler et retirer TOUT listener précédent (même de sessions passées)
   if (window._campusPricedAbort) {
     try { window._campusPricedAbort.abort(); } catch(e) {}
+    window._campusPricedAbort = null;
   }
   window._campusPricedAbort = new AbortController();
+  var _signal = window._campusPricedAbort.signal;
 
-  document.addEventListener('click', function(e) {
+  document.addEventListener('click', function _campusPricedHandler(e) {
+    // Vérification que le signal n'est pas révoqué (double sécurité)
+    if (_signal.aborted) return;
+
     const card = e.target.closest('article.campus-card[data-status="priced"]');
     if (!card) return;
+
+    // Anti-double-clic : ignorer si wizard déjà en cours
+    if (window._wizardOpenLock && (Date.now() - window._wizardOpenLock) < 3000) {
+      console.log('[Campus] clic ignoré — wizard déjà en cours');
+      return;
+    }
 
     const courseId    = card.dataset.courseId || '';
     const coursePrice = parseFloat(card.dataset.coursePrice || '0');
@@ -447,7 +458,7 @@ function _initCampusPricedDelegate() {
       console.error('[Campus] window._wizardOpenForCourse non défini !');
       alert('Module de paiement indisponible. Rechargez la page.');
     }
-  }, { signal: window._campusPricedAbort.signal });
+  }, { signal: _signal });
 }
 
 
