@@ -414,22 +414,33 @@ function _renderCampusCatalogOnly(mainContent, courses, categories, hasAccess, c
     </div>
   `;
 
-  // ── Event delegation pour les cartes 'priced' ──────────────────────────────
-  // Gère les clics sur les cartes payantes via data-course-id / data-course-price
-  // (plus robuste que onclick inline pour les titres avec caractères spéciaux)
-  const catalog = document.getElementById('campus-catalog');
-  if (catalog) {
-    catalog.addEventListener('click', function _campusPricedDelegate(e) {
-      const card = e.target.closest('article.campus-card[data-status="priced"]');
-      if (!card) return;
-      const courseId    = card.dataset.courseId;
-      const coursePrice = parseFloat(card.dataset.coursePrice || '0');
-      const courseTitle = card.querySelector('.campus-card-title')?.textContent?.trim() || '';
-      if (courseId && typeof window._wizardOpenForCourse === 'function') {
-        window._wizardOpenForCourse(courseId, courseTitle, coursePrice);
-      }
-    }, { once: false });
-  }
+}
+
+// ── Event delegation GLOBALE pour les cartes 'priced' ────────────────────────
+// Attachée sur document une seule fois au chargement du script.
+// Fonctionne quelle que soit la façon dont les cartes sont injectées dans le DOM
+// (page full, page catalogue, cache, rechargement).
+function _initCampusPricedDelegate() {
+  if (window._campusPricedDelegateReady) return; // Ne s'attache qu'une fois
+  window._campusPricedDelegateReady = true;
+  document.addEventListener('click', function(e) {
+    const card = e.target.closest('article.campus-card[data-status="priced"]');
+    if (!card) return;
+    e.stopPropagation();
+    const courseId    = card.dataset.courseId;
+    const coursePrice = parseFloat(card.dataset.coursePrice || '0');
+    const courseTitle = card.querySelector('.campus-card-title')?.textContent?.trim() || '';
+    console.log('[Campus] clic carte priced — courseId:', courseId, 'price:', coursePrice, 'title:', courseTitle);
+    if (!courseId) {
+      console.warn('[Campus] data-course-id manquant sur la carte');
+      return;
+    }
+    if (typeof window._wizardOpenForCourse === 'function') {
+      window._wizardOpenForCourse(courseId, courseTitle, coursePrice);
+    } else {
+      console.warn('[Campus] window._wizardOpenForCourse non disponible');
+    }
+  });
 }
 
 
@@ -486,9 +497,10 @@ function renderCampusCourseCard(course) {
        </div>`;
 
   // Overlay cadenas si cours verrouillé ou payant
+  // Pour 'priced' : pointer-events:none pour que le clic traverse vers l'article
   const locked = (status === 'locked' || status === 'priced');
   const lockOverlay = locked ? `
-    <div class="campus-card-lock-overlay">
+    <div class="campus-card-lock-overlay" style="${status === 'priced' ? 'pointer-events:none;' : ''}">
       <i class="fas ${status === 'priced' ? 'fa-tag' : 'fa-lock'}"></i>
     </div>
   ` : '';
@@ -520,6 +532,7 @@ function renderCampusCourseCard(course) {
 
   return `
     <article class="campus-card ${locked ? 'campus-card-locked' : ''}" ${onClickAction ? `onclick="${onClickAction}"` : ''}
+             style="${status === 'priced' ? 'cursor:pointer;' : ''}"
              data-title="${(course.title || '').toLowerCase().replace(/"/g, '')}" data-cat="${course.category_id}"
              data-status="${status}"${pricedData}>
       <div class="campus-card-thumb">
@@ -1726,3 +1739,8 @@ function campusGoToPackages() {
     window.location.hash = 'packages';
   }
 }
+
+// ── Init immédiate : event delegation globale pour cartes priced ─────────────
+// Appelée dès le chargement du script (pas besoin de DOMContentLoaded car
+// campus-app.js est chargé en fin de <body>)
+_initCampusPricedDelegate();
