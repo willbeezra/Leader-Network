@@ -1568,6 +1568,10 @@ let _wizardData={};let cp_enabled=!1,_cpCoins="USDT.TRC20,USDT.ERC20,BTC,ETH";fu
 window._wizardData=_wizardData;
 window._wizardReset=function(){_wizardReset();};
 window._wizardOpenForCourse=function(courseId,title,priceUsd){
+  // Anti-réentrance : ignore si déjà en cours d'ouverture (< 800ms)
+  var _now=Date.now();
+  if(window._wizardOpenLock&&(_now-window._wizardOpenLock)<800){console.log('[Wizard] ouverture déjà en cours, ignorée');return;}
+  window._wizardOpenLock=_now;
   _wizardReset();
   _wizardData.isCoursePayment=true;
   _wizardData.courseId=courseId;
@@ -1578,6 +1582,14 @@ window._wizardOpenForCourse=function(courseId,title,priceUsd){
   _wizardData.bv=0;
   _wizardData.diffPrice=Number(priceUsd)||0;
   _wizardData.diffBV=0;
+  // S'assurer que wizard-overlay existe dans le DOM avant d'appeler wizardStep4
+  if(!document.getElementById('wizard-overlay')){
+    var ov=document.createElement('div');
+    ov.id='wizard-overlay';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:9999;display:none;align-items:center;justify-content:center;padding:1rem;';
+    ov.innerHTML='<div id="wizard-box" class="bg-dark-800 border border-dark-600 rounded-2xl w-full max-w-lg shadow-2xl" style="max-height:92vh;overflow-y:auto;"></div>';
+    document.body.appendChild(ov);
+  }
   const overlay=document.getElementById('wizard-overlay');
   if(overlay)overlay.style.display='flex';
   wizardStep4();
