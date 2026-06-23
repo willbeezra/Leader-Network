@@ -424,21 +424,30 @@ function _initCampusPricedDelegate() {
   if (window._campusPricedDelegateReady) return; // Ne s'attache qu'une fois
   window._campusPricedDelegateReady = true;
   document.addEventListener('click', function(e) {
-    const card = e.target.closest('article.campus-card[data-status="priced"]');
+    // Remonte depuis l'élément cliqué jusqu'à trouver une campus-card
+    const card = e.target.closest('article.campus-card');
     if (!card) return;
+    // Vérifie que c'est bien une carte payante
+    if (card.dataset.status !== 'priced') return;
     e.stopPropagation();
     const courseId    = card.dataset.courseId;
     const coursePrice = parseFloat(card.dataset.coursePrice || '0');
     const courseTitle = card.querySelector('.campus-card-title')?.textContent?.trim() || '';
-    console.log('[Campus] clic carte priced — courseId:', courseId, 'price:', coursePrice, 'title:', courseTitle);
+    console.log('[Campus] clic carte priced — courseId:', courseId, 'price:', coursePrice, 'title:', courseTitle,
+                '| _wizardOpenForCourse:', typeof window._wizardOpenForCourse);
     if (!courseId) {
-      console.warn('[Campus] data-course-id manquant sur la carte');
+      console.error('[Campus] ERREUR: data-course-id manquant sur la carte. HTML:', card.outerHTML.substring(0, 200));
       return;
     }
     if (typeof window._wizardOpenForCourse === 'function') {
-      window._wizardOpenForCourse(courseId, courseTitle, coursePrice);
+      try {
+        window._wizardOpenForCourse(courseId, courseTitle, coursePrice);
+      } catch(err) {
+        console.error('[Campus] _wizardOpenForCourse a lancé une erreur:', err);
+      }
     } else {
-      console.warn('[Campus] window._wizardOpenForCourse non disponible');
+      console.error('[Campus] ERREUR: window._wizardOpenForCourse non défini — member-app.js chargé ?', 
+                    typeof window._wizardReset, typeof wizardStep4);
     }
   });
 }
