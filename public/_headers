@@ -1,14 +1,16 @@
 # Cloudflare Pages — Headers HTTP pour les fichiers statiques
-# Ces headers sont appliqués automatiquement par Cloudflare Pages
 
-# Fichiers JS/CSS statiques — no-cache pour forcer la revalidation (query string ?v= assure le cache-busting)
+# Fichiers JS/CSS statiques — no-store : Safari doit TOUJOURS refetch
 /static/*.js
-  Cache-Control: no-cache, must-revalidate
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  Pragma: no-cache
   X-Content-Type-Options: nosniff
 
 /static/*.css
-  Cache-Control: no-cache, must-revalidate
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  Pragma: no-cache
   X-Content-Type-Options: nosniff
+
 
 # Images et assets
 /static/*.png

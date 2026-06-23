@@ -417,17 +417,14 @@ function _renderCampusCatalogOnly(mainContent, courses, categories, hasAccess, c
 }
 
 // ── Event delegation GLOBALE pour les cartes 'priced' ────────────────────────
-// v3 — utilise AbortController pour pouvoir retirer l'ancien listener
-// et le flag _campusPricedDelegateV3 pour éviter le double-attachement
-// même si une ancienne version du script avait déjà posé _campusPricedDelegateReady
+// Stocke l'AbortController sur window pour survivre aux ré-exécutions du script
+// (SPA : campus-app.js peut être ré-évalué sans rechargement de page)
 function _initCampusPricedDelegate() {
-  // Retirer tout ancien listener via l'AbortController précédent
+  // Annuler et retirer TOUT listener précédent (même de sessions passées)
   if (window._campusPricedAbort) {
-    window._campusPricedAbort.abort();
+    try { window._campusPricedAbort.abort(); } catch(e) {}
   }
-  // Créer un nouveau contrôleur
-  const ac = new AbortController();
-  window._campusPricedAbort = ac;
+  window._campusPricedAbort = new AbortController();
 
   document.addEventListener('click', function(e) {
     const card = e.target.closest('article.campus-card[data-status="priced"]');
@@ -450,7 +447,7 @@ function _initCampusPricedDelegate() {
       console.error('[Campus] window._wizardOpenForCourse non défini !');
       alert('Module de paiement indisponible. Rechargez la page.');
     }
-  }, { signal: ac.signal });
+  }, { signal: window._campusPricedAbort.signal });
 }
 
 
