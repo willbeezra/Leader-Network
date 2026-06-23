@@ -525,26 +525,12 @@ function renderCampusCourseCard(course) {
 // ── Ouvre le wizard d'achat formation depuis une carte formation ──────────────
 // Réutilise exactement le même wizard que les packages — flag isCoursePayment
 function openCoursePaymentWizard(courseId, courseTitleEncoded, priceUsd) {
-  if (typeof _wizardReset === 'function' && typeof wizardStep4 === 'function') {
-    // Initialiser _wizardData directement sans passer par wizardStart
-    // (wizardStart afficherait l'étape 1 "package" qui n'a pas de sens pour une formation)
-    _wizardReset();
-    const title = decodeURIComponent(courseTitleEncoded || '');
-    window._wizardData.isCoursePayment = true;
-    window._wizardData.courseId = courseId;
-    window._wizardData.pkgName = title;       // affiché dans l'étape 7 (confirmation)
-    window._wizardData.price = Number(priceUsd) || 0;
-    window._wizardData.totalAmt = Number(priceUsd) || 0;  // pas de frais admin
-    window._wizardData.addLicense = false;
-    window._wizardData.bv = 0;
-    window._wizardData.diffPrice = Number(priceUsd) || 0;
-    window._wizardData.diffBV = 0;
-    // Ouvrir le wizard directement à l'étape 4 (choix du mode de paiement)
-    const overlay = document.getElementById('wizard-overlay');
-    if (overlay) overlay.style.display = 'flex';
-    wizardStep4();
-  } else {
-    if (typeof showPage === 'function') showPage('campus');
+  const title = decodeURIComponent(courseTitleEncoded || '');
+  if (typeof window._wizardOpenForCourse === 'function') {
+    // Utilise la fonction dédiée exposée par member-app.js
+    window._wizardOpenForCourse(courseId, title, priceUsd);
+  } else if (typeof showPage === 'function') {
+    showPage('campus');
   }
 }
 
