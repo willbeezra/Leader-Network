@@ -417,16 +417,19 @@ function _renderCampusCatalogOnly(mainContent, courses, categories, hasAccess, c
 }
 
 // ── Event delegation GLOBALE pour les cartes 'priced' ────────────────────────
-// Stratégie : délégation sur document, sans stopPropagation, anti-double-appel
-// par timestamp (ignore si même carte cliquée < 300ms après).
+// v3 — utilise AbortController pour pouvoir retirer l'ancien listener
+// et le flag _campusPricedDelegateV3 pour éviter le double-attachement
+// même si une ancienne version du script avait déjà posé _campusPricedDelegateReady
 function _initCampusPricedDelegate() {
-  if (window._campusPricedDelegateReady) return; // Ne s'attache qu'une fois
-  window._campusPricedDelegateReady = true;
-  let _lastPricedClick = 0;
-  let _lastPricedCardId = '';
+  // Retirer tout ancien listener via l'AbortController précédent
+  if (window._campusPricedAbort) {
+    window._campusPricedAbort.abort();
+  }
+  // Créer un nouveau contrôleur
+  const ac = new AbortController();
+  window._campusPricedAbort = ac;
 
   document.addEventListener('click', function(e) {
-    // Remonte depuis l'élément cliqué jusqu'à trouver une campus-card priced
     const card = e.target.closest('article.campus-card[data-status="priced"]');
     if (!card) return;
 
@@ -434,29 +437,20 @@ function _initCampusPricedDelegate() {
     const coursePrice = parseFloat(card.dataset.coursePrice || '0');
     const courseTitle = card.querySelector('.campus-card-title')?.textContent?.trim() || '';
 
-    // Anti-double-appel : ignore si même carte < 500ms
-    const now = Date.now();
-    if (courseId === _lastPricedCardId && (now - _lastPricedClick) < 500) {
-      console.log('[Campus] clic ignoré (double-appel < 500ms)');
-      return;
-    }
-    _lastPricedClick  = now;
-    _lastPricedCardId = courseId;
-
-    console.log('[Campus] clic carte priced — id:', courseId, 'price:', coursePrice, 'title:', courseTitle);
-
     if (!courseId) {
-      console.error('[Campus] ERREUR: data-course-id manquant sur la carte');
+      console.error('[Campus] data-course-id manquant');
       return;
     }
+
+    console.log('[Campus] clic carte priced — id:', courseId, 'price:', coursePrice);
 
     if (typeof window._wizardOpenForCourse === 'function') {
       window._wizardOpenForCourse(courseId, courseTitle, coursePrice);
     } else {
-      console.error('[Campus] ERREUR: window._wizardOpenForCourse non défini !');
-      alert('Le module de paiement n\'est pas disponible. Rechargez la page.');
+      console.error('[Campus] window._wizardOpenForCourse non défini !');
+      alert('Module de paiement indisponible. Rechargez la page.');
     }
-  });
+  }, { signal: ac.signal });
 }
 
 
