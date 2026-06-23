@@ -417,37 +417,44 @@ function _renderCampusCatalogOnly(mainContent, courses, categories, hasAccess, c
 }
 
 // ── Event delegation GLOBALE pour les cartes 'priced' ────────────────────────
-// Attachée sur document une seule fois au chargement du script.
-// Fonctionne quelle que soit la façon dont les cartes sont injectées dans le DOM
-// (page full, page catalogue, cache, rechargement).
+// Stratégie : délégation sur document, sans stopPropagation, anti-double-appel
+// par timestamp (ignore si même carte cliquée < 300ms après).
 function _initCampusPricedDelegate() {
   if (window._campusPricedDelegateReady) return; // Ne s'attache qu'une fois
   window._campusPricedDelegateReady = true;
+  let _lastPricedClick = 0;
+  let _lastPricedCardId = '';
+
   document.addEventListener('click', function(e) {
-    // Remonte depuis l'élément cliqué jusqu'à trouver une campus-card
-    const card = e.target.closest('article.campus-card');
+    // Remonte depuis l'élément cliqué jusqu'à trouver une campus-card priced
+    const card = e.target.closest('article.campus-card[data-status="priced"]');
     if (!card) return;
-    // Vérifie que c'est bien une carte payante
-    if (card.dataset.status !== 'priced') return;
-    e.stopPropagation();
-    const courseId    = card.dataset.courseId;
+
+    const courseId    = card.dataset.courseId || '';
     const coursePrice = parseFloat(card.dataset.coursePrice || '0');
     const courseTitle = card.querySelector('.campus-card-title')?.textContent?.trim() || '';
-    console.log('[Campus] clic carte priced — courseId:', courseId, 'price:', coursePrice, 'title:', courseTitle,
-                '| _wizardOpenForCourse:', typeof window._wizardOpenForCourse);
-    if (!courseId) {
-      console.error('[Campus] ERREUR: data-course-id manquant sur la carte. HTML:', card.outerHTML.substring(0, 200));
+
+    // Anti-double-appel : ignore si même carte < 500ms
+    const now = Date.now();
+    if (courseId === _lastPricedCardId && (now - _lastPricedClick) < 500) {
+      console.log('[Campus] clic ignoré (double-appel < 500ms)');
       return;
     }
+    _lastPricedClick  = now;
+    _lastPricedCardId = courseId;
+
+    console.log('[Campus] clic carte priced — id:', courseId, 'price:', coursePrice, 'title:', courseTitle);
+
+    if (!courseId) {
+      console.error('[Campus] ERREUR: data-course-id manquant sur la carte');
+      return;
+    }
+
     if (typeof window._wizardOpenForCourse === 'function') {
-      try {
-        window._wizardOpenForCourse(courseId, courseTitle, coursePrice);
-      } catch(err) {
-        console.error('[Campus] _wizardOpenForCourse a lancé une erreur:', err);
-      }
+      window._wizardOpenForCourse(courseId, courseTitle, coursePrice);
     } else {
-      console.error('[Campus] ERREUR: window._wizardOpenForCourse non défini — member-app.js chargé ?', 
-                    typeof window._wizardReset, typeof wizardStep4);
+      console.error('[Campus] ERREUR: window._wizardOpenForCourse non défini !');
+      alert('Le module de paiement n\'est pas disponible. Rechargez la page.');
     }
   });
 }
@@ -515,29 +522,26 @@ function renderCampusCourseCard(course) {
   ` : '';
 
   // ── Action au clic ──
-  let onClickAction = `showCampusCourse('${course.slug}')`;
-  if (status === 'priced') {
-    onClickAction = `_campusOpenPricedWizard('${course.id}', ${course.price_usd || 0}, this)`;
-  }
+  // Pour 'priced' : pas d'onclick inline — géré par délégation _initCampusPricedDelegate
+  // Pour les autres : onclick inline direct
+  const onClickAction = (status === 'priced') ? '' : `onclick="showCampusCourse('${course.slug}')"` ;
 
   // ── Texte footer ──
   const footerRight = (status === 'included' || status === 'free')
     ? `<span class="campus-card-lessons"><i class="fas fa-play-circle"></i> ${course.total_lessons || 0} ${_t(course.total_lessons > 1 ? 'leçons' : 'leçon')}</span>`
     : status === 'priced'
-      ? `<button class="campus-card-unlock" style="color:#c9a84c;background:none;border:none;cursor:pointer;padding:0;font:inherit;"
-           onclick="event.stopPropagation(); _campusOpenPricedWizard('${course.id}', ${course.price_usd || 0}, this)">
+      ? `<button class="campus-card-unlock campus-card-buy-btn" style="color:#c9a84c;background:none;border:none;cursor:pointer;padding:0;font:inherit;">
            <i class="fas fa-shopping-cart"></i> Acquérir
          </button>`
       : `<span class="campus-card-unlock"><i class="fas fa-unlock-alt"></i> Débloquer</span>`;
 
-  // Pour status='priced' : on stocke courseId + price dans data-* et on gère via delegation
-  // (évite les problèmes de quotes dans les titres / conflits inline onclick)
+  // Pour status='priced' : données stockées en data-* pour la délégation
   const pricedData = status === 'priced'
     ? ` data-course-id="${course.id}" data-course-price="${course.price_usd || 0}"`
     : '';
 
   return `
-    <article class="campus-card ${locked ? 'campus-card-locked' : ''}" onclick="${onClickAction}"
+    <article class="campus-card ${locked ? 'campus-card-locked' : ''}" ${onClickAction}
              style="${status === 'priced' ? 'cursor:pointer;' : ''}"
              data-title="${(course.title || '').toLowerCase().replace(/"/g, '')}" data-cat="${course.category_id}"
              data-status="${status}"${pricedData}>
@@ -1750,6 +1754,8 @@ function campusGoToPackages() {
   }
 }
 
-// NOTE: _initCampusPricedDelegate() supprimée — les cartes priced
-// utilisent désormais des onclick inline directs sur l'article et le bouton.
-// Cela évite le double-appel delegate + onclick qui causait le RangeError.
+// ── Init délégation clic cartes priced ───────────────────────────────────────
+// Appelée au chargement du script. Le flag interne empêche tout double-attachement.
+// DOIT être la seule façon de déclencher le wizard pour les cartes priced
+// (aucun onclick inline sur article ou bouton pour les cartes priced).
+_initCampusPricedDelegate();
