@@ -1,3 +1,5 @@
+(function() {
+"use strict";
 const API = "";
 async function openWalletDetail(type) {
   const labels = {
@@ -17469,3 +17471,5 @@ async function renderNotifications(e, page, perPage) {
     e.innerHTML = '<div class="p-4 text-red-400">Erreur : ' + t.error + "</div>";
   }
 }
+
+})();
