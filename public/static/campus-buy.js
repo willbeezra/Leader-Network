@@ -1,901 +1,1101 @@
-// campus-buy.js — Flow d'achat campus autonome
-// Safari-safe : zéro template literal imbriqué, zéro async wizard
-// Toutes les fonctions sont courtes, synchrones quand possible
-// API calls via fetch() natif avec token JWT depuis localStorage
-// ─────────────────────────────────────────────────────────────
+// ============================================================
+// campus-buy.js — Flow d'achat formation campus
+// Safari-safe : ZERO template literal, ZERO async/await
+// ZERO fonction récursive, ZERO imbrication complexe
+// Uniquement : function déclarées, XHR callbacks, innerHTML = string
+// ============================================================
+// jshint esversion:6
 
-'use strict';
+(function() {
+  'use strict';
 
-// ── Utilitaires de base ───────────────────────────────────────
-
-function cbToken() {
-  return localStorage.getItem('authToken') || localStorage.getItem('token') || '';
-}
-
-function cbApi(method, path, body) {
-  var opts = {
-    method: method,
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + cbToken() }
+  // ── État global ──────────────────────────────────────────────
+  var CB = {
+    courseId: (window._CB_COURSE_ID || '').replace(/[^a-zA-Z0-9_-]/g, ''),
+    token: '',
+    course: null,
+    orderId: null,
+    gw: {},
+    stripeEnabled: false,
+    stripeKey: '',
+    cpEnabled: false,
+    cpCoins: 'USDT.TRC20,LTC,ETH,BTC',
+    walletBalance: 0,
+    v2Methods: [],
+    v2ManualMethods: [],
+    selectedMethod: '',
+    v2MethodId: '',
+    v2MethodName: '',
+    proofUrl: '',
+    step: 'methods'
   };
-  if (body) opts.body = JSON.stringify(body);
-  return fetch('/api' + path, opts).then(function(r) {
-    return r.json().then(function(d) {
-      if (!r.ok) throw d;
-      return d;
-    });
-  });
-}
 
-function cbFmt(amount) {
-  return '$' + Number(amount).toLocaleString('fr-FR', { minimumFractionDigits: 2 });
-}
+  // ── Helpers ──────────────────────────────────────────────────
+  function getToken() {
+    return localStorage.getItem('leader_member_token') || '';
+  }
 
-function cbEl(id) {
-  return document.getElementById(id);
-}
+  function fmtUsd(n) {
+    var v = parseFloat(n) || 0;
+    return '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
 
-function cbSetHTML(id, html) {
-  var el = cbEl(id);
-  if (el) el.innerHTML = html;
-}
+  function escHtml(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
 
-function cbShow(id) {
-  var el = cbEl(id);
-  if (el) el.style.display = 'block';
-}
+  function el(id) {
+    return document.getElementById(id);
+  }
 
-function cbHide(id) {
-  var el = cbEl(id);
-  if (el) el.style.display = 'none';
-}
+  function showToast(msg, type) {
+    var t = el('cb-toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.style.background = (type === 'error') ? '#450a0a' : '#052e16';
+    t.style.borderColor = (type === 'error') ? '#7f1d1d' : '#166534';
+    t.style.color = (type === 'error') ? '#fca5a5' : '#86efac';
+    t.style.display = 'block';
+    setTimeout(function() { t.style.display = 'none'; }, 4000);
+  }
 
-function cbToast(msg, type) {
-  var t = cbEl('cb-toast');
-  if (!t) return;
-  t.textContent = msg;
-  t.style.background = type === 'error' ? '#450a0a' : '#052e16';
-  t.style.color = type === 'error' ? '#fca5a5' : '#4ade80';
-  t.style.border = type === 'error' ? '1px solid #7f1d1d' : '1px solid #166534';
-  t.style.display = 'block';
-  setTimeout(function() { t.style.display = 'none'; }, 4000);
-}
+  function setHtml(id, html) {
+    var node = el(id);
+    if (node) node.innerHTML = html;
+  }
 
-function cbLoaderHTML() {
-  return '<div class="cb-loader"><div class="cb-spinner"></div>Chargement…</div>';
-}
-
-function cbErrorHTML(msg) {
-  return '<div class="cb-error"><i class="fas fa-exclamation-circle" style="font-size:28px;margin-bottom:10px;display:block;"></i><div>' + (msg || 'Une erreur est survenue.') + '</div><button class="cb-btn-secondary" style="margin-top:14px;width:auto;padding:8px 20px;" onclick="location.reload()">Réessayer</button></div>';
-}
-
-// ── État global ───────────────────────────────────────────────
-
-var _cbState = {
-  courseId: null,
-  course: null,
-  gw: null,
-  orderId: null,
-  stripePublicKey: null,
-  ppClientId: null,
-  ppSdkLoaded: false,
-  ppSdkLoading: false,
-  walletBalance: 0,
-  selectedMethod: null,
-  v2Methods: [],
-  v2ManualMethods: [],
-  cpEnabled: false,
-  cpCoins: 'USDT.TRC20,LTC,ETH,BTC'
-};
-
-// ── Étape 1 : charger les infos de la formation ───────────────
-
-function cbLoadCourse() {
-  cbSetHTML('cb-course-info', cbLoaderHTML());
-  cbApi('GET', '/campus/courses').then(function(data) {
-    var courses = data.courses || data || [];
-    var found = null;
-    for (var i = 0; i < courses.length; i++) {
-      if (String(courses[i].id) === String(_cbState.courseId)) {
-        found = courses[i];
-        break;
-      }
+  function showSection(id) {
+    var ids = ['cb-course-info', 'cb-payment-section', 'cb-checkout-section', 'cb-result-section'];
+    for (var i = 0; i < ids.length; i++) {
+      var node = el(ids[i]);
+      if (!node) continue;
+      node.style.display = (ids[i] === id) ? '' : 'none';
     }
-    if (!found) {
-      cbSetHTML('cb-course-info', cbErrorHTML('Formation introuvable (id: ' + _cbState.courseId + ')'));
+  }
+
+  // ── XHR wrapper (callbacks, pas de Promise) ─────────────────
+  function xhr(method, path, data, onOk, onErr) {
+    var req = new XMLHttpRequest();
+    req.open(method, '/api' + path, true);
+    req.setRequestHeader('Content-Type', 'application/json');
+    var tok = CB.token || getToken();
+    if (tok) req.setRequestHeader('Authorization', 'Bearer ' + tok);
+    req.onreadystatechange = function() {
+      if (req.readyState !== 4) return;
+      var body = {};
+      try { body = JSON.parse(req.responseText); } catch(e) { body = { error: req.responseText }; }
+      if (req.status >= 200 && req.status < 300) {
+        if (onOk) onOk(body);
+      } else {
+        if (onErr) onErr(body);
+      }
+    };
+    req.send(data ? JSON.stringify(data) : null);
+  }
+
+  // ── 1. Initialisation ────────────────────────────────────────
+  function init() {
+    CB.token = getToken();
+    if (!CB.token) {
+      // Pas connecté — rediriger vers login avec retour campus
+      window.location.href = '/login#campus';
       return;
     }
-    _cbState.course = found;
-    cbRenderCourseInfo(found);
-    cbLoadPaymentMethods();
-  }).catch(function(err) {
-    cbSetHTML('cb-course-info', cbErrorHTML((err && err.error) || 'Impossible de charger la formation.'));
-  });
-}
-
-function cbRenderCourseInfo(course) {
-  var price = cbFmt(course.price_usd || course.price || 0);
-  var title = (course.title || course.name || 'Formation').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  var desc = (course.description || course.short_description || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  var html = '<div class="cb-card">';
-  html += '<div class="cb-title">' + title + '</div>';
-  html += '<div class="cb-price">' + price + '</div>';
-  if (desc) html += '<div class="cb-desc">' + desc + '</div>';
-  html += '</div>';
-  cbSetHTML('cb-course-info', html);
-}
-
-// ── Étape 2 : charger les moyens de paiement ─────────────────
-
-function cbLoadPaymentMethods() {
-  cbSetHTML('cb-methods-list', cbLoaderHTML());
-  cbShow('cb-payment-section');
-
-  // On lance toutes les requêtes en parallèle
-  var promises = [
-    cbApi('GET', '/members/packages'),
-    cbApi('GET', '/members/stripe/config').catch(function() { return null; }),
-    cbApi('GET', '/members/coinpayments/config').catch(function() { return null; }),
-    cbApi('GET', '/payment/methods').catch(function() { return null; }),
-    cbApi('GET', '/members/wallet').catch(function() { return null; })
-  ];
-
-  Promise.all(promises).then(function(results) {
-    var pkgData = results[0] || {};
-    var stripeData = results[1];
-    var cpData = results[2];
-    var methodsData = results[3];
-    var walletData = results[4];
-
-    // Gateways (paypal, bank, crypto, manual)
-    var gateways = pkgData.gateways || {};
-    _cbState.gw = cbBuildGw(gateways);
-    _cbState.adminFee = pkgData.adminFee || { amount: 0, active: false, paid: true };
-
-    // Stripe
-    if (stripeData && stripeData.enabled) {
-      _cbState.stripePublicKey = stripeData.public_key;
+    if (!CB.courseId) {
+      showSection('cb-course-info');
+      setHtml('cb-course-info', '<div class="cb-error"><i class="fas fa-exclamation-circle" style="font-size:32px;margin-bottom:12px;color:#f87171;display:block;"></i>Formation introuvable.</div>');
+      return;
     }
+    loadCourse();
+  }
 
-    // CoinPayments
-    if (cpData && cpData.enabled) {
-      _cbState.cpEnabled = true;
-      _cbState.cpCoins = cpData.coins || 'USDT.TRC20,USDT.ERC20,BTC,ETH';
+  // ── 2. Charger infos formation ───────────────────────────────
+  // Utilise GET /api/campus/ (liste) et filtre par ID
+  // Évite la dépendance à un endpoint /course/:id inexistant
+  function loadCourse() {
+    showSection('cb-course-info');
+    setHtml('cb-course-info', '<div class="cb-loader"><div class="cb-spinner"></div>Chargement de la formation\u2026</div>');
+
+    xhr('GET', '/campus/', null, function(data) {
+      var courses = data.courses || [];
+      var found = null;
+      for (var i = 0; i < courses.length; i++) {
+        if (String(courses[i].id) === String(CB.courseId)) {
+          found = courses[i];
+          break;
+        }
+      }
+      if (!found) {
+        setHtml('cb-course-info', '<div class="cb-error"><i class="fas fa-exclamation-circle" style="font-size:32px;margin-bottom:12px;display:block;color:#f87171;"></i>Formation introuvable.</div>');
+        return;
+      }
+      CB.course = found;
+      renderCourseInfo();
+    }, function(err) {
+      setHtml('cb-course-info', '<div class="cb-error"><i class="fas fa-exclamation-circle" style="font-size:32px;margin-bottom:12px;display:block;color:#f87171;"></i>' + escHtml(err.error || 'Impossible de charger la formation.') + '</div>');
+    });
+  }
+
+  // ── 3. Afficher infos formation ──────────────────────────────
+  function renderCourseInfo() {
+    var c = CB.course;
+    if (!c) return;
+
+    var html = '';
+    html += '<div class="cb-card">';
+    if (c.thumbnail_url) {
+      html += '<img src="' + escHtml(c.thumbnail_url) + '" alt="' + escHtml(c.title) + '" style="width:100%;height:160px;object-fit:cover;border-radius:10px;margin-bottom:14px;">';
     }
+    html += '<div class="cb-title">' + escHtml(c.title || 'Formation') + '</div>';
+    html += '<div class="cb-price">' + fmtUsd(c.price_usd) + '</div>';
+    if (c.description) {
+      html += '<div class="cb-desc">' + escHtml(c.description) + '</div>';
+    }
+    html += '</div>';
 
-    // v2 PSP (automatiques sauf exclus)
-    var excluded = ['stripe', 'paypal', 'coinpayments', 'wallet', 'internal_wallet', 'internal', 'leader_wallet'];
-    if (methodsData && methodsData.methods) {
-      var allMethods = [];
-      Object.values(methodsData.methods).forEach(function(arr) {
-        if (Array.isArray(arr)) allMethods = allMethods.concat(arr);
+    setHtml('cb-course-info', html);
+
+    // Afficher la section paiement
+    var sec = el('cb-payment-section');
+    if (sec) sec.style.display = '';
+
+    loadPaymentMethods();
+  }
+
+  // ── 4. Charger tous les moyens de paiement ───────────────────
+  // Séquentiel via callbacks chaînés — pas d'async, pas de Promise.all
+  function loadPaymentMethods() {
+    setHtml('cb-methods-list', '<div class="cb-loader"><div class="cb-spinner"></div>Chargement des moyens de paiement\u2026</div>');
+
+    // Étape 4a : charger packages (gateways legacy)
+    xhr('GET', '/members/packages', null, function(pkgData) {
+      var gw = pkgData.gateways || {};
+      CB.gw = gw;
+
+      // Étape 4b : charger config Stripe
+      xhr('GET', '/members/stripe/config', null, function(strData) {
+        CB.stripeEnabled = !!(strData && strData.enabled);
+        if (CB.stripeEnabled && strData.public_key) CB.stripeKey = strData.public_key;
+
+        // Étape 4c : charger config CoinPayments
+        xhr('GET', '/members/coinpayments/config', null, function(cpData) {
+          CB.cpEnabled = !!(cpData && cpData.enabled);
+          if (CB.cpEnabled && cpData.coins) CB.cpCoins = cpData.coins;
+
+          // Étape 4d : charger méthodes V2
+          xhr('GET', '/payment/methods', null, function(v2Data) {
+            var allMethods = [];
+            var raw = v2Data.methods || {};
+            var keys = Object.keys(raw);
+            for (var i = 0; i < keys.length; i++) {
+              var arr = raw[keys[i]];
+              if (Array.isArray(arr)) {
+                for (var j = 0; j < arr.length; j++) allMethods.push(arr[j]);
+              }
+            }
+            var skipProviders = ['stripe', 'paypal', 'coinpayments', 'wallet', 'internal_wallet', 'internal', 'leader_wallet'];
+            CB.v2Methods = [];
+            CB.v2ManualMethods = [];
+            for (var k = 0; k < allMethods.length; k++) {
+              var m = allMethods[k];
+              if (!m.is_active) continue;
+              if (skipProviders.indexOf(m.provider) >= 0) continue;
+              if (m.is_automatic) {
+                CB.v2Methods.push(m);
+              } else {
+                CB.v2ManualMethods.push(m);
+              }
+            }
+
+            // Étape 4e : charger solde wallet
+            xhr('GET', '/members/wallet', null, function(wData) {
+              CB.walletBalance = parseFloat((wData.wallet && wData.wallet.balance) || (wData.member && wData.member.wallet_balance) || 0) || 0;
+              renderMethodsList();
+            }, function() {
+              CB.walletBalance = 0;
+              renderMethodsList();
+            });
+
+          }, function() {
+            CB.v2Methods = [];
+            CB.v2ManualMethods = [];
+            // continuer quand même
+            xhr('GET', '/members/wallet', null, function(wData) {
+              CB.walletBalance = parseFloat((wData.wallet && wData.wallet.balance) || 0) || 0;
+              renderMethodsList();
+            }, function() {
+              CB.walletBalance = 0;
+              renderMethodsList();
+            });
+          });
+
+        }, function() {
+          CB.cpEnabled = false;
+          // continuer
+          xhr('GET', '/payment/methods', null, function(v2Data) {
+            buildV2FromData(v2Data);
+            xhr('GET', '/members/wallet', null, function(wData) {
+              CB.walletBalance = parseFloat((wData.wallet && wData.wallet.balance) || 0) || 0;
+              renderMethodsList();
+            }, function() { CB.walletBalance = 0; renderMethodsList(); });
+          }, function() {
+            CB.v2Methods = []; CB.v2ManualMethods = [];
+            xhr('GET', '/members/wallet', null, function(wData) {
+              CB.walletBalance = parseFloat((wData.wallet && wData.wallet.balance) || 0) || 0;
+              renderMethodsList();
+            }, function() { CB.walletBalance = 0; renderMethodsList(); });
+          });
+        });
+
+      }, function() {
+        CB.stripeEnabled = false;
+        // continuer (CoinPayments → V2 → wallet)
+        xhr('GET', '/members/coinpayments/config', null, function(cpData) {
+          CB.cpEnabled = !!(cpData && cpData.enabled);
+          if (CB.cpEnabled && cpData.coins) CB.cpCoins = cpData.coins;
+          xhr('GET', '/payment/methods', null, function(v2Data) {
+            buildV2FromData(v2Data);
+            xhr('GET', '/members/wallet', null, function(wData) {
+              CB.walletBalance = parseFloat((wData.wallet && wData.wallet.balance) || 0) || 0;
+              renderMethodsList();
+            }, function() { CB.walletBalance = 0; renderMethodsList(); });
+          }, function() {
+            CB.v2Methods = []; CB.v2ManualMethods = [];
+            loadWalletAndRender();
+          });
+        }, function() {
+          CB.cpEnabled = false;
+          CB.v2Methods = []; CB.v2ManualMethods = [];
+          loadWalletAndRender();
+        });
       });
-      _cbState.v2Methods = allMethods.filter(function(m) {
-        return m.is_automatic && m.is_active && excluded.indexOf(m.provider) === -1;
-      });
-      _cbState.v2ManualMethods = allMethods.filter(function(m) {
-        return !m.is_automatic && m.is_active && ['leader_wallet', 'internal_wallet', 'internal', 'wallet'].indexOf(m.provider) === -1;
-      });
+
+    }, function(err) {
+      CB.gw = {};
+      // Essayer quand même les autres
+      CB.stripeEnabled = false;
+      CB.cpEnabled = false;
+      CB.v2Methods = []; CB.v2ManualMethods = [];
+      loadWalletAndRender();
+    });
+  }
+
+  function buildV2FromData(v2Data) {
+    var allMethods = [];
+    var raw = v2Data.methods || {};
+    var keys = Object.keys(raw);
+    for (var i = 0; i < keys.length; i++) {
+      var arr = raw[keys[i]];
+      if (Array.isArray(arr)) {
+        for (var j = 0; j < arr.length; j++) allMethods.push(arr[j]);
+      }
+    }
+    var skipProviders = ['stripe', 'paypal', 'coinpayments', 'wallet', 'internal_wallet', 'internal', 'leader_wallet'];
+    CB.v2Methods = [];
+    CB.v2ManualMethods = [];
+    for (var k = 0; k < allMethods.length; k++) {
+      var m = allMethods[k];
+      if (!m.is_active) continue;
+      if (skipProviders.indexOf(m.provider) >= 0) continue;
+      if (m.is_automatic) { CB.v2Methods.push(m); }
+      else { CB.v2ManualMethods.push(m); }
+    }
+  }
+
+  function loadWalletAndRender() {
+    xhr('GET', '/members/wallet', null, function(wData) {
+      CB.walletBalance = parseFloat((wData.wallet && wData.wallet.balance) || 0) || 0;
+      renderMethodsList();
+    }, function() {
+      CB.walletBalance = 0;
+      renderMethodsList();
+    });
+  }
+
+  // ── 5. Afficher la liste des méthodes ────────────────────────
+  function renderMethodsList() {
+    var gw = CB.gw;
+    var amt = parseFloat(CB.course && CB.course.price_usd) || 0;
+
+    var hasPaypal  = !!(gw.paypal_email && gw.paypal_active);
+    var hasBank    = !!((!(!gw.bank_iban && !gw.bank_name)) && gw.bank_active);
+    var hasCrypto  = !!(gw.crypto_address && gw.crypto_active);
+    var hasManual  = !!(gw.instructions && gw.manual_active);
+    var hasStripe  = CB.stripeEnabled;
+    var hasCP      = CB.cpEnabled;
+    var hasV2      = CB.v2Methods.length > 0;
+    var hasV2Man   = CB.v2ManualMethods.length > 0;
+
+    var wbal   = CB.walletBalance;
+    var canWal = wbal >= amt;
+    var hasAny = hasPaypal || hasBank || hasCrypto || hasManual || hasStripe || hasCP || hasV2 || hasV2Man || wbal > 0;
+
+    var html = '';
+
+    if (!hasAny) {
+      html = '<div class="cb-info"><i class="fas fa-exclamation-triangle" style="margin-right:6px;"></i>Aucune passerelle de paiement configurée. Contactez votre administrateur.</div>';
+      setHtml('cb-methods-list', html);
+      return;
     }
 
     // Wallet
-    if (walletData) {
-      _cbState.walletBalance = Number(
-        (walletData.wallet && walletData.wallet.balance) ||
-        (walletData.member && walletData.member.wallet_balance) ||
-        0
-      );
+    if (canWal) {
+      html += '<button class="cb-method wallet" onclick="window._cbSelectMethod(\'wallet\')">';
+      html += '<span class="cb-method-icon"><i class="fas fa-wallet" style="color:#06b6d4;"></i></span>';
+      html += '<span style="flex:1;"><span class="cb-method-label">Wallet LEADER</span>';
+      html += '<div class="cb-method-sub">Solde : <span style="color:#22d3ee;font-weight:700;">' + fmtUsd(wbal) + '</span></div></span>';
+      html += '<span class="cb-badge cyan">Immédiat</span></button>';
+    } else if (wbal > 0) {
+      html += '<div class="cb-method" style="opacity:.5;cursor:not-allowed;">';
+      html += '<span class="cb-method-icon"><i class="fas fa-wallet" style="color:#6b7280;"></i></span>';
+      html += '<span style="flex:1;"><span class="cb-method-label" style="color:#9ca3af;">Wallet LEADER</span>';
+      html += '<div class="cb-method-sub">Insuffisant : <span style="color:#f87171;">' + fmtUsd(wbal) + '</span> / ' + fmtUsd(amt) + ' requis</div></span></div>';
     }
 
-    cbRenderMethods();
-  }).catch(function(err) {
-    cbSetHTML('cb-methods-list', cbErrorHTML((err && err.error) || 'Impossible de charger les moyens de paiement.'));
-  });
-}
-
-function cbBuildGw(e) {
-  return {
-    paypal_email: (e.paypal && e.paypal.email) || '',
-    paypal_instructions: (e.paypal && e.paypal.instructions) || '',
-    paypal_active: (e.paypal && e.paypal.active === 'true'),
-    bank_name: (e.bank && e.bank.name) || '',
-    bank_beneficiary: (e.bank && e.bank.beneficiary) || '',
-    bank_iban: (e.bank && e.bank.iban) || '',
-    bank_swift: (e.bank && e.bank.swift) || '',
-    bank_instructions: (e.bank && e.bank.instructions) || '',
-    bank_active: (e.bank && e.bank.active === 'true'),
-    crypto_address: (e.crypto && e.crypto.address) || '',
-    crypto_network: (e.crypto && e.crypto.network) || '',
-    crypto_instructions: (e.crypto && e.crypto.instructions) || '',
-    crypto_active: (e.crypto && e.crypto.active === 'true'),
-    wallet_active: (e.wallet && e.wallet.active === 'true'),
-    instructions: (e.manual && e.manual.instructions) || '',
-    contact_email: (e.manual && e.manual.contact_email) || '',
-    contact_phone: (e.manual && e.manual.contact_phone) || '',
-    manual_active: (e.manual && e.manual.active === 'true')
-  };
-}
-
-// ── Rendu de la liste des méthodes ───────────────────────────
-
-function cbRenderMethods() {
-  var gw = _cbState.gw;
-  var amount = parseFloat((_cbState.course && (_cbState.course.price_usd || _cbState.course.price)) || 0);
-  var html = '';
-
-  // Stripe
-  if (_cbState.stripePublicKey) {
-    html += '<button class="cb-method stripe" onclick="cbSelectMethod(\'stripe\')">';
-    html += '<span class="cb-method-icon"><i class="fas fa-credit-card" style="color:#a78bfa;"></i></span>';
-    html += '<span><div class="cb-method-label">Carte bancaire / Apple Pay / Google Pay</div>';
-    html += '<div class="cb-method-sub">Paiement immédiat · Visa, Mastercard, Amex, Apple Pay, Google Pay</div></span>';
-    html += '<span class="cb-badge green">Recommandé</span>';
-    html += '</button>';
-  }
-
-  // PayPal
-  if (gw.paypal_active && gw.paypal_email) {
-    html += '<button class="cb-method paypal" onclick="cbSelectMethod(\'paypal\')">';
-    html += '<span class="cb-method-icon"><i class="fab fa-paypal" style="color:#60a5fa;"></i></span>';
-    html += '<span><div class="cb-method-label">PayPal / Carte bancaire</div>';
-    html += '<div class="cb-method-sub">Paiement immédiat et sécurisé · Visa, Mastercard, PayPal</div></span>';
-    html += '</button>';
-  }
-
-  // Virement bancaire
-  if (gw.bank_active && (gw.bank_iban || gw.bank_name)) {
-    html += '<button class="cb-method bank" onclick="cbSelectMethod(\'bank\')">';
-    html += '<span class="cb-method-icon"><i class="fas fa-university" style="color:#34d399;"></i></span>';
-    html += '<span><div class="cb-method-label">Virement bancaire</div>';
-    html += '<div class="cb-method-sub">Traitement sous 1-3 jours ouvrés</div></span>';
-    html += '</button>';
-  }
-
-  // Crypto manuel
-  if (gw.crypto_active && gw.crypto_address) {
-    html += '<button class="cb-method crypto" onclick="cbSelectMethod(\'crypto\')">';
-    html += '<span class="cb-method-icon"><i class="fas fa-coins" style="color:#fbbf24;"></i></span>';
-    html += '<span><div class="cb-method-label">Cryptomonnaie (manuel)</div>';
-    html += '<div class="cb-method-sub">Envoi direct vers notre adresse · ' + (gw.crypto_network || 'Réseau blockchain') + '</div></span>';
-    html += '</button>';
-  }
-
-  // CoinPayments
-  if (_cbState.cpEnabled) {
-    html += '<button class="cb-method coinpayments" onclick="cbSelectMethod(\'coinpayments\')">';
-    html += '<span class="cb-method-icon"><i class="fas fa-coins" style="color:#f97316;"></i></span>';
-    html += '<span><div class="cb-method-label">Cryptomonnaie via CoinPayments</div>';
-    html += '<div class="cb-method-sub">Bitcoin, Ethereum, USDT TRC20, Litecoin et plus</div></span>';
-    html += '<span class="cb-badge orange">Crypto</span>';
-    html += '</button>';
-  }
-
-  // Wallet interne
-  if (gw.wallet_active) {
-    var wbal = _cbState.walletBalance;
-    var canW = wbal >= amount;
-    var wbalStr = cbFmt(wbal);
-    html += '<button class="cb-method wallet" onclick="cbSelectMethod(\'wallet\')" ' + (canW ? '' : 'style="opacity:.6;"') + '>';
-    html += '<span class="cb-method-icon"><i class="fas fa-wallet" style="color:#22d3ee;"></i></span>';
-    html += '<span><div class="cb-method-label">Wallet interne — ' + wbalStr + '</div>';
-    html += '<div class="cb-method-sub">' + (canW ? 'Paiement instantané depuis votre solde' : 'Solde insuffisant (' + wbalStr + ' disponible)') + '</div></span>';
-    if (canW) html += '<span class="cb-badge cyan">Instantané</span>';
-    html += '</button>';
-  }
-
-  // v2 PSP automatiques (Mollie, etc.)
-  for (var i = 0; i < _cbState.v2Methods.length; i++) {
-    var m = _cbState.v2Methods[i];
-    var ico = m.provider === 'mollie' ? 'fas fa-credit-card' : 'fas fa-globe';
-    var name = (m.display_name || m.provider).replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    var safeId = (m.id + '').replace(/'/g, '');
-    var safeProvider = (m.provider + '').replace(/'/g, '');
-    var safeName = name;
-    html += '<button class="cb-method v2psp" onclick="cbSelectMethodV2Psp(\'' + safeId + '\',\'' + safeProvider + '\',\'' + safeName + '\')">';
-    html += '<span class="cb-method-icon"><i class="' + ico + '" style="color:#a78bfa;"></i></span>';
-    html += '<span><div class="cb-method-label">' + name + '</div>';
-    html += '<div class="cb-method-sub">Paiement en ligne sécurisé</div></span>';
-    html += '</button>';
-  }
-
-  // v2 manuels
-  for (var j = 0; j < _cbState.v2ManualMethods.length; j++) {
-    var mm = _cbState.v2ManualMethods[j];
-    var mname = (mm.display_name || mm.provider).replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    var mmId = (mm.id + '').replace(/'/g, '');
-    var mmProvider = (mm.provider + '').replace(/'/g, '');
-    var mmName = mname;
-    html += '<button class="cb-method manual" onclick="cbSelectMethodV2Manual(\'' + mmId + '\',\'' + mmProvider + '\',\'' + mmName + '\')">';
-    html += '<span class="cb-method-icon">' + (mm.logo_emoji || '<i class="fas fa-info-circle" style="color:#9ca3af;"></i>') + '</span>';
-    html += '<span><div class="cb-method-label">' + mname + '</div>';
-    html += '<div class="cb-method-sub">Paiement manuel</div></span>';
-    html += '</button>';
-  }
-
-  // Manuel générique (instructions)
-  if (gw.manual_active && gw.instructions) {
-    html += '<button class="cb-method manual" onclick="cbSelectMethod(\'manual\')">';
-    html += '<span class="cb-method-icon"><i class="fas fa-info-circle" style="color:#9ca3af;"></i></span>';
-    html += '<span><div class="cb-method-label">Autre méthode</div>';
-    html += '<div class="cb-method-sub">Voir instructions de paiement</div></span>';
-    html += '</button>';
-  }
-
-  if (!html) {
-    html = '<div class="cb-info"><i class="fas fa-info-circle" style="margin-right:8px;"></i>Aucun moyen de paiement disponible pour le moment. Contactez le support.</div>';
-  }
-
-  cbSetHTML('cb-methods-list', html);
-}
-
-// ── Sélection d'une méthode ───────────────────────────────────
-
-function cbSelectMethod(method) {
-  _cbState.selectedMethod = method;
-  cbHide('cb-payment-section');
-  cbShow('cb-checkout-section');
-  cbRenderCheckout(method);
-}
-
-function cbSelectMethodV2Psp(id, provider, name) {
-  _cbState.selectedMethod = 'v2_psp';
-  _cbState.v2MethodId = id;
-  _cbState.v2DisplayName = name;
-  cbHide('cb-payment-section');
-  cbShow('cb-checkout-section');
-  cbRenderCheckoutV2Psp(id, name);
-}
-
-function cbSelectMethodV2Manual(id, provider, name) {
-  _cbState.selectedMethod = 'v2_manual';
-  _cbState.v2MethodId = id;
-  _cbState.v2DisplayName = name;
-  cbHide('cb-payment-section');
-  cbShow('cb-checkout-section');
-  cbRenderCheckoutV2Manual(id, name);
-}
-
-// ── Checkout : rendu selon la méthode ────────────────────────
-
-function cbRenderCheckout(method) {
-  var gw = _cbState.gw;
-  var course = _cbState.course;
-  var amount = parseFloat((course && (course.price_usd || course.price)) || 0);
-  var amtStr = cbFmt(amount);
-  var html = '';
-
-  html += '<div class="cb-card">';
-  html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">';
-  html += '<button class="cb-btn-secondary" style="width:auto;padding:6px 14px;" onclick="cbBackToMethods()"><i class="fas fa-arrow-left"></i></button>';
-  html += '<span style="font-weight:700;color:#fff;">Montant : <span style="color:#c9a84c;">' + amtStr + '</span></span>';
-  html += '</div>';
-
-  if (method === 'stripe') {
-    html += cbCheckoutStripeHTML(amount);
-  } else if (method === 'paypal') {
-    html += cbCheckoutPayPalHTML(amount);
-  } else if (method === 'bank') {
-    html += cbCheckoutBankHTML(gw, amount);
-  } else if (method === 'crypto') {
-    html += cbCheckoutCryptoHTML(gw, amount);
-  } else if (method === 'coinpayments') {
-    html += cbCheckoutCoinPaymentsHTML(amount);
-  } else if (method === 'wallet') {
-    html += cbCheckoutWalletHTML(amount);
-  } else if (method === 'manual') {
-    html += cbCheckoutManualHTML(gw, amount);
-  }
-
-  html += '</div>';
-  cbSetHTML('cb-checkout-section', html);
-
-  // Initialisation post-rendu
-  if (method === 'stripe') {
-    setTimeout(function() { cbInitStripe(amount); }, 100);
-  } else if (method === 'paypal') {
-    setTimeout(function() { cbInitPayPal(amount); }, 100);
-  } else if (method === 'coinpayments') {
-    setTimeout(function() { cbCreateCoinPaymentsOrder(amount); }, 100);
-  }
-}
-
-// ─────────────── Stripe ──────────────────────────────────────
-
-function cbCheckoutStripeHTML(amount) {
-  var html = '<div id="stripe-payment-element" style="margin-bottom:16px;">';
-  html += '<div class="cb-loader"><div class="cb-spinner"></div>Chargement du module Stripe…</div>';
-  html += '</div>';
-  html += '<div id="stripe-error-msg" class="cb-error" style="display:none;margin-bottom:12px;"></div>';
-  html += '<button id="stripe-pay-btn" class="cb-btn-primary" onclick="cbStripeConfirm()" disabled>';
-  html += '<i class="fas fa-lock" style="margin-right:8px;"></i>Payer ' + cbFmt(amount);
-  html += '</button>';
-  return html;
-}
-
-var _cbStripe = null;
-var _cbStripeElements = null;
-var _cbStripePiSecret = null;
-var _cbStripePiId = null;
-
-function cbInitStripe(amount) {
-  var key = _cbState.stripePublicKey;
-  if (!key) {
-    cbSetHTML('stripe-payment-element', '<div class="cb-error">Stripe non configuré.</div>');
-    return;
-  }
-
-  cbLoadStripeSdk().then(function(ok) {
-    if (!ok) {
-      cbSetHTML('stripe-payment-element', '<div class="cb-error">Impossible de charger Stripe. Vérifiez votre connexion.</div>');
-      return;
+    // Stripe
+    if (hasStripe) {
+      html += '<button class="cb-method stripe" onclick="window._cbSelectMethod(\'stripe\')">';
+      html += '<span class="cb-method-icon"><i class="fas fa-credit-card" style="color:#a78bfa;"></i></span>';
+      html += '<span style="flex:1;"><span class="cb-method-label">Carte bancaire / Apple Pay / Google Pay</span>';
+      html += '<div class="cb-method-sub">Paiement imm\u00e9diat \u00b7 Visa, Mastercard, Amex, Apple Pay</div></span>';
+      html += '<span class="cb-badge green">Recommand\u00e9</span></button>';
     }
-    return cbCreateOrderThen(function(orderId) {
-      return cbApi('POST', '/members/stripe/create-payment-intent', {
-        amount: amount,
-        order_id: orderId,
-        description: 'LEADER — Campus ' + _cbState.courseId
-      });
-    });
-  }).then(function(pi) {
-    if (!pi) return;
-    _cbStripePiSecret = pi.client_secret;
-    _cbStripePiId = pi.payment_intent_id;
-    var appearance = {
-      theme: 'night',
-      variables: {
-        colorPrimary: '#c9a84c',
-        colorBackground: '#1a1f2e',
-        colorText: '#ffffff',
-        colorDanger: '#f87171',
-        borderRadius: '12px',
-        fontFamily: 'system-ui, sans-serif'
+
+    // PayPal
+    if (hasPaypal) {
+      html += '<button class="cb-method paypal" onclick="window._cbSelectMethod(\'paypal\')">';
+      html += '<span class="cb-method-icon"><i class="fab fa-paypal" style="color:#60a5fa;"></i></span>';
+      html += '<span style="flex:1;"><span class="cb-method-label">PayPal / Carte bancaire</span>';
+      html += '<div class="cb-method-sub">Paiement imm\u00e9diat et s\u00e9curis\u00e9 \u00b7 Visa, Mastercard</div></span></button>';
+    }
+
+    // Virement bancaire
+    if (hasBank) {
+      var bankLabel = escHtml(gw.bank_beneficiary || gw.bank_name || '');
+      html += '<button class="cb-method bank" onclick="window._cbSelectMethod(\'bank\')">';
+      html += '<span class="cb-method-icon"><i class="fas fa-university" style="color:#10b981;"></i></span>';
+      html += '<span style="flex:1;"><span class="cb-method-label">Virement bancaire</span>';
+      html += '<div class="cb-method-sub">2\u20133 jours ouvrables' + (bankLabel ? ' \u00b7 ' + bankLabel : '') + '</div></span></button>';
+    }
+
+    // Crypto direct
+    if (hasCrypto) {
+      var netLabel = escHtml(gw.crypto_network || 'USDT');
+      html += '<button class="cb-method crypto" onclick="window._cbSelectMethod(\'crypto\')">';
+      html += '<span class="cb-method-icon"><i class="fab fa-bitcoin" style="color:#f59e0b;"></i></span>';
+      html += '<span style="flex:1;"><span class="cb-method-label">Crypto (' + netLabel + ')</span>';
+      html += '<div class="cb-method-sub">R\u00e9seau : ' + escHtml(gw.crypto_network || 'TRC20') + '</div></span></button>';
+    }
+
+    // CoinPayments
+    if (hasCP) {
+      html += '<button class="cb-method coinpayments" onclick="window._cbSelectMethod(\'coinpayments\')">';
+      html += '<span class="cb-method-icon"><i class="fas fa-coins" style="color:#f97316;"></i></span>';
+      html += '<span style="flex:1;"><span class="cb-method-label">Cryptomonnaie via CoinPayments</span>';
+      html += '<div class="cb-method-sub">Bitcoin, Ethereum, USDT TRC20, Litecoin et plus</div></span>';
+      html += '<span class="cb-badge orange">Crypto</span></button>';
+    }
+
+    // Méthodes V2 automatiques (PSP)
+    for (var vi = 0; vi < CB.v2Methods.length; vi++) {
+      var vm = CB.v2Methods[vi];
+      var vIcon = vm.provider === 'mollie' ? 'fas fa-credit-card' : (vm.logo_emoji ? '' : 'fas fa-credit-card');
+      var vLabel = escHtml(vm.display_name || vm.provider);
+      var vDesc  = escHtml(vm.description || 'Paiement s\u00e9curis\u00e9');
+      var vId    = escHtml(vm.id || '');
+      var vProv  = escHtml(vm.provider || '');
+      html += '<button class="cb-method v2psp" onclick="window._cbSelectV2(\'' + vId + '\',\'' + vProv + '\',\'' + vLabel + '\')">';
+      if (vIcon) {
+        html += '<span class="cb-method-icon"><i class="' + vIcon + '" style="color:#a78bfa;"></i></span>';
+      } else {
+        html += '<span class="cb-method-icon">' + escHtml(vm.logo_emoji || '') + '</span>';
       }
-    };
-    _cbStripe = Stripe(key);
-    _cbStripeElements = _cbStripe.elements({ clientSecret: _cbStripePiSecret, appearance: appearance });
-    _cbStripeElements.create('payment', { layout: 'tabs' }).mount('#stripe-payment-element');
-    var btn = cbEl('stripe-pay-btn');
-    if (btn) btn.disabled = false;
-  }).catch(function(err) {
-    cbSetHTML('stripe-payment-element', cbErrorHTML((err && err.error) || 'Erreur Stripe.'));
-  });
-}
-
-function cbLoadStripeSdk() {
-  if (window.Stripe) return Promise.resolve(true);
-  return new Promise(function(resolve) {
-    var s = document.createElement('script');
-    s.src = 'https://js.stripe.com/v3/';
-    s.onload = function() { resolve(true); };
-    s.onerror = function() { resolve(false); };
-    document.head.appendChild(s);
-  });
-}
-
-function cbStripeConfirm() {
-  var btn = cbEl('stripe-pay-btn');
-  var errEl = cbEl('stripe-error-msg');
-  if (!_cbStripe || !_cbStripeElements) return;
-  if (btn) { btn.disabled = true; btn.innerHTML = '<div class="cb-spinner" style="width:20px;height:20px;border-width:2px;margin:0 auto;"></div>'; }
-  if (errEl) errEl.style.display = 'none';
-
-  _cbStripe.confirmPayment({ elements: _cbStripeElements, redirect: 'if_required' }).then(function(result) {
-    var error = result.error;
-    var pi = result.paymentIntent;
-    if (error) {
-      if (errEl) { errEl.textContent = error.message || 'Paiement refusé'; errEl.style.display = 'block'; }
-      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-lock" style="margin-right:8px;"></i>Réessayer'; }
-      return;
+      html += '<span style="flex:1;"><span class="cb-method-label">' + vLabel + '</span>';
+      html += '<div class="cb-method-sub">' + vDesc + '</div></span>';
+      html += '<span class="cb-badge blue">Automatique</span></button>';
     }
-    if (pi && pi.status === 'succeeded') {
-      if (btn) btn.innerHTML = '<div class="cb-spinner" style="width:20px;height:20px;border-width:2px;margin:0 auto;"></div>';
-      return cbApi('POST', '/members/stripe/confirm-payment', {
-        payment_intent_id: _cbStripePiId,
-        order_id: _cbState.orderId
-      });
+
+    // Méthodes V2 manuelles (Mobile Money, etc.)
+    for (var mi = 0; mi < CB.v2ManualMethods.length; mi++) {
+      var mm = CB.v2ManualMethods[mi];
+      var mmIcon  = mm.logo_emoji || '';
+      var mmLabel = escHtml(mm.display_name || mm.provider);
+      var mmDesc  = escHtml(mm.instructions || mm.description || 'Envoi manuel \u00b7 preuve requise');
+      var mmId    = escHtml(mm.id || '');
+      var mmProv  = escHtml(mm.provider || '');
+      html += '<button class="cb-method manual" onclick="window._cbSelectV2Manual(\'' + mmId + '\',\'' + mmProv + '\',\'' + mmLabel + '\')">';
+      if (mmIcon) {
+        html += '<span class="cb-method-icon">' + escHtml(mmIcon) + '</span>';
+      } else {
+        html += '<span class="cb-method-icon"><i class="fas fa-mobile-alt" style="color:#6b7280;"></i></span>';
+      }
+      html += '<span style="flex:1;"><span class="cb-method-label">' + mmLabel + '</span>';
+      html += '<div class="cb-method-sub">' + mmDesc + '</div></span>';
+      html += '<span class="cb-badge orange">Mobile Money</span></button>';
     }
-    if (errEl) { errEl.textContent = 'Statut inattendu: ' + (pi && pi.status); errEl.style.display = 'block'; }
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-lock" style="margin-right:8px;"></i>Réessayer'; }
-  }).then(function(res) {
-    if (!res) return;
-    cbShowSuccess(res.message || 'Paiement confirmé et formation activée !');
-  }).catch(function(err) {
-    if (errEl) { errEl.textContent = (err && err.error) || 'Erreur lors du paiement'; errEl.style.display = 'block'; }
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-lock" style="margin-right:8px;"></i>Réessayer'; }
-  });
-}
 
-// ─────────────── PayPal ──────────────────────────────────────
+    // Manuel instructions
+    if (hasManual) {
+      html += '<button class="cb-method manual" onclick="window._cbSelectMethod(\'manual\')">';
+      html += '<span class="cb-method-icon"><i class="fas fa-info-circle" style="color:#6b7280;"></i></span>';
+      html += '<span style="flex:1;"><span class="cb-method-label">Autre m\u00e9thode</span>';
+      html += '<div class="cb-method-sub">Voir instructions</div></span></button>';
+    }
 
-function cbCheckoutPayPalHTML(amount) {
-  var html = '<div class="cb-info"><i class="fas fa-bolt" style="margin-right:8px;color:#fbbf24;"></i>';
-  html += 'Paiement sécurisé via PayPal. Activation immédiate après confirmation.';
-  html += '</div>';
-  html += '<div id="cb-paypal-container">';
-  html += '<div class="cb-loader"><div class="cb-spinner"></div>Chargement PayPal…</div>';
-  html += '</div>';
-  return html;
-}
+    setHtml('cb-methods-list', html);
+  }
 
-function cbInitPayPal(amount) {
-  if (!_cbState.ppClientId) {
-    cbApi('GET', '/members/paypal/config').then(function(data) {
-      if (!data || !data.enabled || !data.client_id) {
-        cbSetHTML('cb-paypal-container', cbErrorHTML('PayPal non disponible.'));
+  // ── 6. Sélection méthode ─────────────────────────────────────
+  window._cbSelectMethod = function(method) {
+    CB.selectedMethod = method;
+    CB.step = 'checkout';
+    createOrderThenCheckout(method, null, null);
+  };
+
+  window._cbSelectV2 = function(methodId, provider, displayName) {
+    CB.selectedMethod = 'v2_psp';
+    CB.v2MethodId = methodId;
+    CB.v2MethodName = displayName;
+    createOrderThenCheckoutV2(methodId, provider, displayName);
+  };
+
+  window._cbSelectV2Manual = function(methodId, provider, displayName) {
+    CB.selectedMethod = 'v2_manual';
+    CB.v2MethodId = methodId;
+    CB.v2MethodName = displayName;
+    createOrderThenV2Manual(methodId, provider, displayName);
+  };
+
+  // ── 7. Créer la commande puis aller au checkout ──────────────
+  function createOrderThenCheckout(method, v2Id, v2Name) {
+    var courseId = CB.courseId;
+    showSection('cb-checkout-section');
+    setHtml('cb-checkout-section', '<div class="cb-loader"><div class="cb-spinner"></div>Cr\u00e9ation de la commande\u2026</div>');
+
+    xhr('POST', '/campus/course/' + courseId + '/order', { payment_method: method }, function(data) {
+      if (data.code === 'ALREADY_OWNED') {
+        showResultOwned();
         return;
       }
-      _cbState.ppClientId = data.client_id;
-      cbLoadPayPalSdk().then(function(ok) {
-        if (!ok) { cbSetHTML('cb-paypal-container', cbErrorHTML('SDK PayPal indisponible.')); return; }
-        cbRenderPayPalButtons(amount);
-      });
-    }).catch(function() {
-      cbSetHTML('cb-paypal-container', cbErrorHTML('Erreur PayPal.'));
-    });
-    return;
-  }
-  cbLoadPayPalSdk().then(function(ok) {
-    if (!ok) { cbSetHTML('cb-paypal-container', cbErrorHTML('SDK PayPal indisponible.')); return; }
-    cbRenderPayPalButtons(amount);
-  });
-}
-
-function cbLoadPayPalSdk() {
-  if (window.paypal) return Promise.resolve(true);
-  if (_cbState.ppSdkLoaded) return Promise.resolve(true);
-  if (_cbState.ppSdkLoading) {
-    return new Promise(function(resolve) {
-      var tries = 0;
-      var check = setInterval(function() {
-        tries++;
-        if (window.paypal) { clearInterval(check); resolve(true); return; }
-        if (tries > 80) { clearInterval(check); resolve(false); }
-      }, 100);
+      CB.orderId = data.order_id;
+      if (data.existing && data.status === 'proof_submitted') {
+        showResultProofDone(data.order_id);
+        return;
+      }
+      renderCheckout(method, data);
+    }, function(err) {
+      if (err.code === 'ALREADY_OWNED' || (err.error && err.error.indexOf('d\u00e9j\u00e0') >= 0)) {
+        showResultOwned();
+        return;
+      }
+      setHtml('cb-checkout-section',
+        '<div class="cb-error">' +
+        '<i class="fas fa-exclamation-circle" style="font-size:32px;margin-bottom:12px;display:block;color:#f87171;"></i>' +
+        escHtml(err.error || 'Erreur lors de la cr\u00e9ation de commande.') +
+        '<div style="margin-top:16px;"><button class="cb-btn-secondary" onclick="window._cbBackToMethods()" style="width:auto;padding:10px 20px;">Retour</button></div></div>'
+      );
     });
   }
-  _cbState.ppSdkLoading = true;
-  return new Promise(function(resolve) {
-    var s = document.createElement('script');
-    s.src = 'https://www.paypal.com/sdk/js?client-id=' + _cbState.ppClientId + '&currency=USD&components=buttons&enable-funding=card,paylater&disable-funding=venmo';
-    s.onload = function() { _cbState.ppSdkLoaded = true; _cbState.ppSdkLoading = false; resolve(true); };
-    s.onerror = function() { _cbState.ppSdkLoading = false; resolve(false); };
-    document.head.appendChild(s);
-  });
-}
 
-function cbRenderPayPalButtons(amount) {
-  var containerId = 'cb-paypal-container';
-  cbSetHTML(containerId, '<div id="cb-paypal-btns"></div>');
+  function renderCheckout(method, orderData) {
+    var gw = CB.gw;
+    var amt = parseFloat(CB.course && CB.course.price_usd) || 0;
+    var orderId = CB.orderId || orderData.order_id;
 
-  paypal.Buttons({
-    style: { layout: 'vertical', color: 'gold', shape: 'rect', label: 'pay', height: 45 },
-    createOrder: function() {
-      return cbCreateOrderThen(function(orderId) {
-        return cbApi('POST', '/members/paypal/create-order', {
-          amount: amount,
-          order_id: orderId,
-          currency: 'USD'
-        }).then(function(d) { return d.paypal_order_id || d.id; });
-      });
-    },
-    onApprove: function(data) {
-      cbSetHTML(containerId, cbLoaderHTML());
-      return cbApi('POST', '/members/paypal/capture-order', { paypal_order_id: data.orderID }).then(function(r) {
-        cbShowSuccess(r.message || 'Paiement PayPal confirmé et formation activée !');
-      }).catch(function(err) {
-        cbSetHTML(containerId, cbErrorHTML((err && err.error) || 'Erreur lors de la capture PayPal.'));
-      });
-    },
-    onError: function() {
-      cbSetHTML(containerId, cbErrorHTML('Une erreur PayPal est survenue. Réessayez ou choisissez une autre méthode.'));
-    },
-    onCancel: function() {
-      cbSetHTML(containerId, '<div class="cb-info" style="color:#fbbf24;"><i class="fas fa-times-circle" style="margin-right:8px;"></i>Paiement annulé. Cliquez sur « Retour » pour recommencer.</div>');
-    }
-  }).render('#cb-paypal-btns');
-}
-
-// ─────────────── Virement bancaire ───────────────────────────
-
-function cbCheckoutBankHTML(gw, amount) {
-  var html = '<div class="cb-info">';
-  html += '<div style="font-weight:700;margin-bottom:8px;"><i class="fas fa-university" style="margin-right:8px;color:#34d399;"></i>Coordonnées bancaires</div>';
-  if (gw.bank_beneficiary) html += '<div class="cb-field"><span class="cb-label">Bénéficiaire</span><div style="color:#e5e7eb;font-weight:600;">' + gw.bank_beneficiary.replace(/</g,'&lt;') + '</div></div>';
-  if (gw.bank_name) html += '<div class="cb-field"><span class="cb-label">Banque</span><div style="color:#e5e7eb;">' + gw.bank_name.replace(/</g,'&lt;') + '</div></div>';
-  if (gw.bank_iban) html += '<div class="cb-field"><span class="cb-label">IBAN</span><div style="color:#e5e7eb;font-family:monospace;font-size:13px;word-break:break-all;">' + gw.bank_iban.replace(/</g,'&lt;') + '</div></div>';
-  if (gw.bank_swift) html += '<div class="cb-field"><span class="cb-label">BIC/SWIFT</span><div style="color:#e5e7eb;font-family:monospace;">' + gw.bank_swift.replace(/</g,'&lt;') + '</div></div>';
-  html += '<div class="cb-field"><span class="cb-label">Montant exact à virer</span><div style="color:#c9a84c;font-size:20px;font-weight:800;">' + cbFmt(amount) + '</div></div>';
-  if (gw.bank_instructions) html += '<div style="margin-top:8px;font-size:13px;color:#93c5fd;">' + gw.bank_instructions.replace(/</g,'&lt;') + '</div>';
-  html += '</div>';
-  html += cbProofFormHTML('bank');
-  return html;
-}
-
-// ─────────────── Crypto manuel ───────────────────────────────
-
-function cbCheckoutCryptoHTML(gw, amount) {
-  var html = '<div class="cb-info">';
-  html += '<div style="font-weight:700;margin-bottom:8px;"><i class="fas fa-coins" style="margin-right:8px;color:#fbbf24;"></i>Adresse de réception crypto</div>';
-  if (gw.crypto_network) html += '<div class="cb-field"><span class="cb-label">Réseau</span><div style="color:#e5e7eb;font-weight:600;">' + gw.crypto_network.replace(/</g,'&lt;') + '</div></div>';
-  if (gw.crypto_address) html += '<div class="cb-field"><span class="cb-label">Adresse</span><div style="color:#e5e7eb;font-family:monospace;font-size:12px;word-break:break-all;">' + gw.crypto_address.replace(/</g,'&lt;') + '</div></div>';
-  html += '<div class="cb-field"><span class="cb-label">Montant équivalent</span><div style="color:#c9a84c;font-size:20px;font-weight:800;">' + cbFmt(amount) + '</div></div>';
-  html += '<div style="color:#f87171;font-size:12px;margin-top:4px;"><i class="fas fa-exclamation-triangle" style="margin-right:4px;"></i>Vérifiez bien le réseau avant d\'envoyer.</div>';
-  if (gw.crypto_instructions) html += '<div style="margin-top:8px;font-size:13px;color:#93c5fd;">' + gw.crypto_instructions.replace(/</g,'&lt;') + '</div>';
-  html += '</div>';
-  html += cbProofFormHTML('crypto');
-  return html;
-}
-
-// ─────────────── CoinPayments ────────────────────────────────
-
-function cbCheckoutCoinPaymentsHTML(amount) {
-  return '<div class="cb-loader"><div class="cb-spinner"></div>Création du paiement CoinPayments…</div>';
-}
-
-function cbCreateCoinPaymentsOrder(amount) {
-  cbCreateOrderThen(function(orderId) {
-    return cbApi('POST', '/members/coinpayments/create', {
-      amount: amount,
-      order_id: orderId,
-      currency1: 'USD',
-      currency2: 'USDT.TRC20'
-    });
-  }).then(function(data) {
-    var html = '<div class="cb-info">';
-    html += '<div style="font-weight:700;margin-bottom:12px;"><i class="fas fa-coins" style="margin-right:8px;color:#f97316;"></i>Paiement CoinPayments</div>';
-    if (data.checkout_url || data.status_url) {
-      html += '<a href="' + (data.checkout_url || data.status_url) + '" target="_blank" class="cb-btn-primary" style="display:block;text-align:center;text-decoration:none;margin-bottom:12px;">';
-      html += '<i class="fas fa-external-link-alt" style="margin-right:8px;"></i>Ouvrir la page de paiement CoinPayments';
-      html += '</a>';
-    }
-    if (data.txn_id) html += '<div class="cb-field"><span class="cb-label">Référence transaction</span><div style="font-family:monospace;font-size:12px;color:#e5e7eb;">' + data.txn_id + '</div></div>';
-    html += '<div style="font-size:12px;color:#9ca3af;margin-top:8px;">La formation sera activée automatiquement après confirmation du paiement.</div>';
-    html += '</div>';
-    cbSetHTML('cb-checkout-section', html);
-  }).catch(function(err) {
-    cbSetHTML('cb-checkout-section', cbErrorHTML((err && err.error) || 'Erreur CoinPayments.'));
-  });
-}
-
-// ─────────────── Wallet interne ──────────────────────────────
-
-function cbCheckoutWalletHTML(amount) {
-  var wbal = _cbState.walletBalance;
-  var canW = wbal >= amount;
-  var html = '<div class="cb-info">';
-  html += '<div style="font-weight:700;margin-bottom:8px;"><i class="fas fa-wallet" style="margin-right:8px;color:#22d3ee;"></i>Paiement depuis votre Wallet</div>';
-  html += '<div class="cb-field"><span class="cb-label">Solde disponible</span><div style="color:#22d3ee;font-size:20px;font-weight:800;">' + cbFmt(wbal) + '</div></div>';
-  html += '<div class="cb-field"><span class="cb-label">Montant à payer</span><div style="color:#c9a84c;font-size:20px;font-weight:800;">' + cbFmt(amount) + '</div></div>';
-  if (!canW) {
-    html += '<div style="color:#f87171;font-size:13px;"><i class="fas fa-exclamation-circle" style="margin-right:6px;"></i>Solde insuffisant. Il vous manque ' + cbFmt(amount - wbal) + '.</div>';
-  }
-  html += '</div>';
-  if (canW) {
-    html += '<button class="cb-btn-primary" id="cb-wallet-pay-btn" onclick="cbPayWithWallet()">';
-    html += '<i class="fas fa-check" style="margin-right:8px;"></i>Confirmer le paiement par Wallet';
-    html += '</button>';
-  }
-  return html;
-}
-
-function cbPayWithWallet() {
-  var btn = cbEl('cb-wallet-pay-btn');
-  if (btn) { btn.disabled = true; btn.innerHTML = cbLoaderHTML(); }
-  cbCreateOrderThen(function(orderId) {
-    return cbApi('POST', '/members/wallet/pay', {
-      order_id: orderId,
-      amount: (_cbState.course && (_cbState.course.price_usd || _cbState.course.price)) || 0
-    });
-  }).then(function(r) {
-    cbShowSuccess(r.message || 'Paiement par Wallet confirmé ! Formation activée.');
-  }).catch(function(err) {
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check" style="margin-right:8px;"></i>Confirmer le paiement par Wallet'; }
-    cbToast((err && err.error) || 'Erreur Wallet.', 'error');
-  });
-}
-
-// ─────────────── Manuel générique ────────────────────────────
-
-function cbCheckoutManualHTML(gw, amount) {
-  var html = '<div class="cb-info">';
-  html += '<div style="font-weight:700;margin-bottom:8px;"><i class="fas fa-info-circle" style="margin-right:8px;"></i>Instructions de paiement</div>';
-  if (gw.instructions) html += '<div style="margin-bottom:10px;font-size:14px;white-space:pre-wrap;">' + gw.instructions.replace(/</g,'&lt;') + '</div>';
-  if (gw.contact_email) html += '<div class="cb-field"><span class="cb-label">Contact email</span><div><a href="mailto:' + gw.contact_email + '" style="color:#60a5fa;">' + gw.contact_email + '</a></div></div>';
-  if (gw.contact_phone) html += '<div class="cb-field"><span class="cb-label">Téléphone</span><div style="color:#e5e7eb;">' + gw.contact_phone.replace(/</g,'&lt;') + '</div></div>';
-  html += '<div class="cb-field"><span class="cb-label">Montant</span><div style="color:#c9a84c;font-size:20px;font-weight:800;">' + cbFmt(amount) + '</div></div>';
-  html += '</div>';
-  html += cbProofFormHTML('manual');
-  return html;
-}
-
-// ─────────────── v2 PSP (Mollie, etc.) ───────────────────────
-
-function cbRenderCheckoutV2Psp(methodId, name) {
-  var course = _cbState.course;
-  var amount = parseFloat((course && (course.price_usd || course.price)) || 0);
-  var safeName = (name + '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-  var html = '<div class="cb-card">';
-  html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">';
-  html += '<button class="cb-btn-secondary" style="width:auto;padding:6px 14px;" onclick="cbBackToMethods()"><i class="fas fa-arrow-left"></i></button>';
-  html += '<span style="font-weight:700;color:#fff;">' + safeName + ' — <span style="color:#c9a84c;">' + cbFmt(amount) + '</span></span>';
-  html += '</div>';
-  html += '<div class="cb-loader"><div class="cb-spinner"></div>Création de la commande et redirection vers ' + safeName + '…</div>';
-  html += '</div>';
-  cbSetHTML('cb-checkout-section', html);
-
-  // Créer la commande et rediriger
-  cbCreateOrderFor('v2_psp').then(function(orderId) {
-    return cbApi('POST', '/psp/initiate', {
-      payment_method_id: methodId,
-      amount: amount,
-      order_id: orderId,
-      return_url: window.location.href
-    });
-  }).then(function(pspResp) {
-    if (pspResp.redirect_url) {
-      window.location.href = pspResp.redirect_url;
+    if (method === 'wallet') {
+      renderCheckoutWallet(orderId, amt);
+    } else if (method === 'stripe') {
+      renderCheckoutStripe(orderId, amt);
+    } else if (method === 'paypal') {
+      renderCheckoutPaypal(orderId, amt, gw);
+    } else if (method === 'bank') {
+      renderCheckoutBank(orderId, amt, gw);
+    } else if (method === 'crypto') {
+      renderCheckoutCrypto(orderId, amt, gw);
+    } else if (method === 'coinpayments') {
+      renderCheckoutCoinpayments(orderId, amt);
+    } else if (method === 'manual') {
+      renderCheckoutManual(orderId, amt, gw);
     } else {
-      throw { error: 'URL de redirection manquante' };
+      renderCheckoutProof(orderId, amt, 'Paiement');
     }
-  }).catch(function(err) {
-    var errHtml = '<div class="cb-card">';
-    errHtml += '<button class="cb-btn-secondary" style="width:auto;padding:6px 14px;margin-bottom:16px;" onclick="cbBackToMethods()"><i class="fas fa-arrow-left"></i> Retour</button>';
-    errHtml += cbErrorHTML((err && err.error) || 'Erreur lors de la redirection vers ' + safeName + '.');
-    errHtml += '</div>';
-    cbSetHTML('cb-checkout-section', errHtml);
-  });
-}
+  }
 
-// ─────────────── v2 Manuel ───────────────────────────────────
+  // ── 8a. Checkout Wallet ──────────────────────────────────────
+  function renderCheckoutWallet(orderId, amt) {
+    var wbal = CB.walletBalance;
+    var html = '';
+    html += '<div class="cb-card">';
+    html += '<div class="cb-section-title"><i class="fas fa-wallet" style="color:#06b6d4;margin-right:6px;"></i>Paiement par Wallet LEADER</div>';
+    html += '<div class="cb-info">Solde disponible : <strong style="color:#22d3ee;">' + fmtUsd(wbal) + '</strong></div>';
+    html += '<div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #1f2937;">';
+    html += '<span style="color:#9ca3af;">Formation</span><span style="color:#fff;font-weight:600;">' + escHtml(CB.course && CB.course.title || '') + '</span></div>';
+    html += '<div style="display:flex;justify-content:space-between;padding:12px 0;">';
+    html += '<span style="color:#9ca3af;">Montant</span><span style="color:#c9a84c;font-weight:800;font-size:20px;">' + fmtUsd(amt) + '</span></div>';
+    html += '<div id="cb-wallet-err" class="cb-error" style="display:none;margin-bottom:12px;"></div>';
+    html += '<button class="cb-btn-primary" id="cb-wallet-pay-btn" onclick="window._cbWalletPay(\'' + escHtml(orderId) + '\')">Payer ' + fmtUsd(amt) + ' depuis mon Wallet</button>';
+    html += '<button class="cb-btn-secondary" onclick="window._cbBackToMethods()"><i class="fas fa-arrow-left" style="margin-right:6px;"></i>Retour</button>';
+    html += '</div>';
+    setHtml('cb-checkout-section', html);
+  }
 
-function cbRenderCheckoutV2Manual(methodId, name) {
-  var course = _cbState.course;
-  var amount = parseFloat((course && (course.price_usd || course.price)) || 0);
-  var safeName = (name + '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  window._cbWalletPay = function(orderId) {
+    var btn = el('cb-wallet-pay-btn');
+    var errDiv = el('cb-wallet-err');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Paiement en cours\u2026'; }
+    if (errDiv) errDiv.style.display = 'none';
 
-  var html = '<div class="cb-card">';
-  html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">';
-  html += '<button class="cb-btn-secondary" style="width:auto;padding:6px 14px;" onclick="cbBackToMethods()"><i class="fas fa-arrow-left"></i></button>';
-  html += '<span style="font-weight:700;color:#fff;">' + safeName + ' — <span style="color:#c9a84c;">' + cbFmt(amount) + '</span></span>';
-  html += '</div>';
-  html += '<div class="cb-info"><i class="fas fa-info-circle" style="margin-right:8px;"></i>';
-  html += 'Effectuez le paiement de <strong>' + cbFmt(amount) + '</strong> via <strong>' + safeName + '</strong>, puis soumettez votre preuve ci-dessous.';
-  html += '</div>';
-  html += cbProofFormHTML('v2manual_' + methodId);
-  html += '</div>';
-  cbSetHTML('cb-checkout-section', html);
-}
-
-// ─────────────── Formulaire de preuve ────────────────────────
-
-function cbProofFormHTML(context) {
-  var ctxSafe = context.replace(/'/g, '');
-  var html = '<div style="margin-top:16px;">';
-  html += '<div class="cb-section-title">Soumettre votre preuve de paiement</div>';
-  html += '<div class="cb-field">';
-  html += '<label class="cb-label" for="cb-proof-url">Lien / hash de transaction <span style="color:#9ca3af;">(optionnel)</span></label>';
-  html += '<input class="cb-input" type="url" id="cb-proof-url" placeholder="https://... ou txid...">';
-  html += '</div>';
-  html += '<div class="cb-field">';
-  html += '<label class="cb-label" for="cb-proof-note">Référence / commentaire <span style="color:#9ca3af;">(optionnel)</span></label>';
-  html += '<input class="cb-input" type="text" id="cb-proof-note" placeholder="Ex: Virement du 24/06 — John Doe">';
-  html += '</div>';
-  html += '<div id="cb-proof-error" class="cb-error" style="display:none;margin-bottom:12px;"></div>';
-  html += '<button class="cb-btn-primary" id="cb-proof-btn" onclick="cbSubmitProof(\'' + ctxSafe + '\')">';
-  html += '<i class="fas fa-paper-plane" style="margin-right:8px;"></i>J\'ai payé — Soumettre la preuve';
-  html += '</button>';
-  html += '<div class="cb-proof-note" style="margin-top:8px;text-align:center;">Votre formation sera activée après vérification du paiement (généralement sous 24h).</div>';
-  html += '</div>';
-  return html;
-}
-
-function cbSubmitProof(context) {
-  var proofUrl = (cbEl('cb-proof-url') && cbEl('cb-proof-url').value.trim()) || '';
-  var note = (cbEl('cb-proof-note') && cbEl('cb-proof-note').value.trim()) || '';
-  var errEl = cbEl('cb-proof-error');
-  var btn = cbEl('cb-proof-btn');
-
-  if (errEl) errEl.style.display = 'none';
-  if (btn) { btn.disabled = true; btn.innerHTML = cbLoaderHTML(); }
-
-  // Déterminer le payment_method à partir du contexte
-  var pm = 'manual';
-  if (context === 'bank') pm = 'bank';
-  else if (context === 'crypto') pm = 'crypto';
-  else if (context.indexOf('v2manual_') === 0) pm = 'v2_manual';
-
-  // Créer la commande si pas déjà fait, puis soumettre la preuve
-  cbCreateOrderFor(pm).then(function(orderId) {
-    return cbApi('POST', '/campus/course-order/' + orderId + '/proof', {
-      proof_url: proofUrl,
-      note: note
+    xhr('POST', '/campus/course/' + CB.courseId + '/order', { payment_method: 'wallet' }, function(data) {
+      if (data.code === 'ALREADY_OWNED') { showResultOwned(); return; }
+      CB.orderId = data.order_id || orderId;
+      // Soumettre preuve wallet (pas de fichier — juste confirmer)
+      xhr('POST', '/campus/course-order/' + CB.orderId + '/proof',
+        { proof_url: 'wallet_payment', note: 'Paiement depuis wallet LEADER' },
+        function() { showResultSuccess('Paiement effectu\u00e9 !', 'Votre wallet a \u00e9t\u00e9 d\u00e9bit\u00e9. La formation sera disponible d\u00e8s validation.'); },
+        function(err2) {
+          if (btn) { btn.disabled = false; btn.innerHTML = 'Payer depuis mon Wallet'; }
+          if (errDiv) { errDiv.textContent = err2.error || 'Erreur lors du paiement.'; errDiv.style.display = ''; }
+        }
+      );
+    }, function(err) {
+      if (btn) { btn.disabled = false; btn.innerHTML = 'Payer depuis mon Wallet'; }
+      if (errDiv) { errDiv.textContent = err.error || 'Erreur lors de la commande.'; errDiv.style.display = ''; }
     });
-  }).then(function() {
-    cbShowSuccess('Preuve de paiement soumise avec succès ! Votre formation sera activée après vérification (sous 24h).');
-  }).catch(function(err) {
-    if (errEl) { errEl.textContent = (err && err.error) || 'Erreur lors de la soumission.'; errEl.style.display = 'block'; }
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:8px;"></i>J\'ai payé — Soumettre la preuve'; }
-  });
-}
+  };
 
-// ─────────────── Gestion de la commande campus ───────────────
+  // ── 8b. Checkout Stripe ──────────────────────────────────────
+  function renderCheckoutStripe(orderId, amt) {
+    var html = '';
+    html += '<div class="cb-card">';
+    html += '<div class="cb-section-title"><i class="fas fa-credit-card" style="color:#a78bfa;margin-right:6px;"></i>Paiement par carte bancaire</div>';
+    html += '<div class="cb-info">Montant : <strong style="color:#c9a84c;">' + fmtUsd(amt) + '</strong> \u00b7 Formation : ' + escHtml(CB.course && CB.course.title || '') + '</div>';
+    html += '<div id="stripe-mount" style="padding:16px 0;min-height:80px;"></div>';
+    html += '<div id="cb-stripe-err" class="cb-error" style="display:none;margin-bottom:12px;"></div>';
+    html += '<button class="cb-btn-primary" id="cb-stripe-pay-btn" onclick="window._cbStripeSubmit(\'' + escHtml(orderId) + '\')" style="margin-bottom:8px;">Payer ' + fmtUsd(amt) + '</button>';
+    html += '<button class="cb-btn-secondary" onclick="window._cbBackToMethods()"><i class="fas fa-arrow-left" style="margin-right:6px;"></i>Retour</button>';
+    html += '</div>';
+    setHtml('cb-checkout-section', html);
 
-function cbCreateOrderFor(paymentMethod) {
-  if (_cbState.orderId) return Promise.resolve(_cbState.orderId);
-  return cbApi('POST', '/campus/course/' + _cbState.courseId + '/order', { payment_method: paymentMethod }).then(function(r) {
-    _cbState.orderId = r.order_id;
-    return _cbState.orderId;
-  }).catch(function(err) {
-    // Si commande existante, récupérer son ID
-    if (err && err.existing_order_id) {
-      _cbState.orderId = err.existing_order_id;
-      return _cbState.orderId;
-    }
-    // Parfois l'API retourne existing dans r avec order_id
-    if (err && err.order_id) {
-      _cbState.orderId = err.order_id;
-      return _cbState.orderId;
-    }
-    throw err;
-  });
-}
-
-// cbCreateOrderThen : crée la commande puis exécute un callback async qui reçoit l'orderId
-function cbCreateOrderThen(callback) {
-  return cbCreateOrderFor('manual').then(function(orderId) {
-    return callback(orderId);
-  });
-}
-
-// ─────────────── Navigation ──────────────────────────────────
-
-function cbBackToMethods() {
-  _cbState.selectedMethod = null;
-  _cbState.orderId = null; // Réinitialiser pour permettre une nouvelle commande
-  cbHide('cb-checkout-section');
-  cbHide('cb-result-section');
-  cbShow('cb-payment-section');
-  cbSetHTML('cb-checkout-section', '');
-}
-
-function cbShowSuccess(msg) {
-  cbHide('cb-checkout-section');
-  cbHide('cb-payment-section');
-  cbShow('cb-result-section');
-  var html = '<div class="cb-success">';
-  html += '<div class="cb-success-icon">✅</div>';
-  html += '<div class="cb-success-title">Paiement enregistré</div>';
-  html += '<div class="cb-success-msg">' + (msg || 'Votre paiement a été pris en compte.').replace(/</g, '&lt;') + '</div>';
-  html += '<button class="cb-btn-primary" style="margin-top:20px;max-width:280px;margin-left:auto;margin-right:auto;display:block;" onclick="window.location.href=\'/login#campus\'">';
-  html += '<i class="fas fa-graduation-cap" style="margin-right:8px;"></i>Retour au Campus';
-  html += '</button>';
-  html += '</div>';
-  cbSetHTML('cb-result-section', html);
-}
-
-// ─────────────── Init ─────────────────────────────────────────
-
-function cbInit() {
-  var courseId = window._CB_COURSE_ID;
-  if (!courseId) {
-    cbSetHTML('cb-course-info', cbErrorHTML('Identifiant de formation manquant.'));
-    return;
+    // Charger Stripe SDK
+    var script = document.createElement('script');
+    script.src = 'https://js.stripe.com/v3/';
+    script.onload = function() { initStripeElement(orderId, amt); };
+    document.head.appendChild(script);
   }
 
-  // Vérifier qu'on est authentifié
-  var token = cbToken();
-  if (!token) {
-    window.location.href = '/login';
-    return;
+  var _stripeInstance = null;
+  var _stripeElements = null;
+  var _stripeCard = null;
+
+  function initStripeElement(orderId, amt) {
+    if (!window.Stripe || !CB.stripeKey) {
+      setHtml('cb-stripe-err', 'Stripe non disponible.');
+      var errDiv = el('cb-stripe-err');
+      if (errDiv) errDiv.style.display = '';
+      return;
+    }
+    _stripeInstance = window.Stripe(CB.stripeKey);
+    _stripeElements = _stripeInstance.elements();
+    _stripeCard = _stripeElements.create('card', {
+      style: {
+        base: { color: '#e5e7eb', fontSize: '16px', '::placeholder': { color: '#6b7280' } },
+        invalid: { color: '#f87171' }
+      }
+    });
+    _stripeCard.mount('#stripe-mount');
   }
 
-  _cbState.courseId = courseId;
-  cbLoadCourse();
-}
+  window._cbStripeSubmit = function(orderId) {
+    if (!_stripeInstance || !_stripeCard) {
+      showToast('Stripe non initialis\u00e9.', 'error');
+      return;
+    }
+    var btn = el('cb-stripe-pay-btn');
+    var errDiv = el('cb-stripe-err');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Paiement\u2026'; }
+    if (errDiv) errDiv.style.display = 'none';
 
-// Démarrage au chargement du DOM
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', cbInit);
-} else {
-  cbInit();
-}
+    // Créer PaymentIntent côté serveur
+    xhr('POST', '/members/stripe/create-payment-intent',
+      { amount: CB.course.price_usd, currency: 'usd', order_id: orderId, product: 'campus_course', course_id: CB.courseId },
+      function(data) {
+        var clientSecret = data.client_secret;
+        _stripeInstance.confirmCardPayment(clientSecret, {
+          payment_method: { card: _stripeCard }
+        }).then(function(result) {
+          if (result.error) {
+            if (btn) { btn.disabled = false; btn.innerHTML = 'Payer'; }
+            if (errDiv) { errDiv.textContent = result.error.message; errDiv.style.display = ''; }
+          } else if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
+            // Soumettre preuve Stripe
+            xhr('POST', '/campus/course-order/' + orderId + '/proof',
+              { proof_url: 'stripe:' + result.paymentIntent.id, note: 'Stripe PaymentIntent: ' + result.paymentIntent.id },
+              function() { showResultSuccess('Paiement r\u00e9ussi !', 'Votre paiement Stripe a \u00e9t\u00e9 confirm\u00e9. La formation sera disponible tr\u00e8s rapidement.'); },
+              function(err2) { showToast(err2.error || 'Erreur apr\u00e8s paiement Stripe.', 'error'); }
+            );
+          }
+        });
+      },
+      function(err) {
+        if (btn) { btn.disabled = false; btn.innerHTML = 'Payer'; }
+        if (errDiv) { errDiv.textContent = err.error || 'Erreur de cr\u00e9ation PaymentIntent.'; errDiv.style.display = ''; }
+      }
+    );
+  };
+
+  // ── 8c. Checkout PayPal ──────────────────────────────────────
+  function renderCheckoutPaypal(orderId, amt, gw) {
+    var email = escHtml(gw.paypal_email || '');
+    var html = '';
+    html += '<div class="cb-card">';
+    html += '<div class="cb-section-title"><i class="fab fa-paypal" style="color:#60a5fa;margin-right:6px;"></i>Paiement PayPal</div>';
+    html += '<div class="cb-info">';
+    html += '<p style="margin:0 0 8px;color:#93c5fd;">Envoyez <strong style="color:#c9a84c;">' + fmtUsd(amt) + '</strong> via PayPal \u00e0 :</p>';
+    html += '<p style="font-size:18px;font-weight:700;color:#fff;margin:0;">' + email + '</p>';
+    html += '<p style="font-size:12px;color:#6b7280;margin:6px 0 0;">Mentionnez votre identifiant unique LEADER en r\u00e9f\u00e9rence.</p>';
+    html += '</div>';
+    html += renderProofForm(orderId);
+    html += '</div>';
+    setHtml('cb-checkout-section', html);
+  }
+
+  // ── 8d. Checkout Virement bancaire ───────────────────────────
+  function renderCheckoutBank(orderId, amt, gw) {
+    var html = '';
+    html += '<div class="cb-card">';
+    html += '<div class="cb-section-title"><i class="fas fa-university" style="color:#10b981;margin-right:6px;"></i>Virement bancaire</div>';
+    html += '<div class="cb-info">';
+    if (gw.bank_beneficiary || gw.bank_name) {
+      html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="color:#9ca3af;">B\u00e9n\u00e9ficiaire</span><span style="color:#fff;font-weight:600;">' + escHtml(gw.bank_beneficiary || gw.bank_name || '') + '</span></div>';
+    }
+    if (gw.bank_iban) {
+      html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="color:#9ca3af;">IBAN</span><span style="color:#fff;font-family:monospace;">' + escHtml(gw.bank_iban) + '</span></div>';
+    }
+    if (gw.bank_bic) {
+      html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="color:#9ca3af;">BIC / SWIFT</span><span style="color:#fff;font-family:monospace;">' + escHtml(gw.bank_bic) + '</span></div>';
+    }
+    if (gw.bank_account) {
+      html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="color:#9ca3af;">N\u00b0 compte</span><span style="color:#fff;font-family:monospace;">' + escHtml(gw.bank_account) + '</span></div>';
+    }
+    html += '<div style="display:flex;justify-content:space-between;padding-top:8px;border-top:1px solid #1f2937;"><span style="color:#9ca3af;">Montant</span><span style="color:#c9a84c;font-weight:700;">' + fmtUsd(amt) + '</span></div>';
+    html += '<p style="font-size:12px;color:#6b7280;margin:8px 0 0;">Mentionnez votre identifiant unique LEADER en r\u00e9f\u00e9rence.</p>';
+    html += '</div>';
+    html += renderProofForm(orderId);
+    html += '</div>';
+    setHtml('cb-checkout-section', html);
+  }
+
+  // ── 8e. Checkout Crypto direct ───────────────────────────────
+  function renderCheckoutCrypto(orderId, amt, gw) {
+    var html = '';
+    html += '<div class="cb-card">';
+    html += '<div class="cb-section-title"><i class="fab fa-bitcoin" style="color:#f59e0b;margin-right:6px;"></i>Paiement Crypto</div>';
+    html += '<div class="cb-info">';
+    if (gw.crypto_network) {
+      html += '<div style="margin-bottom:8px;"><span style="color:#9ca3af;">R\u00e9seau : </span><span style="color:#fff;font-weight:600;">' + escHtml(gw.crypto_network) + '</span></div>';
+    }
+    if (gw.crypto_address) {
+      html += '<div style="margin-bottom:8px;"><span style="color:#9ca3af;">Adresse :</span><div style="font-family:monospace;font-size:12px;color:#f59e0b;word-break:break-all;margin-top:4px;">' + escHtml(gw.crypto_address) + '</div></div>';
+    }
+    html += '<div style="display:flex;justify-content:space-between;padding-top:8px;border-top:1px solid #1f2937;"><span style="color:#9ca3af;">Montant</span><span style="color:#c9a84c;font-weight:700;">' + fmtUsd(amt) + '</span></div>';
+    html += '</div>';
+    html += renderProofForm(orderId);
+    html += '</div>';
+    setHtml('cb-checkout-section', html);
+  }
+
+  // ── 8f. Checkout CoinPayments ────────────────────────────────
+  function renderCheckoutCoinpayments(orderId, amt) {
+    var html = '';
+    html += '<div class="cb-card">';
+    html += '<div class="cb-section-title"><i class="fas fa-coins" style="color:#f97316;margin-right:6px;"></i>Paiement via CoinPayments</div>';
+    html += '<div class="cb-info">Montant : <strong style="color:#c9a84c;">' + fmtUsd(amt) + '</strong></div>';
+    html += '<div style="margin-bottom:14px;">';
+    html += '<label class="cb-label">Devise crypto</label>';
+    html += '<select id="cp-coin-select" class="cb-input">';
+    var coins = (CB.cpCoins || 'USDT.TRC20,LTC,ETH,BTC').split(',');
+    for (var ci = 0; ci < coins.length; ci++) {
+      var coin = coins[ci].trim();
+      html += '<option value="' + escHtml(coin) + '">' + escHtml(coin) + '</option>';
+    }
+    html += '</select></div>';
+    html += '<div id="cb-cp-err" class="cb-error" style="display:none;margin-bottom:12px;"></div>';
+    html += '<button class="cb-btn-primary" id="cb-cp-btn" onclick="window._cbCoinPaymentsSubmit(\'' + escHtml(orderId) + '\')">G\u00e9n\u00e9rer l\'adresse de paiement</button>';
+    html += '<button class="cb-btn-secondary" onclick="window._cbBackToMethods()"><i class="fas fa-arrow-left" style="margin-right:6px;"></i>Retour</button>';
+    html += '</div>';
+    setHtml('cb-checkout-section', html);
+  }
+
+  window._cbCoinPaymentsSubmit = function(orderId) {
+    var btn = el('cb-cp-btn');
+    var errDiv = el('cb-cp-err');
+    var coinSel = el('cp-coin-select');
+    var coin = coinSel ? coinSel.value : 'USDT.TRC20';
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Cr\u00e9ation\u2026'; }
+    if (errDiv) errDiv.style.display = 'none';
+
+    xhr('POST', '/psp/initiate',
+      { order_id: orderId, provider: 'coinpayments', coin: coin, order_type: 'campus_course', course_id: CB.courseId, amount: CB.course.price_usd },
+      function(data) {
+        if (data.checkout_url) {
+          window.location.href = data.checkout_url;
+        } else if (data.address) {
+          renderCPAddress(data, coin);
+        } else {
+          if (btn) { btn.disabled = false; btn.innerHTML = 'G\u00e9n\u00e9rer l\'adresse'; }
+          if (errDiv) { errDiv.textContent = 'R\u00e9ponse inattendue du serveur.'; errDiv.style.display = ''; }
+        }
+      },
+      function(err) {
+        if (btn) { btn.disabled = false; btn.innerHTML = 'G\u00e9n\u00e9rer l\'adresse'; }
+        if (errDiv) { errDiv.textContent = err.error || 'Erreur CoinPayments.'; errDiv.style.display = ''; }
+      }
+    );
+  };
+
+  function renderCPAddress(data, coin) {
+    var html = '';
+    html += '<div class="cb-card">';
+    html += '<div class="cb-section-title"><i class="fas fa-coins" style="color:#f97316;margin-right:6px;"></i>Adresse de paiement ' + escHtml(coin) + '</div>';
+    html += '<div class="cb-info">';
+    html += '<div style="margin-bottom:10px;"><span style="color:#9ca3af;">Adresse : </span><div style="font-family:monospace;font-size:12px;color:#f97316;word-break:break-all;margin-top:4px;">' + escHtml(data.address || '') + '</div></div>';
+    if (data.amount) {
+      html += '<div><span style="color:#9ca3af;">Montant exact : </span><span style="color:#c9a84c;font-weight:700;">' + escHtml(String(data.amount)) + ' ' + escHtml(coin) + '</span></div>';
+    }
+    if (data.timeout) {
+      html += '<div style="margin-top:8px;font-size:12px;color:#6b7280;">Expire dans : ' + escHtml(String(Math.floor((data.timeout || 0) / 60))) + ' min</div>';
+    }
+    html += '</div>';
+    html += renderProofForm(data.order_id || CB.orderId || '');
+    html += '</div>';
+    setHtml('cb-checkout-section', html);
+  }
+
+  // ── 8g. Checkout Manuel ──────────────────────────────────────
+  function renderCheckoutManual(orderId, amt, gw) {
+    var html = '';
+    html += '<div class="cb-card">';
+    html += '<div class="cb-section-title"><i class="fas fa-info-circle" style="color:#6b7280;margin-right:6px;"></i>Autre m\u00e9thode de paiement</div>';
+    if (gw.instructions) {
+      html += '<div class="cb-info"><p style="margin:0;white-space:pre-wrap;">' + escHtml(gw.instructions) + '</p></div>';
+    }
+    html += '<div style="display:flex;justify-content:space-between;padding:12px 0;"><span style="color:#9ca3af;">Montant</span><span style="color:#c9a84c;font-weight:700;">' + fmtUsd(amt) + '</span></div>';
+    html += renderProofForm(orderId);
+    html += '</div>';
+    setHtml('cb-checkout-section', html);
+  }
+
+  // ── 8h. Checkout V2 PSP (redirection) ───────────────────────
+  function createOrderThenCheckoutV2(methodId, provider, displayName) {
+    showSection('cb-checkout-section');
+    setHtml('cb-checkout-section', '<div class="cb-loader"><div class="cb-spinner"></div>Cr\u00e9ation de la commande\u2026</div>');
+
+    xhr('POST', '/campus/course/' + CB.courseId + '/order', { payment_method: 'v2_psp' }, function(data) {
+      if (data.code === 'ALREADY_OWNED') { showResultOwned(); return; }
+      CB.orderId = data.order_id;
+      if (data.existing && data.status === 'proof_submitted') { showResultProofDone(data.order_id); return; }
+      launchV2PSP(data.order_id, methodId, provider, displayName);
+    }, function(err) {
+      if (err.code === 'ALREADY_OWNED') { showResultOwned(); return; }
+      setHtml('cb-checkout-section', '<div class="cb-error"><i class="fas fa-exclamation-circle" style="font-size:32px;margin-bottom:12px;display:block;color:#f87171;"></i>' + escHtml(err.error || 'Erreur de commande.') + '<div style="margin-top:16px;"><button class="cb-btn-secondary" onclick="window._cbBackToMethods()" style="width:auto;padding:10px 20px;">Retour</button></div></div>');
+    });
+  }
+
+  function launchV2PSP(orderId, methodId, provider, displayName) {
+    setHtml('cb-checkout-section', '<div class="cb-loader"><div class="cb-spinner"></div>Redirection vers la passerelle\u2026</div>');
+    xhr('POST', '/psp/initiate',
+      { order_id: orderId, provider: provider, payment_method_id: methodId, order_type: 'campus_course', course_id: CB.courseId, amount: CB.course.price_usd },
+      function(data) {
+        if (data.checkout_url) {
+          window.location.href = data.checkout_url;
+        } else {
+          setHtml('cb-checkout-section', '<div class="cb-error">Impossible d\'obtenir l\'URL de paiement. <button class="cb-btn-secondary" onclick="window._cbBackToMethods()" style="width:auto;padding:8px 16px;margin-top:12px;">Retour</button></div>');
+        }
+      },
+      function(err) {
+        setHtml('cb-checkout-section', '<div class="cb-error"><i class="fas fa-exclamation-circle" style="font-size:32px;margin-bottom:12px;display:block;color:#f87171;"></i>' + escHtml(err.error || 'Erreur PSP.') + '<div style="margin-top:16px;"><button class="cb-btn-secondary" onclick="window._cbBackToMethods()" style="width:auto;padding:10px 20px;">Retour</button></div></div>');
+      }
+    );
+  }
+
+  // ── 8i. Checkout V2 Manuel (Mobile Money, etc.) ──────────────
+  function createOrderThenV2Manual(methodId, provider, displayName) {
+    showSection('cb-checkout-section');
+    setHtml('cb-checkout-section', '<div class="cb-loader"><div class="cb-spinner"></div>Cr\u00e9ation de la commande\u2026</div>');
+
+    xhr('POST', '/campus/course/' + CB.courseId + '/order', { payment_method: 'v2_manual' }, function(data) {
+      if (data.code === 'ALREADY_OWNED') { showResultOwned(); return; }
+      CB.orderId = data.order_id;
+      if (data.existing && data.status === 'proof_submitted') { showResultProofDone(data.order_id); return; }
+
+      // Charger les détails de la méthode V2
+      xhr('GET', '/payment/methods', null, function(v2Data) {
+        var allMethods = [];
+        var raw = v2Data.methods || {};
+        var keys = Object.keys(raw);
+        for (var i = 0; i < keys.length; i++) {
+          var arr = raw[keys[i]];
+          if (Array.isArray(arr)) { for (var j = 0; j < arr.length; j++) allMethods.push(arr[j]); }
+        }
+        var found = null;
+        for (var k = 0; k < allMethods.length; k++) {
+          if (allMethods[k].id === methodId) { found = allMethods[k]; break; }
+        }
+        renderV2ManualCheckout(data.order_id, found || { id: methodId, display_name: displayName, config: {} });
+      }, function() {
+        renderV2ManualCheckout(data.order_id, { id: methodId, display_name: displayName, config: {} });
+      });
+
+    }, function(err) {
+      if (err.code === 'ALREADY_OWNED') { showResultOwned(); return; }
+      setHtml('cb-checkout-section', '<div class="cb-error"><i class="fas fa-exclamation-circle" style="font-size:32px;margin-bottom:12px;display:block;color:#f87171;"></i>' + escHtml(err.error || 'Erreur de commande.') + '<div style="margin-top:16px;"><button class="cb-btn-secondary" onclick="window._cbBackToMethods()" style="width:auto;padding:10px 20px;">Retour</button></div></div>');
+    });
+  }
+
+  function renderV2ManualCheckout(orderId, methodDetails) {
+    var cfg = (methodDetails && methodDetails.config) || {};
+    var amt = parseFloat(CB.course && CB.course.price_usd) || 0;
+    var instrText = (methodDetails && methodDetails.instructions) || cfg.instructions || '';
+    var phoneNum = cfg.phone_number || cfg.account_number || '';
+    var accName  = cfg.account_name || cfg.beneficiary || '';
+    var emoji    = (methodDetails && methodDetails.logo_emoji) || '';
+    var dname    = escHtml((methodDetails && methodDetails.display_name) || 'M\u00e9thode de paiement');
+
+    var html = '';
+    html += '<div class="cb-card">';
+    html += '<div class="cb-section-title">' + (emoji ? escHtml(emoji) + ' ' : '<i class="fas fa-mobile-alt" style="color:#6b7280;margin-right:6px;"></i>') + dname + '</div>';
+    html += '<div class="cb-info">';
+    html += '<div style="color:#93c5fd;font-weight:600;margin-bottom:10px;"><i class="fas fa-info-circle" style="margin-right:6px;"></i>Instructions de paiement</div>';
+    if (phoneNum) {
+      html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="color:#9ca3af;">Num\u00e9ro</span><span style="font-family:monospace;font-weight:700;color:#fff;">' + escHtml(phoneNum) + '</span></div>';
+    }
+    if (accName) {
+      html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="color:#9ca3af;">B\u00e9n\u00e9ficiaire</span><span style="font-weight:600;color:#fff;">' + escHtml(accName) + '</span></div>';
+    }
+    html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="color:#9ca3af;">Montant</span><span style="color:#c9a84c;font-weight:700;">' + fmtUsd(amt) + '</span></div>';
+    if (instrText) {
+      html += '<p style="font-size:12px;color:#9ca3af;margin:10px 0 0;padding-top:10px;border-top:1px solid #1f2937;">' + escHtml(instrText) + '</p>';
+    }
+    html += '<p style="font-size:12px;color:#6b7280;margin:8px 0 0;">R\u00e9f\u00e9rence : votre identifiant unique LEADER</p>';
+    html += '</div>';
+
+    // Zone upload preuve
+    html += '<div class="cb-field"><label class="cb-label">Justificatif de paiement <span style="color:#f87171;">*</span></label>';
+    html += '<input type="file" id="cb-v2manual-file" accept="image/*,application/pdf" class="cb-input" style="padding:8px;" onchange="window._cbHandleFileSelect(this)">';
+    html += '<div id="cb-v2manual-preview" style="margin-top:8px;font-size:12px;color:#22d3ee;"></div>';
+    html += '</div>';
+
+    html += '<div class="cb-field"><label class="cb-label">R\u00e9f\u00e9rence / N\u00b0 de transaction (optionnel)</label>';
+    html += '<input type="text" id="cb-v2manual-ref" class="cb-input" placeholder="Ex: TXN123456789"></div>';
+    html += '<div id="cb-v2manual-err" class="cb-error" style="display:none;margin-bottom:12px;"></div>';
+    html += '<button class="cb-btn-primary" id="cb-v2manual-submit-btn" onclick="window._cbV2ManualSubmit(\'' + escHtml(orderId) + '\')"><i class="fas fa-paper-plane" style="margin-right:8px;"></i>Soumettre la preuve</button>';
+    html += '<button class="cb-btn-secondary" onclick="window._cbBackToMethods()"><i class="fas fa-arrow-left" style="margin-right:6px;"></i>Retour</button>';
+    html += '</div>';
+    setHtml('cb-checkout-section', html);
+  }
+
+  // Upload fichier preuve via base64 (campus — pas d'endpoint upload dédié)
+  window._cbHandleFileSelect = function(input) {
+    var file = input.files && input.files[0];
+    var preview = el('cb-v2manual-preview');
+    if (!file) { CB.proofUrl = ''; if (preview) preview.textContent = ''; return; }
+    if (file.size > 5 * 1024 * 1024) {
+      CB.proofUrl = '';
+      if (preview) { preview.style.color = '#f87171'; preview.textContent = 'Fichier trop volumineux (max 5 Mo).'; }
+      return;
+    }
+    // Upload via API fichiers membres
+    var formData = new FormData();
+    formData.append('file', file);
+    formData.append('purpose', 'proof');
+    var req = new XMLHttpRequest();
+    req.open('POST', '/api/members/upload', true);
+    var tok = CB.token || getToken();
+    if (tok) req.setRequestHeader('Authorization', 'Bearer ' + tok);
+    if (preview) { preview.style.color = '#22d3ee'; preview.textContent = 'Upload en cours\u2026'; }
+    req.onreadystatechange = function() {
+      if (req.readyState !== 4) return;
+      var resp = {};
+      try { resp = JSON.parse(req.responseText); } catch(e) { resp = {}; }
+      if (req.status >= 200 && req.status < 300 && resp.url) {
+        CB.proofUrl = resp.url;
+        if (preview) { preview.style.color = '#22d3ee'; preview.textContent = 'Fichier upload\u00e9 : ' + file.name; }
+      } else {
+        // Fallback : encoder en base64 et utiliser comme proof_url
+        var reader = new FileReader();
+        reader.onload = function(e) {
+          CB.proofUrl = e.target.result;
+          if (preview) { preview.style.color = '#22d3ee'; preview.textContent = 'Fichier s\u00e9lectionn\u00e9 : ' + file.name; }
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+    req.send(formData);
+  };
+
+  window._cbV2ManualSubmit = function(orderId) {
+    var btn    = el('cb-v2manual-submit-btn');
+    var errDiv = el('cb-v2manual-err');
+    var refInput = el('cb-v2manual-ref');
+    var proofUrl = CB.proofUrl || '';
+    if (!proofUrl) {
+      if (errDiv) { errDiv.textContent = 'Veuillez uploader une preuve de paiement.'; errDiv.style.display = ''; }
+      return;
+    }
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Envoi\u2026'; }
+    if (errDiv) errDiv.style.display = 'none';
+
+    var note = (refInput && refInput.value) ? ('Ref: ' + refInput.value.trim()) : '';
+    xhr('POST', '/campus/course-order/' + orderId + '/proof',
+      { proof_url: proofUrl, note: note },
+      function() { showResultSuccess('Preuve soumise !', 'Votre preuve de paiement a \u00e9t\u00e9 envoy\u00e9e. La formation sera valid\u00e9e sous 24\u201348h.'); },
+      function(err) {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:8px;"></i>Soumettre la preuve'; }
+        if (errDiv) { errDiv.textContent = err.error || 'Erreur lors de l\'envoi.'; errDiv.style.display = ''; }
+      }
+    );
+  };
+
+  // ── 9. Formulaire preuve générique (PayPal, Bank, Crypto, Manuel) ─
+  function renderProofForm(orderId) {
+    var html = '';
+    html += '<div class="cb-field" style="margin-top:16px;"><label class="cb-label">Justificatif de paiement <span style="color:#f87171;">*</span></label>';
+    html += '<input type="file" id="cb-proof-file" accept="image/*,application/pdf" class="cb-input" style="padding:8px;" onchange="window._cbHandleProofFile(this)">';
+    html += '<div id="cb-proof-preview" class="cb-proof-note"></div></div>';
+    html += '<div class="cb-field"><label class="cb-label">R\u00e9f\u00e9rence transaction (optionnel)</label>';
+    html += '<input type="text" id="cb-proof-ref" class="cb-input" placeholder="Ex: PayPal-XXXXXX ou TXN123"></div>';
+    html += '<div id="cb-proof-err" class="cb-error" style="display:none;margin-bottom:12px;"></div>';
+    html += '<button class="cb-btn-primary" id="cb-proof-submit-btn" onclick="window._cbProofSubmit(\'' + escHtml(orderId) + '\')"><i class="fas fa-paper-plane" style="margin-right:8px;"></i>Soumettre la preuve</button>';
+    html += '<button class="cb-btn-secondary" onclick="window._cbBackToMethods()"><i class="fas fa-arrow-left" style="margin-right:6px;"></i>Retour</button>';
+    return html;
+  }
+
+  window._cbHandleProofFile = function(input) {
+    var file = input.files && input.files[0];
+    var preview = el('cb-proof-preview');
+    if (!file) { CB.proofUrl = ''; if (preview) preview.textContent = ''; return; }
+    if (file.size > 5 * 1024 * 1024) {
+      CB.proofUrl = '';
+      if (preview) { preview.style.color = '#f87171'; preview.textContent = 'Fichier trop volumineux (max 5 Mo).'; }
+      return;
+    }
+    var formData = new FormData();
+    formData.append('file', file);
+    formData.append('purpose', 'proof');
+    var req = new XMLHttpRequest();
+    req.open('POST', '/api/members/upload', true);
+    var tok = CB.token || getToken();
+    if (tok) req.setRequestHeader('Authorization', 'Bearer ' + tok);
+    if (preview) { preview.style.color = '#22d3ee'; preview.textContent = 'Upload en cours\u2026'; }
+    req.onreadystatechange = function() {
+      if (req.readyState !== 4) return;
+      var resp = {};
+      try { resp = JSON.parse(req.responseText); } catch(e) { resp = {}; }
+      if (req.status >= 200 && req.status < 300 && resp.url) {
+        CB.proofUrl = resp.url;
+        if (preview) { preview.style.color = '#22d3ee'; preview.textContent = 'Fichier upload\u00e9 : ' + file.name; }
+      } else {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+          CB.proofUrl = e.target.result;
+          if (preview) { preview.style.color = '#22d3ee'; preview.textContent = file.name + ' s\u00e9lectionn\u00e9'; }
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+    req.send(formData);
+  };
+
+  window._cbProofSubmit = function(orderId) {
+    var btn      = el('cb-proof-submit-btn');
+    var errDiv   = el('cb-proof-err');
+    var refInput = el('cb-proof-ref');
+    var proofUrl = CB.proofUrl || '';
+    if (!proofUrl) {
+      if (errDiv) { errDiv.textContent = 'Veuillez uploader une preuve de paiement.'; errDiv.style.display = ''; }
+      return;
+    }
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Envoi\u2026'; }
+    if (errDiv) errDiv.style.display = 'none';
+    var note = (refInput && refInput.value) ? refInput.value.trim() : '';
+    xhr('POST', '/campus/course-order/' + orderId + '/proof',
+      { proof_url: proofUrl, note: note },
+      function() { showResultSuccess('Preuve soumise !', 'Votre justificatif a \u00e9t\u00e9 envoy\u00e9. La formation sera valid\u00e9e sous 24\u201348h.'); },
+      function(err) {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:8px;"></i>Soumettre la preuve'; }
+        if (errDiv) { errDiv.textContent = err.error || 'Erreur.'; errDiv.style.display = ''; }
+      }
+    );
+  };
+
+  // ── Checkout générique (autres méthodes) ─────────────────────
+  function renderCheckoutProof(orderId, amt, label) {
+    var html = '';
+    html += '<div class="cb-card">';
+    html += '<div class="cb-section-title">' + escHtml(label) + '</div>';
+    html += '<div class="cb-info">Montant : <strong style="color:#c9a84c;">' + fmtUsd(amt) + '</strong></div>';
+    html += renderProofForm(orderId);
+    html += '</div>';
+    setHtml('cb-checkout-section', html);
+  }
+
+  // ── 10. Résultats ────────────────────────────────────────────
+  function showResultSuccess(title, msg) {
+    showSection('cb-result-section');
+    var html = '';
+    html += '<div class="cb-card cb-success">';
+    html += '<div class="cb-success-icon"><i class="fas fa-check-circle" style="color:#4ade80;"></i></div>';
+    html += '<div class="cb-success-title">' + escHtml(title) + '</div>';
+    html += '<div class="cb-success-msg">' + escHtml(msg) + '</div>';
+    html += '<button class="cb-btn-primary" style="margin-top:20px;" onclick="window.location.href=\'/login#campus\'">Retour au Campus</button>';
+    html += '</div>';
+    setHtml('cb-result-section', html);
+  }
+
+  function showResultOwned() {
+    showSection('cb-result-section');
+    var html = '';
+    html += '<div class="cb-card">';
+    html += '<div style="text-align:center;padding:20px 0;">';
+    html += '<i class="fas fa-graduation-cap" style="font-size:48px;color:#4ade80;margin-bottom:12px;display:block;"></i>';
+    html += '<div style="font-size:20px;font-weight:700;color:#4ade80;margin-bottom:8px;">Vous avez d\u00e9j\u00e0 acc\u00e8s</div>';
+    html += '<div style="font-size:14px;color:#86efac;margin-bottom:20px;">Vous poss\u00e9dez d\u00e9j\u00e0 cette formation.</div>';
+    html += '<button class="cb-btn-primary" onclick="window.location.href=\'/login#campus\'">Aller au Campus</button>';
+    html += '</div></div>';
+    setHtml('cb-result-section', html);
+  }
+
+  function showResultProofDone(orderId) {
+    showSection('cb-result-section');
+    var html = '';
+    html += '<div class="cb-card">';
+    html += '<div style="text-align:center;padding:20px 0;">';
+    html += '<i class="fas fa-hourglass-half" style="font-size:48px;color:#f59e0b;margin-bottom:12px;display:block;"></i>';
+    html += '<div style="font-size:20px;font-weight:700;color:#f59e0b;margin-bottom:8px;">Preuve d\u00e9j\u00e0 soumise</div>';
+    html += '<div style="font-size:14px;color:#fcd34d;margin-bottom:8px;">Votre preuve est en cours de validation.</div>';
+    if (orderId) {
+      html += '<div style="font-size:12px;color:#6b7280;margin-bottom:20px;">R\u00e9f. : ' + escHtml(String(orderId).substring(0, 16)) + '\u2026</div>';
+    }
+    html += '<button class="cb-btn-primary" onclick="window.location.href=\'/login#campus\'">Retour au Campus</button>';
+    html += '</div></div>';
+    setHtml('cb-result-section', html);
+  }
+
+  // ── 11. Navigation ───────────────────────────────────────────
+  window._cbBackToMethods = function() {
+    CB.proofUrl = '';
+    CB.orderId = null;
+    CB.selectedMethod = '';
+    showSection('cb-payment-section');
+    var sec = el('cb-course-info');
+    if (sec) sec.style.display = '';
+  };
+
+  // ── Démarrage ────────────────────────────────────────────────
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+})();
