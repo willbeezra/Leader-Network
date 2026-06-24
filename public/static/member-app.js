@@ -2792,27 +2792,37 @@ async function serviceRedirect(type, btnEl) {
     if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = '<i class="fas fa-external-link-alt mr-1"></i>' + label; }
   };
   if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Ouverture…'; }
-  // Ouvrir la fenêtre AVANT l'appel async pour éviter le blocage popup
-  var newWin = window.open('about:blank', '_blank');
+  // Ouvrir un onglet vide AVANT le await pour contourner le blocage popup Safari/Firefox
+  var tab = window.open('', '_blank');
   try {
     var r = await api('POST', '/broker/' + type + '/redirect', {});
     if (r && r.url) {
-      if (newWin && !newWin.closed) {
-        newWin.location.href = r.url;
+      if (tab && !tab.closed) {
+        tab.location.href = r.url;
+        showToast('Accès ' + label + ' ouvert', 'success');
       } else {
-        // Fallback si popup bloqué malgré tout
-        window.location.href = r.url;
+        // L'onglet a été bloqué quand même → fallback modal
+        showModal('<div class="p-6 space-y-4 text-center">'
+          + '<div class="flex justify-between items-center mb-2">'
+          + '<h3 class="font-bold text-white">Accès ' + label + '</h3>'
+          + '<button onclick="closeModal()" class="text-gray-400 hover:text-white"><i class="fas fa-times"></i></button>'
+          + '</div>'
+          + '<p class="text-sm text-gray-400">Votre navigateur a bloqué l\'ouverture automatique.<br>Cliquez sur le bouton ci-dessous pour accéder à ' + label + ' :</p>'
+          + '<a href="' + r.url + '" target="_blank" rel="noopener noreferrer" onclick="closeModal()"'
+          + ' class="mt-2 inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-500 text-white font-bold px-6 py-3 rounded-xl transition text-sm">'
+          + '<i class="fas fa-external-link-alt"></i>Ouvrir ' + label + '</a>'
+          + '</div>');
       }
-      showToast('Accès ' + label + ' ouvert', 'success');
       resetBtn();
     } else {
-      if (newWin) newWin.close();
+      if (tab && !tab.closed) tab.close();
       showToast('Erreur : lien non disponible', 'error');
       resetBtn();
     }
   } catch(err) {
-    if (newWin) newWin.close();
-    showToast(err && err.error || 'Erreur de redirection', 'error');
+    if (tab && !tab.closed) tab.close();
+    var msg = (err && (err.error || err.message)) || 'Erreur de redirection';
+    showToast(msg, 'error');
     resetBtn();
   }
 }function renderMyOrders(e) {if (!e || 0 === e.length) return "";const t = { pending: "En attente de paiement", proof_submitted: "Preuve soumise — en vérification", validated: "Validé ✓", rejected: "Rejeté", active: "Actif" },n = { pending: "text-yellow-400 bg-yellow-500/10 border-yellow-500/30", proof_submitted: "text-blue-400 bg-blue-500/10 border-blue-500/30", validated: "text-green-400 bg-green-500/10 border-green-500/30", rejected: "text-red-400 bg-red-500/10 border-red-500/30", active: "text-green-400 bg-green-500/10 border-green-500/30" };return "\n\n  <div class=\"bg-dark-800 rounded-2xl border border-dark-600 overflow-hidden\">\n\n    <div class=\"px-6 py-4 border-b border-dark-600 flex items-center justify-between\">\n\n      <h3 class=\"font-semibold flex items-center gap-2\"><i class=\"fas fa-list text-rouge-400\"></i>Mes commandes</h3>\n\n      <span class=\"text-xs text-gray-500\">".concat(
@@ -10233,20 +10243,40 @@ async function renderSubscription(el) {
   }
 
   async function redirectBroker(type, btnEl) {
+    const label = type === 'synex-libre' ? 'Synex Libre' : 'Kronex';
+    const resetBtn = () => {
+      if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = `<i class="fas fa-external-link-alt mr-2"></i>Ouvrir ${label}`; }
+    };
     if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Redirection…'; }
+    // Ouvrir un onglet vide AVANT le await pour contourner le blocage popup Safari/Firefox
+    const tab = window.open('', '_blank');
     try {
       const r = await api('POST', `/broker/${type}/redirect`, {});
       if (r && r.url) {
-        const a = document.createElement('a');
-        a.href = r.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
-        a.style.display = 'none'; document.body.appendChild(a); a.click();
-        setTimeout(() => document.body.removeChild(a), 1000);
-        showToast(`Redirection vers ${type === 'synex-libre' ? 'Synex Libre' : 'Kronex'} ouverte`, 'success');
-        if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = `<i class="fas fa-external-link-alt mr-2"></i>Ouvrir ${type === 'synex-libre' ? 'Synex Libre' : 'Kronex'}`; }
+        if (tab && !tab.closed) {
+          tab.location.href = r.url;
+          showToast(`Accès ${label} ouvert`, 'success');
+        } else {
+          showModal('<div class="p-6 space-y-4 text-center">'
+            + '<div class="flex justify-between items-center mb-2">'
+            + `<h3 class="font-bold text-white">Accès ${label}</h3>`
+            + '<button onclick="closeModal()" class="text-gray-400 hover:text-white"><i class="fas fa-times"></i></button>'
+            + '</div>'
+            + `<p class="text-sm text-gray-400">Votre navigateur a bloqué l'ouverture automatique.<br>Cliquez ci-dessous pour accéder à ${label} :</p>`
+            + `<a href="${r.url}" target="_blank" rel="noopener noreferrer" onclick="closeModal()"`
+            + ` class="mt-2 inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-500 text-white font-bold px-6 py-3 rounded-xl transition text-sm">`
+            + `<i class="fas fa-external-link-alt"></i>Ouvrir ${label}</a>`
+            + '</div>');
+        }
+        resetBtn();
+      } else {
+        if (tab && !tab.closed) tab.close();
+        resetBtn();
       }
     } catch (err) {
-      showToast(err && err.error || 'Erreur de redirection', 'error');
-      if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = `<i class="fas fa-external-link-alt mr-2"></i>${type === 'synex-libre' ? 'Synex Libre' : 'Kronex'}`; }
+      if (tab && !tab.closed) tab.close();
+      showToast((err && err.error) || 'Erreur de redirection', 'error');
+      resetBtn();
     }
   }
   window._subRedirectBroker = redirectBroker;
