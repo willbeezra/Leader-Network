@@ -37,6 +37,14 @@ members.get('/coinpayments/config', async (c) => {
   })
 })
 
+// GET /api/members/stripe/config — Clé publique pour le SDK frontend (route PUBLIQUE)
+// Doit être déclarée AVANT le middleware auth pour être accessible sans token
+members.get('/stripe/config', async (c) => {
+  const { publicKey, mode, enabled } = await getStripeConfig(c.env.DB, c.env)
+  if (!enabled) return c.json({ enabled: false })
+  return c.json({ enabled: true, public_key: publicKey, mode, currency: 'usd' })
+})
+
 // Middleware auth membre — appliqué à toutes les autres routes
 members.use('/*', async (c, next) => {
   const auth = c.req.header('Authorization')
@@ -3819,13 +3827,6 @@ async function getStripeConfig(db: D1Database, env: {
   _stripeConfigCache = { data: result, ts: Date.now() }
   return result
 }
-
-// GET /api/members/stripe/config — Clé publique pour le SDK frontend (route PUBLIQUE)
-members.get('/stripe/config', async (c) => {
-  const { publicKey, mode, enabled } = await getStripeConfig(c.env.DB, c.env)
-  if (!enabled) return c.json({ enabled: false })
-  return c.json({ enabled: true, public_key: publicKey, mode, currency: 'usd' })
-})
 
 // POST /api/members/stripe/create-payment-intent
 // Crée un PaymentIntent Stripe et retourne le client_secret pour le SDK frontend
