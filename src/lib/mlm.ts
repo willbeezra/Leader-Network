@@ -2412,6 +2412,18 @@ export async function processDailyPayments(db: D1Database): Promise<number> {
 
     // ── Boucle : une transaction par jour dû ──────────────────────────────
     for (let dayIndex = firstDueDayIndex; dayIndex <= lastDueDayIndex; dayIndex++) {
+      // Guard anti-doublon : re-lire days_paid depuis DB avant chaque versement
+      // Protection contre race condition (2 Workers en parallèle sur la même entrée)
+      const freshEntry = await db.prepare(
+        `SELECT days_paid, status FROM pending_wallet_entries WHERE id = ?`
+      ).bind(entry.id).first() as any
+      if (!freshEntry || freshEntry.status === 'completed' || freshEntry.status === 'cancelled') break
+      if (freshEntry.days_paid !== currentDaysPaid) {
+        // Un autre Worker a déjà avancé days_paid — on recalcule depuis son état
+        console.warn(`[processDailyPayments] Race condition détectée sur ${entry.id} : days_paid DB=${freshEntry.days_paid} vs local=${currentDaysPaid} — abandon`)
+        break
+      }
+
       // Date calendaire de ce jour (pour le libellé)
       const dayDate = new Date(startMs + dayIndex * 24 * 60 * 60 * 1000)
       const dayLabel = dayDate.toLocaleDateString('fr-FR', {
@@ -2460,19 +2472,27 @@ export async function processDailyPayments(db: D1Database): Promise<number> {
 
       currentDaysPaid++
       paid++
+
+      // ── Mise à jour atomique après CHAQUE versement journalier ─────────
+      // CRITIQUE : si le Worker est tué (timeout CPU Cloudflare), les jours
+      // déjà versés sont persistés immédiatement en DB, empêchant les re-paiements.
+      // Sans cet UPDATE ici, days_paid reste à sa valeur d'origine et le prochain
+      // run recommencerait tout depuis le début (cause des doublons observés).
+      const isCompletedSoFar = currentDaysPaid >= entry.days_in_month
+      await db.prepare(
+        `UPDATE pending_wallet_entries
+         SET days_paid    = ?,
+             status       = ?,
+             last_paid_at = datetime('now')
+         WHERE id = ?`
+      ).bind(currentDaysPaid, isCompletedSoFar ? 'completed' : 'active', entry.id).run()
     }
 
-    // ── Mise à jour de l'entrée pending ───────────────────────────────────
+    // ── Post-boucle : notifications et commission parente ────────────────
+    // Note : days_paid et status ont déjà été mis à jour après CHAQUE versement
+    // (dans la boucle ci-dessus). On utilise isCompleted ici uniquement pour
+    // décider des notifications et de la mise à jour de la commission parente.
     const isCompleted = currentDaysPaid >= entry.days_in_month
-    const newStatus   = isCompleted ? 'completed' : 'active'
-
-    await db.prepare(
-      `UPDATE pending_wallet_entries
-       SET days_paid    = ?,
-           status       = ?,
-           last_paid_at = datetime('now')
-       WHERE id = ?`
-    ).bind(currentDaysPaid, newStatus, entry.id).run()
 
     // Marquer la commission parente comme payée si terminée
     if (isCompleted && entry.commission_id) {
