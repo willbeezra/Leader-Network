@@ -21,6 +21,7 @@ interface PSPInitiateBody {
   order_id?: string         // ID commande package (optionnel)
   license_id?: string       // ID licence (optionnel — parcours licenseOnly)
   topup_id?: string         // ID recharge wallet (optionnel)
+  campus_order_id?: string  // ID commande formation campus (optionnel)
   return_url?: string       // URL de retour après paiement
   metadata?: Record<string, any>
 }
@@ -110,6 +111,7 @@ async function recordPSPSession(db: D1Database, opts: {
   orderId?: string
   licenseId?: string
   topupId?: string
+  campusOrderId?: string
   metadata?: any
 }): Promise<string> {
   const id = 'psp_' + Math.random().toString(36).substring(2, 18)
@@ -132,6 +134,16 @@ async function recordPSPSession(db: D1Database, opts: {
       WHERE id = ?
     `).bind(opts.externalRef, opts.licenseId).run()
     return opts.licenseId
+  }
+
+  // Si commande formation campus
+  if (opts.campusOrderId) {
+    await db.prepare(`
+      UPDATE campus_course_orders
+      SET payment_ref = ?, updated_at = datetime('now')
+      WHERE id = ?
+    `).bind(opts.externalRef, opts.campusOrderId).run()
+    return opts.campusOrderId
   }
 
   // Si commande package
@@ -228,6 +240,24 @@ async function confirmPSPPayment(db: D1Database, externalRef: string, amount: nu
     return { type: 'order', id: order.id }
   }
 
+  // 4. Chercher dans campus_course_orders (formations achetées via V2 PSP)
+  const campusOrder = await db.prepare(
+    `SELECT * FROM campus_course_orders WHERE payment_ref = ? AND status = 'pending'`
+  ).bind(externalRef).first() as any
+
+  if (campusOrder) {
+    await db.prepare(`
+      UPDATE campus_course_orders
+      SET status = 'validated', payment_ref = ?,
+          validated_at = datetime('now'), updated_at = datetime('now')
+      WHERE id = ?
+    `).bind(`${provider}:${externalRef}`, campusOrder.id).run()
+    await createNotification(db, campusOrder.member_id, 'success', 'Formation debloquee !',
+      `Votre paiement ${provider} de $${amount} a ete confirme. Acces a la formation active.`)
+    console.log(`[PSP webhook campus] Formation ${campusOrder.course_id} validee via ${provider} — member=${campusOrder.member_id}`)
+    return { type: 'campus_order', id: campusOrder.id }
+  }
+
   return null
 }
 
@@ -239,7 +269,7 @@ async function confirmPSPPayment(db: D1Database, externalRef: string, amount: nu
 pspRouter.post('/initiate', async (c) => {
   const memberId = (c as any).get('memberId') as string
   const body = await c.req.json() as PSPInitiateBody
-  const { payment_method_id, amount, currency = 'USD', order_id, license_id, topup_id, return_url } = body
+  const { payment_method_id, amount, currency = 'USD', order_id, license_id, topup_id, campus_order_id, return_url } = body
 
   if (!payment_method_id || !amount || amount <= 0) {
     return c.json({ error: 'Paramètres invalides' }, 400)
@@ -304,7 +334,7 @@ pspRouter.post('/initiate', async (c) => {
         await recordPSPSession(c.env.DB, {
           memberId, paymentMethodId: payment_method_id, provider,
           amount, currency, externalRef: session.id,
-          orderId: order_id, licenseId: license_id, topupId: topup_id,
+          orderId: order_id, licenseId: license_id, topupId: topup_id, campusOrderId: campus_order_id,
           metadata: { session_id: session.id }
         })
 
@@ -357,7 +387,7 @@ pspRouter.post('/initiate', async (c) => {
         await recordPSPSession(c.env.DB, {
           memberId, paymentMethodId: payment_method_id, provider,
           amount, currency, externalRef: paypalOrder.id,
-          orderId: order_id, licenseId: license_id, topupId: topup_id
+          orderId: order_id, licenseId: license_id, topupId: topup_id, campusOrderId: campus_order_id,
         })
 
         return c.json({ redirect_url: approvalLink, paypal_order_id: paypalOrder.id, provider })
@@ -392,7 +422,7 @@ pspRouter.post('/initiate', async (c) => {
         await recordPSPSession(c.env.DB, {
           memberId, paymentMethodId: payment_method_id, provider,
           amount, currency, externalRef: payment.id,
-          orderId: order_id, licenseId: license_id, topupId: topup_id
+          orderId: order_id, licenseId: license_id, topupId: topup_id, campusOrderId: campus_order_id,
         })
 
         const checkoutUrl = payment._links?.checkout?.href
@@ -438,7 +468,7 @@ pspRouter.post('/initiate', async (c) => {
         await recordPSPSession(c.env.DB, {
           memberId, paymentMethodId: payment_method_id, provider,
           amount, currency, externalRef: txRef,
-          orderId: order_id, licenseId: license_id, topupId: topup_id
+          orderId: order_id, licenseId: license_id, topupId: topup_id, campusOrderId: campus_order_id,
         })
 
         return c.json({ redirect_url: data.data.link, tx_ref: txRef, provider })
@@ -477,7 +507,7 @@ pspRouter.post('/initiate', async (c) => {
         await recordPSPSession(c.env.DB, {
           memberId, paymentMethodId: payment_method_id, provider,
           amount, currency, externalRef: link.id,
-          orderId: order_id, licenseId: license_id, topupId: topup_id
+          orderId: order_id, licenseId: license_id, topupId: topup_id, campusOrderId: campus_order_id,
         })
 
         return c.json({ redirect_url: link.short_url, link_id: link.id, provider })
@@ -524,7 +554,7 @@ pspRouter.post('/initiate', async (c) => {
         await recordPSPSession(c.env.DB, {
           memberId, paymentMethodId: payment_method_id, provider,
           amount, currency, externalRef: data.payment_link?.id || idempotencyKey,
-          orderId: order_id, licenseId: license_id, topupId: topup_id
+          orderId: order_id, licenseId: license_id, topupId: topup_id, campusOrderId: campus_order_id,
         })
 
         return c.json({ redirect_url: data.payment_link?.url, provider })
@@ -569,7 +599,7 @@ pspRouter.post('/initiate', async (c) => {
         await recordPSPSession(c.env.DB, {
           memberId, paymentMethodId: payment_method_id, provider,
           amount, currency, externalRef: reference,
-          orderId: order_id, licenseId: license_id, topupId: topup_id
+          orderId: order_id, licenseId: license_id, topupId: topup_id, campusOrderId: campus_order_id,
         })
 
         return c.json({ redirect_url: link.url, reference, provider })
@@ -606,7 +636,7 @@ pspRouter.post('/initiate', async (c) => {
         await recordPSPSession(c.env.DB, {
           memberId, paymentMethodId: payment_method_id, provider,
           amount, currency, externalRef: reference,
-          orderId: order_id, licenseId: license_id, topupId: topup_id
+          orderId: order_id, licenseId: license_id, topupId: topup_id, campusOrderId: campus_order_id,
         })
 
         return c.json({ redirect_url: data._links?.redirect?.href, reference, provider })
@@ -655,7 +685,7 @@ pspRouter.post('/initiate', async (c) => {
         await recordPSPSession(c.env.DB, {
           memberId, paymentMethodId: payment_method_id, provider,
           amount, currency, externalRef: data.result.txn_id,
-          orderId: order_id, licenseId: license_id, topupId: topup_id,
+          orderId: order_id, licenseId: license_id, topupId: topup_id, campusOrderId: campus_order_id,
           metadata: { address: data.result.address, qr_url: data.result.qrcode_url }
         })
 
@@ -703,7 +733,7 @@ pspRouter.post('/initiate', async (c) => {
         await recordPSPSession(c.env.DB, {
           memberId, paymentMethodId: payment_method_id, provider,
           amount, currency, externalRef: data.data.code,
-          orderId: order_id, licenseId: license_id, topupId: topup_id
+          orderId: order_id, licenseId: license_id, topupId: topup_id, campusOrderId: campus_order_id,
         })
 
         return c.json({ redirect_url: data.data.hosted_url, charge_code: data.data.code, provider })
@@ -748,7 +778,7 @@ pspRouter.post('/initiate', async (c) => {
         await recordPSPSession(c.env.DB, {
           memberId, paymentMethodId: payment_method_id, provider,
           amount, currency, externalRef: orderId2,
-          orderId: order_id, licenseId: license_id, topupId: topup_id
+          orderId: order_id, licenseId: license_id, topupId: topup_id, campusOrderId: campus_order_id,
         })
 
         return c.json({ redirect_url: data.invoice_url, invoice_id: data.id, order_id: orderId2, provider })
@@ -800,7 +830,7 @@ pspRouter.post('/initiate', async (c) => {
         await recordPSPSession(c.env.DB, {
           memberId, paymentMethodId: payment_method_id, provider,
           amount, currency, externalRef: merchantTradeNo,
-          orderId: order_id, licenseId: license_id, topupId: topup_id
+          orderId: order_id, licenseId: license_id, topupId: topup_id, campusOrderId: campus_order_id,
         })
 
         return c.json({
@@ -848,7 +878,7 @@ pspRouter.post('/initiate', async (c) => {
         await recordPSPSession(c.env.DB, {
           memberId, paymentMethodId: payment_method_id, provider,
           amount, currency, externalRef: invoice.id,
-          orderId: order_id, licenseId: license_id, topupId: topup_id
+          orderId: order_id, licenseId: license_id, topupId: topup_id, campusOrderId: campus_order_id,
         })
 
         const serverUrlBase = config.server_url.replace(/\/$/, '')

@@ -815,7 +815,7 @@
   function launchV2PSP(orderId, methodId, provider, displayName) {
     setHtml('cb-checkout-section', '<div class="cb-loader"><div class="cb-spinner"></div>Redirection vers la passerelle\u2026</div>');
     xhr('POST', '/psp/initiate',
-      { order_id: orderId, provider: provider, payment_method_id: methodId, order_type: 'campus_course', course_id: CB.courseId, amount: CB.course.price_usd },
+      { campus_order_id: orderId, payment_method_id: methodId, amount: CB.course.price_usd, currency: 'USD', return_url: window.location.href },
       function(data) {
         if (data.checkout_url) {
           window.location.href = data.checkout_url;
