@@ -936,6 +936,22 @@ async function loadBrandingPublic(db: D1Database): Promise<{ logoUri: string; ne
   } catch { return { logoUri: '', networkName: 'LEADER' } }
 }
 
+// ============================================================
+// GET /campus/acheter/:courseId
+// Page d'achat campus dédiée — zéro wizard JS, zéro template literal imbriqué
+// Remplace complètement _wizardOpenForCourse pour les formations payantes
+// Safari-safe : HTML plat, JS autonome dans campus-buy.js
+// ============================================================
+app.get('/campus/acheter/:courseId', async (c) => {
+  const courseId = c.req.param('courseId')
+  const branding = await loadBrandingPublic(c.env.DB)
+  const networkName = branding.networkName || 'LEADER'
+  const logoUri = branding.logoUri || ''
+
+  const html = campusBuyHTML(courseId, networkName, logoUri)
+  return c.html(html)
+})
+
 // Toutes les routes → SPA
 app.get('*', async (c) => {
   const path = new URL(c.req.url).pathname
@@ -2950,5 +2966,105 @@ app.get('/api/i18n/stats', async (c) => {
     return c.json({ error: String(err) }, 500)
   }
 })
+
+// ============================================================
+// campusBuyHTML — Page d'achat campus autonome (Safari-safe)
+// HTML plat, zéro template literal imbriqué, zéro async wizard
+// Le JS est dans public/static/campus-buy.js
+// ============================================================
+function campusBuyHTML(courseId: string, networkName: string, logoUri: string): string {
+  const safeId = courseId.replace(/[^a-zA-Z0-9_-]/g, '')
+  const safeName = networkName.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  return '<!DOCTYPE html>' +
+    '<html lang="fr">' +
+    '<head>' +
+    '<meta charset="UTF-8">' +
+    '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+    '<title>Acquérir la formation — ' + safeName + '</title>' +
+    '<link rel="stylesheet" href="/static/style.css">' +
+    '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">' +
+    '<style>' +
+    'body{background:#0f1117;color:#e5e7eb;font-family:system-ui,sans-serif;margin:0;min-height:100vh;}' +
+    '.cb-wrap{max-width:560px;margin:0 auto;padding:24px 16px 48px;}' +
+    '.cb-back{display:inline-flex;align-items:center;gap:8px;color:#9ca3af;text-decoration:none;font-size:14px;margin-bottom:20px;padding:6px 12px;border-radius:8px;transition:background .2s;}' +
+    '.cb-back:hover{background:#1f2937;color:#e5e7eb;}' +
+    '.cb-card{background:#1a1f2e;border:1px solid #2d3748;border-radius:16px;padding:24px;margin-bottom:20px;}' +
+    '.cb-title{font-size:20px;font-weight:700;color:#fff;margin:0 0 6px;}' +
+    '.cb-price{font-size:28px;font-weight:800;color:#c9a84c;margin:8px 0;}' +
+    '.cb-desc{font-size:14px;color:#9ca3af;margin:0;}' +
+    '.cb-section-title{font-size:13px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;margin:0 0 12px;}' +
+    '.cb-method{width:100%;border:2px solid #2d3748;border-radius:12px;padding:16px;margin-bottom:10px;background:transparent;color:#e5e7eb;cursor:pointer;text-align:left;display:flex;align-items:center;gap:14px;transition:border-color .2s,background .2s;font-size:14px;}' +
+    '.cb-method:hover{border-color:#4b5563;background:#1f2937;}' +
+    '.cb-method.stripe{border-color:#7c3aed55;background:#4c1d9510;}' +
+    '.cb-method.stripe:hover{border-color:#7c3aed;}' +
+    '.cb-method.paypal{border-color:#1d4ed855;background:#1e3a8a10;}' +
+    '.cb-method.paypal:hover{border-color:#3b82f6;}' +
+    '.cb-method.bank{border-color:#05966955;background:#0647341a;}' +
+    '.cb-method.bank:hover{border-color:#10b981;}' +
+    '.cb-method.crypto{border-color:#d9770655;background:#78350f10;}' +
+    '.cb-method.crypto:hover{border-color:#f59e0b;}' +
+    '.cb-method.wallet{border-color:#0891b255;background:#0e748510;}' +
+    '.cb-method.wallet:hover{border-color:#06b6d4;}' +
+    '.cb-method.coinpayments{border-color:#ea580c55;background:#43140710;}' +
+    '.cb-method.coinpayments:hover{border-color:#f97316;}' +
+    '.cb-method.v2psp{border-color:#6d28d955;background:#2e1065a0;}' +
+    '.cb-method.v2psp:hover{border-color:#a78bfa;}' +
+    '.cb-method.manual{border-color:#37415155;background:#111827;}' +
+    '.cb-method.manual:hover{border-color:#6b7280;}' +
+    '.cb-method-icon{font-size:22px;width:32px;text-align:center;flex-shrink:0;}' +
+    '.cb-method-label{font-weight:700;color:#fff;}' +
+    '.cb-method-sub{font-size:12px;color:#9ca3af;margin-top:2px;}' +
+    '.cb-badge{margin-left:auto;font-size:9px;padding:2px 8px;border-radius:999px;font-weight:600;white-space:nowrap;}' +
+    '.cb-badge.green{background:#16a34a20;color:#4ade80;border:1px solid #16a34a40;}' +
+    '.cb-badge.orange{background:#ea580c20;color:#fb923c;border:1px solid #ea580c40;}' +
+    '.cb-badge.blue{background:#1d4ed820;color:#60a5fa;border:1px solid #1d4ed840;}' +
+    '.cb-badge.cyan{background:#0891b220;color:#22d3ee;border:1px solid #0891b240;}' +
+    '.cb-loader{display:flex;flex-direction:column;align-items:center;gap:12px;padding:40px;color:#9ca3af;font-size:14px;}' +
+    '.cb-spinner{width:32px;height:32px;border:3px solid #374151;border-top-color:#c9a84c;border-radius:50%;animation:cb-spin .7s linear infinite;}' +
+    '@keyframes cb-spin{to{transform:rotate(360deg);}}' +
+    '.cb-error{background:#450a0a;border:1px solid #7f1d1d;border-radius:12px;padding:20px;text-align:center;color:#fca5a5;}' +
+    '.cb-info{background:#1e3a5f;border:1px solid #1e40af;border-radius:10px;padding:14px;font-size:13px;color:#93c5fd;margin-bottom:12px;}' +
+    '.cb-success{background:#052e16;border:1px solid #166534;border-radius:12px;padding:24px;text-align:center;}' +
+    '.cb-success-icon{font-size:48px;margin-bottom:12px;}' +
+    '.cb-success-title{font-size:20px;font-weight:700;color:#4ade80;margin-bottom:8px;}' +
+    '.cb-success-msg{font-size:14px;color:#86efac;}' +
+    '.cb-btn-primary{width:100%;padding:14px;background:#c9a84c;color:#0f1117;font-weight:700;font-size:15px;border:none;border-radius:12px;cursor:pointer;transition:background .2s;}' +
+    '.cb-btn-primary:hover{background:#d4b565;}' +
+    '.cb-btn-primary:disabled{opacity:.5;cursor:not-allowed;}' +
+    '.cb-btn-secondary{width:100%;padding:12px;background:#1f2937;color:#9ca3af;font-weight:600;font-size:14px;border:none;border-radius:12px;cursor:pointer;transition:background .2s;margin-top:8px;}' +
+    '.cb-btn-secondary:hover{background:#374151;color:#e5e7eb;}' +
+    '.cb-input{width:100%;padding:12px 14px;background:#111827;border:1px solid #374151;border-radius:10px;color:#e5e7eb;font-size:14px;outline:none;box-sizing:border-box;}' +
+    '.cb-input:focus{border-color:#c9a84c;}' +
+    '.cb-label{font-size:13px;color:#9ca3af;margin-bottom:6px;display:block;}' +
+    '.cb-field{margin-bottom:14px;}' +
+    '.cb-proof-note{font-size:12px;color:#6b7280;margin-top:4px;}' +
+    '.cb-toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1f2937;border:1px solid #374151;padding:12px 20px;border-radius:10px;font-size:14px;color:#e5e7eb;z-index:9999;display:none;}' +
+    '</style>' +
+    '</head>' +
+    '<body>' +
+    '<div class="cb-wrap">' +
+    '<a href="/login#campus" class="cb-back" id="cb-back-btn">' +
+    '<i class="fas fa-arrow-left"></i> Retour au Campus' +
+    '</a>' +
+    '<div id="cb-course-info">' +
+    '<div class="cb-loader"><div class="cb-spinner"></div>Chargement de la formation…</div>' +
+    '</div>' +
+    '<div id="cb-payment-section" style="display:none">' +
+    '<div class="cb-card">' +
+    '<div class="cb-section-title">Choisissez votre moyen de paiement</div>' +
+    '<div id="cb-methods-list">' +
+    '<div class="cb-loader"><div class="cb-spinner"></div>Chargement des moyens de paiement…</div>' +
+    '</div>' +
+    '</div>' +
+    '</div>' +
+    '<div id="cb-checkout-section" style="display:none"></div>' +
+    '<div id="cb-result-section" style="display:none"></div>' +
+    '</div>' +
+    '<div id="cb-toast" class="cb-toast"></div>' +
+    '<script>window._CB_COURSE_ID = "' + safeId + '";</script>' +
+    '<script src="/static/campus-buy.js"></script>' +
+    '</body>' +
+    '</html>'
+}
 
 export default app

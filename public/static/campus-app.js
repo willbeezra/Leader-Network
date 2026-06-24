@@ -417,37 +417,12 @@ function _renderCampusCatalogOnly(mainContent, courses, categories, hasAccess, c
 }
 
 // ── Achat direct formation (bouton Acquérir) ─────────────────────────────────
-// Approche : onclick inline sur le bouton → zéro listener sur document
-// Pas d'AbortController, pas de délégation, pas d'accumulation possible.
-// Flag atomique window._campusBuyLock (timestamp) — reset auto 4s.
+// Redirection vers la page dédiée /campus/acheter/:courseId
+// Zéro wizard JS — zéro RangeError Safari.
 // ─────────────────────────────────────────────────────────────────────────────
 window._campusAcquerirClick = function(btn, courseId, coursePrice, courseTitle) {
-  // Bloquer immédiatement les appels multiples (multi-tap, double-clic)
-  var now = Date.now();
-  if (window._campusBuyLock && (now - window._campusBuyLock) < 4000) {
-    console.log('[Campus] achat ignoré — déjà en cours');
-    return;
-  }
-  window._campusBuyLock = now;
-  // Timeout de sécurité — reset automatique après 4s quoi qu'il arrive
-  setTimeout(function() { window._campusBuyLock = 0; }, 4000);
-
-  console.log('[Campus] _campusAcquerirClick — id:', courseId, 'price:', coursePrice);
-
-  if (typeof window._wizardOpenForCourse !== 'function') {
-    window._campusBuyLock = 0;
-    alert('Module de paiement indisponible. Rechargez la page.');
-    return;
-  }
-  try {
-    window._wizardOpenForCourse(courseId, courseTitle || '', coursePrice);
-  } catch(e) {
-    // En cas d'erreur (RangeError, etc.) : reset immédiat du lock
-    window._campusBuyLock = 0;
-    window._wizardOpenLock = 0;
-    window._wizardStep4Running = false;
-    console.error('[Campus] erreur _wizardOpenForCourse:', e);
-  }
+  console.log('[Campus] _campusAcquerirClick — redirection vers /campus/acheter/', courseId);
+  window.location.href = '/campus/acheter/' + encodeURIComponent(courseId);
 };
 
 // Compatibilité : _initCampusPricedDelegate ne fait plus rien (gardé pour ne pas casser d'éventuels appels)
@@ -524,7 +499,7 @@ function renderCampusCourseCard(course) {
     ? `<span class="campus-card-lessons"><i class="fas fa-play-circle"></i> ${course.total_lessons || 0} ${_t(course.total_lessons > 1 ? 'leçons' : 'leçon')}</span>`
     : status === 'priced'
       ? `<button class="campus-card-unlock campus-card-buy-btn"
-               onclick="event.stopPropagation();window._campusAcquerirClick(this,'${course.id}',${course.price_usd || 0},'${(course.title || '').replace(/'/g, "\\'")}')"
+               onclick="event.stopPropagation();window.location.href='/campus/acheter/'+encodeURIComponent('${course.id}')"
                style="color:#c9a84c;background:none;border:none;cursor:pointer;padding:0;font:inherit;">
            <i class="fas fa-shopping-cart"></i> Acquérir
          </button>`
