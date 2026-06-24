@@ -477,6 +477,14 @@
         showResultOwned();
         return;
       }
+      // Wallet : validation automatique immédiate côté serveur
+      if (data.auto_validated && data.status === 'validated') {
+        showResultSuccess(
+          'Accès activé !',
+          'Votre wallet a \u00e9t\u00e9 d\u00e9bit\u00e9 de ' + fmtUsd(data.amount_usd) + '. Acc\u00e8s \u00e0 la formation activ\u00e9 imm\u00e9diatement.'
+        );
+        return;
+      }
       CB.orderId = data.order_id;
       if (data.existing && data.status === 'proof_submitted') {
         showResultProofDone(data.order_id);
@@ -522,6 +530,9 @@
   }
 
   // ── 8a. Checkout Wallet ──────────────────────────────────────
+  // NB: le débit et la validation se font directement dans POST /campus/course/:id/order
+  // Cette fonction n'est plus appelée (wallet détecté dans createOrderThenCheckout)
+  // Conservée comme fallback si la réponse ne contient pas auto_validated
   function renderCheckoutWallet(orderId, amt) {
     var wbal = CB.walletBalance;
     var html = '';
@@ -533,33 +544,28 @@
     html += '<div style="display:flex;justify-content:space-between;padding:12px 0;">';
     html += '<span style="color:#9ca3af;">Montant</span><span style="color:#c9a84c;font-weight:800;font-size:20px;">' + fmtUsd(amt) + '</span></div>';
     html += '<div id="cb-wallet-err" class="cb-error" style="display:none;margin-bottom:12px;"></div>';
-    html += '<button class="cb-btn-primary" id="cb-wallet-pay-btn" onclick="window._cbWalletPay(\'' + escHtml(orderId) + '\')">Payer ' + fmtUsd(amt) + ' depuis mon Wallet</button>';
+    html += '<button class="cb-btn-primary" id="cb-wallet-pay-btn" onclick="window._cbWalletConfirm(\'' + escHtml(orderId) + '\')">Confirmer le paiement wallet</button>';
     html += '<button class="cb-btn-secondary" onclick="window._cbBackToMethods()"><i class="fas fa-arrow-left" style="margin-right:6px;"></i>Retour</button>';
     html += '</div>';
     setHtml('cb-checkout-section', html);
   }
 
-  window._cbWalletPay = function(orderId) {
+  // Fallback wallet : renvoyer une commande wallet (le serveur valide auto)
+  window._cbWalletConfirm = function(orderId) {
     var btn = el('cb-wallet-pay-btn');
     var errDiv = el('cb-wallet-err');
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Paiement en cours\u2026'; }
     if (errDiv) errDiv.style.display = 'none';
-
     xhr('POST', '/campus/course/' + CB.courseId + '/order', { payment_method: 'wallet' }, function(data) {
       if (data.code === 'ALREADY_OWNED') { showResultOwned(); return; }
-      CB.orderId = data.order_id || orderId;
-      // Soumettre preuve wallet (pas de fichier — juste confirmer)
-      xhr('POST', '/campus/course-order/' + CB.orderId + '/proof',
-        { proof_url: 'wallet_payment', note: 'Paiement depuis wallet LEADER' },
-        function() { showResultSuccess('Paiement effectu\u00e9 !', 'Votre wallet a \u00e9t\u00e9 d\u00e9bit\u00e9. La formation sera disponible d\u00e8s validation.'); },
-        function(err2) {
-          if (btn) { btn.disabled = false; btn.innerHTML = 'Payer depuis mon Wallet'; }
-          if (errDiv) { errDiv.textContent = err2.error || 'Erreur lors du paiement.'; errDiv.style.display = ''; }
-        }
-      );
+      if (data.auto_validated) {
+        showResultSuccess('Acc\u00e8s activ\u00e9 !', 'Votre wallet a \u00e9t\u00e9 d\u00e9bit\u00e9. Acc\u00e8s imm\u00e9diat \u00e0 la formation.');
+      } else {
+        showResultSuccess('Paiement enregistr\u00e9', 'Votre paiement wallet est en cours de traitement.');
+      }
     }, function(err) {
-      if (btn) { btn.disabled = false; btn.innerHTML = 'Payer depuis mon Wallet'; }
-      if (errDiv) { errDiv.textContent = err.error || 'Erreur lors de la commande.'; errDiv.style.display = ''; }
+      if (btn) { btn.disabled = false; btn.innerHTML = 'Confirmer le paiement wallet'; }
+      if (errDiv) { errDiv.textContent = err.error || 'Erreur.'; errDiv.style.display = ''; }
     });
   };
 
@@ -568,15 +574,13 @@
     var html = '';
     html += '<div class="cb-card">';
     html += '<div class="cb-section-title"><i class="fas fa-credit-card" style="color:#a78bfa;margin-right:6px;"></i>Paiement par carte bancaire</div>';
-    html += '<div class="cb-info">Montant : <strong style="color:#c9a84c;">' + fmtUsd(amt) + '</strong> \u00b7 Formation : ' + escHtml(CB.course && CB.course.title || '') + '</div>';
+    html += '<div class="cb-info">Montant : <strong style="color:#c9a84c;">' + fmtUsd(amt) + '</strong> \u00b7 ' + escHtml(CB.course && CB.course.title || '') + '</div>';
     html += '<div id="stripe-mount" style="padding:16px 0;min-height:80px;"></div>';
     html += '<div id="cb-stripe-err" class="cb-error" style="display:none;margin-bottom:12px;"></div>';
     html += '<button class="cb-btn-primary" id="cb-stripe-pay-btn" onclick="window._cbStripeSubmit(\'' + escHtml(orderId) + '\')" style="margin-bottom:8px;">Payer ' + fmtUsd(amt) + '</button>';
     html += '<button class="cb-btn-secondary" onclick="window._cbBackToMethods()"><i class="fas fa-arrow-left" style="margin-right:6px;"></i>Retour</button>';
     html += '</div>';
     setHtml('cb-checkout-section', html);
-
-    // Charger Stripe SDK
     var script = document.createElement('script');
     script.src = 'https://js.stripe.com/v3/';
     script.onload = function() { initStripeElement(orderId, amt); };
@@ -589,9 +593,8 @@
 
   function initStripeElement(orderId, amt) {
     if (!window.Stripe || !CB.stripeKey) {
-      setHtml('cb-stripe-err', 'Stripe non disponible.');
       var errDiv = el('cb-stripe-err');
-      if (errDiv) errDiv.style.display = '';
+      if (errDiv) { errDiv.textContent = 'Stripe non disponible.'; errDiv.style.display = ''; }
       return;
     }
     _stripeInstance = window.Stripe(CB.stripeKey);
@@ -614,31 +617,39 @@
     var errDiv = el('cb-stripe-err');
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Paiement\u2026'; }
     if (errDiv) errDiv.style.display = 'none';
-
-    // Créer PaymentIntent côté serveur
-    xhr('POST', '/members/stripe/create-payment-intent',
-      { amount: CB.course.price_usd, currency: 'usd', order_id: orderId, product: 'campus_course', course_id: CB.courseId },
+    // Etape 1 : PaymentIntent via route campus dediee
+    xhr('POST', '/campus/stripe/create-payment-intent',
+      { order_id: orderId, course_id: CB.courseId, amount: CB.course.price_usd },
       function(data) {
         var clientSecret = data.client_secret;
+        var piId = data.payment_intent_id;
+        // Etape 2 : confirmer cote Stripe SDK
         _stripeInstance.confirmCardPayment(clientSecret, {
           payment_method: { card: _stripeCard }
         }).then(function(result) {
           if (result.error) {
-            if (btn) { btn.disabled = false; btn.innerHTML = 'Payer'; }
+            if (btn) { btn.disabled = false; btn.innerHTML = 'Payer ' + fmtUsd(CB.course.price_usd); }
             if (errDiv) { errDiv.textContent = result.error.message; errDiv.style.display = ''; }
           } else if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
-            // Soumettre preuve Stripe
-            xhr('POST', '/campus/course-order/' + orderId + '/proof',
-              { proof_url: 'stripe:' + result.paymentIntent.id, note: 'Stripe PaymentIntent: ' + result.paymentIntent.id },
-              function() { showResultSuccess('Paiement r\u00e9ussi !', 'Votre paiement Stripe a \u00e9t\u00e9 confirm\u00e9. La formation sera disponible tr\u00e8s rapidement.'); },
-              function(err2) { showToast(err2.error || 'Erreur apr\u00e8s paiement Stripe.', 'error'); }
+            if (btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Validation\u2026'; }
+            // Etape 3 : confirmer cote serveur -> validation automatique
+            xhr('POST', '/campus/stripe/confirm-payment',
+              { payment_intent_id: result.paymentIntent.id, order_id: orderId },
+              function() {
+                showResultSuccess('Paiement Stripe confirm\u00e9 !',
+                  'Votre paiement a \u00e9t\u00e9 valid\u00e9 automatiquement. Acc\u00e8s activ\u00e9 imm\u00e9diatement.');
+              },
+              function() {
+                showResultSuccess('Paiement re\u00e7u !',
+                  'Votre paiement Stripe a \u00e9t\u00e9 re\u00e7u. Acc\u00e8s activ\u00e9 sous quelques minutes.');
+              }
             );
           }
         });
       },
       function(err) {
-        if (btn) { btn.disabled = false; btn.innerHTML = 'Payer'; }
-        if (errDiv) { errDiv.textContent = err.error || 'Erreur de cr\u00e9ation PaymentIntent.'; errDiv.style.display = ''; }
+        if (btn) { btn.disabled = false; btn.innerHTML = 'Payer ' + fmtUsd(CB.course.price_usd); }
+        if (errDiv) { errDiv.textContent = err.error || 'Erreur PaymentIntent.'; errDiv.style.display = ''; }
       }
     );
   };

@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { walletOperation, createNotification } from '../lib/mlm.js'
 
 const campus = new Hono<{ Bindings: CloudflareBindings }>()
 
@@ -860,11 +861,48 @@ campus.post('/course/:courseId/order', async (c) => {
     if (existing.status === 'validated') {
       return c.json({ error: 'Vous avez déjà accès à cette formation', code: 'ALREADY_OWNED' }, 409)
     }
-    // Commande en cours → retourner l'id existant pour reprendre le wizard
     return c.json({ order_id: existing.id, status: existing.status, existing: true })
   }
 
-  // Créer la commande
+  // ── FLOW WALLET : paiement immédiat + validation automatique ────────────
+  if (payment_method === 'wallet' || payment_method === 'internal_wallet') {
+    const price = Number(course.price_usd)
+    // Vérifier le solde
+    const walletRow = await db.prepare(
+      `SELECT balance FROM wallets WHERE member_id = ?`
+    ).bind(memberId).first() as any
+    const balance = Number(walletRow?.balance ?? 0)
+    if (balance < price) {
+      return c.json({
+        error: `Solde insuffisant. Disponible : $${balance.toFixed(2)}, Requis : $${price.toFixed(2)}`
+      }, 400)
+    }
+    // Débiter le wallet
+    await walletOperation(db, memberId, price, 'debit', 'debit_order_wallet',
+      `Achat formation : ${course.title}`)
+    // Créer la commande directement validée
+    const orderId = crypto.randomUUID().replace(/-/g, '').substring(0, 16)
+    await db.prepare(
+      `INSERT INTO campus_course_orders
+         (id, member_id, course_id, amount_usd, status, payment_method, proof_url, validated_at, updated_at)
+       VALUES (?, ?, ?, ?, 'validated', 'wallet', 'wallet_auto', datetime('now'), datetime('now'))`
+    ).bind(orderId, memberId, courseId, price).run()
+    // Notification
+    const walletAfter = await db.prepare(`SELECT balance FROM wallets WHERE member_id = ?`).bind(memberId).first() as any
+    await createNotification(db, memberId, 'success',
+      'Formation débloquée !',
+      `Votre accès à "${course.title}" a été activé. $${price.toFixed(2)} débités de votre wallet (nouveau solde : $${Number(walletAfter?.balance ?? 0).toFixed(2)}).`)
+    return c.json({
+      order_id: orderId,
+      amount_usd: price,
+      course_title: course.title,
+      status: 'validated',
+      auto_validated: true,
+      message: 'Accès activé immédiatement — paiement wallet confirmé !'
+    })
+  }
+
+  // ── Autres méthodes : créer la commande en pending ───────────────────────
   const orderId = crypto.randomUUID().replace(/-/g, '').substring(0, 16)
   await db.prepare(
     `INSERT INTO campus_course_orders (id, member_id, course_id, amount_usd, status, payment_method)
@@ -897,6 +935,152 @@ campus.post('/course-order/:orderId/proof', async (c) => {
   ).bind(proof_url, note, orderId).run()
 
   return c.json({ success: true, message: 'Preuve soumise — validation sous 24–48h' })
+})
+
+// ============================================================
+// STRIPE — Paiement automatique formations campus
+// ============================================================
+
+// Helper : lire la config Stripe depuis la DB
+async function getCampusStripeConfig(db: D1Database, env: any) {
+  const rows = await db.prepare(
+    `SELECT key, value FROM payment_gateway_config WHERE gateway = 'stripe_api'`
+  ).all()
+  const map: Record<string, string> = {}
+  for (const r of (rows.results as any[])) map[r.key] = r.value
+  return {
+    enabled:   map['enabled'] === 'true',
+    secretKey: map['secret_key'] || (env?.STRIPE_SECRET_KEY as string) || '',
+    publicKey: map['public_key'] || '',
+  }
+}
+
+// POST /campus/stripe/create-payment-intent
+// Crée un PaymentIntent pour une formation, retourne client_secret
+campus.post('/stripe/create-payment-intent', async (c) => {
+  const db = c.env.DB
+  const memberId = (c.get('memberId' as any) as string) || null
+  if (!memberId) return c.json({ error: 'Non authentifié' }, 401)
+
+  const { order_id, course_id, amount } = await c.req.json()
+  if (!order_id || !course_id || !amount) return c.json({ error: 'Paramètres manquants' }, 400)
+
+  const { secretKey, enabled } = await getCampusStripeConfig(db, c.env)
+  if (!enabled || !secretKey) return c.json({ error: 'Stripe non configuré' }, 503)
+
+  // Vérifier que la commande appartient bien au membre et est en pending
+  const order = await db.prepare(
+    `SELECT id, status, amount_usd, course_id FROM campus_course_orders WHERE id = ? AND member_id = ?`
+  ).bind(order_id, memberId).first() as any
+  if (!order) return c.json({ error: 'Commande introuvable' }, 404)
+  if (order.status === 'validated') return c.json({ error: 'Commande déjà validée', code: 'ALREADY_OWNED' }, 409)
+
+  const course = await db.prepare(`SELECT title FROM campus_courses WHERE id = ?`).bind(course_id).first() as any
+
+  try {
+    const body = new URLSearchParams({
+      amount:   String(Math.round(Number(amount) * 100)),
+      currency: 'usd',
+      'automatic_payment_methods[enabled]': 'true',
+      description: `LEADER Campus — ${course?.title || 'Formation'}`,
+      'metadata[member_id]':   memberId,
+      'metadata[order_id]':    order_id,
+      'metadata[course_id]':   course_id,
+      'metadata[order_type]':  'campus_course',
+    })
+    const res = await fetch('https://api.stripe.com/v1/payment_intents', {
+      method: 'POST',
+      headers: {
+        'Authorization':  `Bearer ${secretKey}`,
+        'Content-Type':   'application/x-www-form-urlencoded',
+        'Stripe-Version': '2024-06-20',
+      },
+      body: body.toString(),
+    })
+    if (!res.ok) {
+      const err = await res.json() as any
+      return c.json({ error: err?.error?.message || 'Erreur Stripe' }, 502)
+    }
+    const pi = await res.json() as { id: string; client_secret: string }
+    // Stocker le payment_intent_id dans la commande pour tracking
+    await db.prepare(
+      `UPDATE campus_course_orders SET payment_ref = ?, updated_at = datetime('now') WHERE id = ?`
+    ).bind(`stripe:${pi.id}`, order_id).run()
+    return c.json({ client_secret: pi.client_secret, payment_intent_id: pi.id })
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Erreur Stripe' }, 500)
+  }
+})
+
+// POST /campus/stripe/confirm-payment
+// Appelé par le frontend après confirmCardPayment() réussi
+// Vérifie le PaymentIntent auprès de Stripe puis valide la commande automatiquement
+campus.post('/stripe/confirm-payment', async (c) => {
+  const db = c.env.DB
+  const memberId = (c.get('memberId' as any) as string) || null
+  if (!memberId) return c.json({ error: 'Non authentifié' }, 401)
+
+  const { payment_intent_id, order_id } = await c.req.json()
+  if (!payment_intent_id || !order_id) return c.json({ error: 'Paramètres manquants' }, 400)
+
+  const { secretKey, enabled } = await getCampusStripeConfig(db, c.env)
+  if (!enabled || !secretKey) return c.json({ error: 'Stripe non configuré' }, 503)
+
+  // Vérifier le statut du PaymentIntent directement auprès de Stripe (source de vérité)
+  const res = await fetch(`https://api.stripe.com/v1/payment_intents/${payment_intent_id}`, {
+    headers: {
+      'Authorization':  `Bearer ${secretKey}`,
+      'Stripe-Version': '2024-06-20',
+    },
+  })
+  if (!res.ok) return c.json({ error: 'Impossible de vérifier le paiement Stripe' }, 502)
+  const pi = await res.json() as { id: string; status: string; amount: number; metadata: any }
+
+  if (pi.status !== 'succeeded') {
+    return c.json({ error: `Paiement non confirmé par Stripe (statut : ${pi.status})` }, 402)
+  }
+
+  // Vérifier que la commande appartient bien au membre
+  const order = await db.prepare(
+    `SELECT * FROM campus_course_orders WHERE id = ? AND member_id = ?`
+  ).bind(order_id, memberId).first() as any
+  if (!order) return c.json({ error: 'Commande introuvable' }, 404)
+  if (order.status === 'validated') {
+    return c.json({ success: true, already_validated: true, order_id })
+  }
+
+  const capturedAmount = pi.amount / 100
+  const stripeRef = `stripe:${payment_intent_id}`
+
+  // Valider la commande automatiquement
+  await db.prepare(
+    `UPDATE campus_course_orders
+     SET status       = 'validated',
+         payment_ref  = ?,
+         proof_url    = ?,
+         validated_at = datetime('now'),
+         updated_at   = datetime('now')
+     WHERE id = ?`
+  ).bind(stripeRef, stripeRef, order_id).run()
+
+  // Récupérer le titre de la formation pour la notification
+  const course = await db.prepare(
+    `SELECT title FROM campus_courses WHERE id = ?`
+  ).bind(order.course_id).first() as any
+
+  await createNotification(db, memberId, 'success',
+    'Paiement Stripe confirmé — Formation débloquée !',
+    `Votre paiement de $${capturedAmount.toFixed(2)} a été reçu. Accès à "${course?.title || 'la formation'}" activé immédiatement.`)
+
+  return c.json({
+    success: true,
+    order_id,
+    payment_intent_id,
+    amount: capturedAmount,
+    status: 'validated',
+    auto_validated: true,
+    message: 'Paiement confirmé — accès à la formation activé immédiatement !',
+  })
 })
 
 // GET /campus/my-course-orders — mes commandes formations
