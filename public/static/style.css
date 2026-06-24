@@ -622,18 +622,10 @@ main {
   background-color: rgba(192,48,32,0.08) !important;
 }
 
-/* CRITIQUE : text-dark-900 SUR bouton rouge = bleu nuit illisible.
-   On remplace par blanc partout où c'est sur fond rouge-500 */
-.bg-rouge-500.text-dark-900,
-button.bg-rouge-500,
-.bg-rouge-500 {
-  color: #FFFFFF;
-}
-
-/* Boutons rouge inline (Tailwind utilities) : toujours texte blanc */
+/* Boutons rouge : texte blanc — couvre text-dark-900 sur bg-rouge-500 */
 button.bg-rouge-500,
 a.bg-rouge-500,
-[class*="bg-rouge-500"]:not([class*="bg-rouge-500\/"]) {
+.bg-rouge-500.text-dark-900 {
   color: #FFFFFF !important;
 }
 
@@ -652,12 +644,6 @@ a.bg-rouge-500,
 /* Commissions : prime_leadership */
 .comm-prime_leadership {
   color: #E05040;
-}
-
-/* Tabs wizard retrait : actif */
-.bg-rouge-500.text-dark-900 {
-  color: #FFFFFF !important;
-  background-color: #C03020 !important;
 }
 
 /* data-table hover rouge visible */
