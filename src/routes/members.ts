@@ -1077,36 +1077,33 @@ members.get('/transactions', async (c) => {
       FROM credit_croissance cc
       WHERE cc.member_id = ?
 
-      UNION ALL
-
-      -- ── Source 6 : achats de formations campus ──
-      SELECT
-        cco.id,
-        'campus_purchase'  AS tx_type,
-        'purchase'         AS category,
-        -cco.amount_usd    AS amount,
-        NULL AS balance_before,
-        NULL AS balance_after,
-        'Achat formation : ' || COALESCE(cc2.title, cco.course_id) AS description,
-        CASE cco.payment_method
-          WHEN 'wallet' THEN 'principal'
-          ELSE 'external'
-        END                AS wallet_type,
-        cco.created_at,
-        cco.status,
-        NULL AS source_name,
-        NULL AS source_unique_id,
-        NULL AS comm_period,
-        COALESCE(cc2.title, cco.course_id) AS package_name,
-        'campus_course'    AS product_type,
-        cco.payment_method AS payment_method
-      FROM campus_course_orders cco
-      LEFT JOIN campus_courses cc2 ON cc2.id = cco.course_id
-      WHERE cco.member_id = ?
-
     ) unified
     ORDER BY created_at DESC
-    LIMIT ? OFFSET ?
+    LIMIT ? OFFSET 0
+  `
+
+  // Requête séparée pour campus_course_orders (évite D1 "too many terms in compound SELECT")
+  const campusSQL = `
+    SELECT
+      cco.id,
+      'campus_purchase'  AS tx_type,
+      'purchase'         AS category,
+      -cco.amount_usd    AS amount,
+      NULL               AS balance_before,
+      NULL               AS balance_after,
+      'Achat formation : ' || COALESCE(cc2.title, cco.course_id) AS description,
+      CASE cco.payment_method WHEN 'wallet' THEN 'principal' ELSE 'external' END AS wallet_type,
+      cco.created_at,
+      cco.status,
+      NULL AS source_name,
+      NULL AS source_unique_id,
+      NULL AS comm_period,
+      COALESCE(cc2.title, cco.course_id) AS package_name,
+      'campus_course'    AS product_type,
+      cco.payment_method AS payment_method
+    FROM campus_course_orders cco
+    LEFT JOIN campus_courses cc2 ON cc2.id = cco.course_id
+    WHERE cco.member_id = ?
   `
 
   const countSQL = `
@@ -1125,16 +1122,29 @@ members.get('/transactions', async (c) => {
     ) AS total
   `
 
-  const [rows, countRow] = await Promise.all([
+  const [rows, campusRows, countRow] = await Promise.all([
+    // unifiedSQL charge offset+limit lignes depuis le début, sans offset SQL
+    // La pagination finale se fait côté JS après fusion avec campus
     c.env.DB.prepare(unifiedSQL)
-      .bind(memberId, memberId, memberId, memberId, memberId, memberId, limit, offset)
+      .bind(memberId, memberId, memberId, memberId, memberId, offset + limit)
+      .all(),
+    c.env.DB.prepare(campusSQL)
+      .bind(memberId)
       .all(),
     c.env.DB.prepare(countSQL)
       .bind(memberId, memberId, memberId, memberId, memberId, memberId)
       .first() as any,
   ])
 
-  const transactions = (rows.results || []).map((t: any) => ({
+  // Fusionner, trier par date DESC, paginer
+  const allRaw = [
+    ...(rows.results || []),
+    ...(campusRows.results || []),
+  ].sort((a: any, b: any) =>
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  ).slice(offset, offset + limit)
+
+  const transactions = allRaw.map((t: any) => ({
     ...t,
     direction: (t.amount ?? 0) >= 0 ? 'credit' : 'debit',
   }))
