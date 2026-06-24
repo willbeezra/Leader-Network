@@ -86,15 +86,17 @@ async function openWalletDetail(type) {
                   ? '<span class="text-green-400">' + daysLeft + "j restants \xB7 " + (e.amount_per_day || 0).toFixed(2) + "$/j</span>"
                   : '<span class="text-gray-400">Lib\xE9r\xE9</span>';
             return (
-              '<div class="bg-dark-700 rounded-xl p-3"><div class="flex justify-between items-start mb-1"><div class="text-sm font-medium text-white">' +
-              typeLabel +
-              sourceHtml +
-              '</div><div class="text-orange-300 font-bold ml-3 flex-shrink-0">' +
-              fmt$(remaining) +
-              '</div></div><div class="text-xs mb-2">' +
-              releaseHtml +
-              " \xB7 P\xE9riode " +
-              (e.period || "—") +
+              [
+                '<div class="bg-dark-700 rounded-xl p-3"><div class="flex justify-between items-start mb-1"><div class="text-sm font-medium text-white">',
+                typeLabel,
+                sourceHtml,
+                '</div><div class="text-orange-300 font-bold ml-3 flex-shrink-0">',
+                fmt$(remaining),
+                '</div></div><div class="text-xs mb-2">',
+                releaseHtml,
+                " \xB7 P\xE9riode ",
+                e.period || "—"
+              ].join("") +
               '</div><div class="h-1.5 bg-dark-600 rounded-full"><div class="h-1.5 bg-orange-500/60 rounded-full" style="width:' +
               progress +
               '%"></div></div><div class="flex justify-between text-xs text-gray-600 mt-1"><span>' +
@@ -264,15 +266,17 @@ function renderPagination(containerId, total, page, perPage, onPageChange, onPer
   var k = "_pg_" + cid;
   var kp = "_pp_" + cid;
   var selectHtml =
-    '<select class="pagination-perpage" onchange="window[this.dataset.kp](parseInt(this.value),1)" data-kp="' +
-    kp +
-    '">' +
-    '<option value="10"' +
-    (perPage === 10 ? " selected" : "") +
-    ">10 / page</option>" +
-    '<option value="25"' +
-    (perPage === 25 ? " selected" : "") +
-    ">25 / page</option>" +
+    [
+      '<select class="pagination-perpage" onchange="window[this.dataset.kp](parseInt(this.value),1)" data-kp="',
+      kp,
+      '">',
+      '<option value="10"',
+      perPage === 10 ? " selected" : "",
+      ">10 / page</option>",
+      '<option value="25"',
+      perPage === 25 ? " selected" : "",
+      ">25 / page</option>"
+    ].join("") +
     '<option value="50"' +
     (perPage === 50 ? " selected" : "") +
     ">50 / page</option>" +
@@ -289,32 +293,35 @@ function renderPagination(containerId, total, page, perPage, onPageChange, onPer
   }
   for (var p = start; p <= end; p++) {
     var active = p === page ? "pagination-btn active" : "pagination-btn";
-    buttons += '<button class="' + active + '" onclick="window[this.dataset.k](' + p + ')" data-k="' + k + '">' + p + "</button>";
+    buttons += ['<button class="', active, '" onclick="window[this.dataset.k](', p, ')" data-k="', k, '">', p, "</button>"].join("");
   }
   if (end < totalPages) {
     if (end < totalPages - 1) buttons += '<span class="pagination-ellipsis">…</span>';
     buttons += '<button class="pagination-btn" onclick="window[this.dataset.k](' + totalPages + ')" data-k="' + k + '">' + totalPages + "</button>";
   }
-  var prevBtn =
-    '<button class="pagination-btn"' +
-    (page <= 1 ? " disabled" : "") +
-    ' onclick="if(' +
-    page +
-    ">1)window[this.dataset.k](" +
-    (page - 1) +
-    ')" data-k="' +
-    k +
-    '">&#8592;</button>';
+  var prevBtn = [
+    '<button class="pagination-btn"',
+    page <= 1 ? " disabled" : "",
+    ' onclick="if(',
+    page,
+    ">1)window[this.dataset.k](",
+    page - 1,
+    ')" data-k="',
+    k,
+    '">&#8592;</button>'
+  ].join("");
   var nextBtn =
-    '<button class="pagination-btn"' +
-    (page >= totalPages ? " disabled" : "") +
-    ' onclick="if(' +
-    page +
-    "<" +
-    totalPages +
-    ")window[this.dataset.k](" +
-    (page + 1) +
-    ')" data-k="' +
+    [
+      '<button class="pagination-btn"',
+      page >= totalPages ? " disabled" : "",
+      ' onclick="if(',
+      page,
+      "<",
+      totalPages,
+      ")window[this.dataset.k](",
+      page + 1,
+      ')" data-k="'
+    ].join("") +
     k +
     '">&#8594;</button>';
   el.innerHTML = '<div class="pagination-bar">' + info + selectHtml + '<div class="pagination-pages">' + prevBtn + buttons + nextBtn + "</div></div>";
@@ -1976,37 +1983,40 @@ function showPinConfirmation(e) {
       M2: "Placement direct",
       M3: "Via lien de parrainage"
     }[e.registration_method] || e.registration_method;
-  document.getElementById("pin-confirm-content").innerHTML =
-    '\n\n    <div class="space-y-4">\n\n      <!-- Identifiant unique -->\n\n      <div class="bg-dark-700 rounded-xl p-4 border border-rouge-500/25">\n\n        <' +
-    'div class="text-xs text-gray-400 mb-1 uppercase tracking-wider">Votre identifiant unique</div>\n\n        <div class="text-2xl font-bold text-rouge-400 ' +
-    'font-mono tracking-widest">' +
-    e.member.unique_id +
-    ('</div>\n\n        <div class="text-xs text-gray-500 mt-1">Conservez-le précieusement — il ne peut pas être modifié</div>\n\n      </div>\n\n\n\n      <!-- PIN ' +
-      'affiché UNE SEULE FOIS -->\n\n      <div class="bg-dark-700 rounded-xl p-4 border border-red-500/40">\n\n        <div class="flex items-center gap-2 mb-2">' +
-      '\n\n          <i class="fas fa-triangle-exclamation text-red-400"></i>\n\n          <div class="text-xs text-red-300 uppercase tracking-wider font-bold">' +
-      "PIN de sécurité — Visible une seule fois !</div>\n\n" +
-      '        </div>\n\n        <div class="text-3xl font-bold text-white font-mono tracking-[0.3em] text-center py-2">') +
-    e.pin_displayed +
-    ('</div>\n\n        <div class="text-xs text-red-400/80 mt-1 text-center">Ce PIN sera requis pour chaque retrait. Notez-le maintenant.</div>\n\n      </div>\n' +
-      '\n\n\n      <!-- Infos compte -->\n\n      <div class="bg-dark-700/50 rounded-xl p-3 space-y-2 text-sm">\n\n        <div class="flex justify-between"><span ' +
-      'class="text-gray-400">Nom</span><span class="text-white font-medium">') +
-    e.member.first_name +
-    " " +
-    e.member.last_name +
-    '</span></div>\n\n        <div class="flex justify-between"><span class="text-gray-400">Email</span><span class="text-white">' +
-    e.member.email +
-    '</span></div>\n\n        <div class="flex justify-between"><span class="text-gray-400">M\xE9thode</span><span class="text-rouge-400 text-xs">' +
-    t +
-    "</span></div>\n\n        " +
-    (e.in_holding_tank
+  document.getElementById("pin-confirm-content").innerHTML = [
+    [
+      '\n\n    <div class="space-y-4">\n\n      <!-- Identifiant unique -->\n\n      <div class="bg-dark-700 rounded-xl p-4 border border-rouge-500/25">\n\n        <',
+      'div class="text-xs text-gray-400 mb-1 uppercase tracking-wider">Votre identifiant unique</div>\n\n        <div class="text-2xl font-bold text-rouge-400 ',
+      'font-mono tracking-widest">',
+      e.member.unique_id,
+      '</div>\n\n        <div class="text-xs text-gray-500 mt-1">Conservez-le précieusement — il ne peut pas être modifié</div>\n\n      </div>\n\n\n\n      <!-- PIN ' +
+        'affiché UNE SEULE FOIS -->\n\n      <div class="bg-dark-700 rounded-xl p-4 border border-red-500/40">\n\n        <div class="flex items-center gap-2 mb-2">' +
+        '\n\n          <i class="fas fa-triangle-exclamation text-red-400"></i>\n\n          <div class="text-xs text-red-300 uppercase tracking-wider font-bold">' +
+        "PIN de sécurité — Visible une seule fois !</div>\n\n" +
+        '        </div>\n\n        <div class="text-3xl font-bold text-white font-mono tracking-[0.3em] text-center py-2">',
+      e.pin_displayed,
+      '</div>\n\n        <div class="text-xs text-red-400/80 mt-1 text-center">Ce PIN sera requis pour chaque retrait. Notez-le maintenant.</div>\n\n      </div>\n' +
+        '\n\n\n      <!-- Infos compte -->\n\n      <div class="bg-dark-700/50 rounded-xl p-3 space-y-2 text-sm">\n\n        <div class="flex justify-between"><span ' +
+        'class="text-gray-400">Nom</span><span class="text-white font-medium">',
+      e.member.first_name,
+      " "
+    ].join(""),
+    e.member.last_name,
+    '</span></div>\n\n        <div class="flex justify-between"><span class="text-gray-400">Email</span><span class="text-white">',
+    e.member.email,
+    '</span></div>\n\n        <div class="flex justify-between"><span class="text-gray-400">M\xE9thode</span><span class="text-rouge-400 text-xs">',
+    t,
+    "</span></div>\n\n        ",
+    e.in_holding_tank
       ? '<div class="flex justify-between"><span class="text-gray-400">Statut</span><span class="text-orange-400 text-xs"><i class="fas fa-clock mr-1"></i>En ' +
         "attente de placement</span></div>"
       : '<div class="flex justify-between"><span class="text-gray-400">Statut</span><span class="text-green-400 text-xs"><i class="fas fa-check mr-1"></i>Placé ' +
-        "dans l'arbre</span></div>") +
-    ('\n\n      </div>\n\n\n\n      <!-- Avertissement -->\n\n      <div class="bg-yellow-900/20 border border-yellow-500/20 rounded-xl p-3">\n\n        <p ' +
+        "dans l'arbre</span></div>",
+    '\n\n      </div>\n\n\n\n      <!-- Avertissement -->\n\n      <div class="bg-yellow-900/20 border border-yellow-500/20 rounded-xl p-3">\n\n        <p ' +
       'class="text-xs text-yellow-400">\n\n          <i class="fas fa-info-circle mr-1"></i>\n\n          Un email de bienvenue vous a été envoyé. Votre PIN ne ' +
       "sera <strong>jamais</strong> affiché à nouveau.\n\n          Vous pouvez le modifier dans votre profil si vous le perdez.\n\n        </p>\n\n      </div>\n\n  " +
-      "  </div>");
+      "  </div>"
+  ].join("");
 }
 function pinConfirmOk() {
   (document.getElementById("pin-confirmation").classList.add("hidden"), initApp());
@@ -2207,510 +2217,564 @@ async function renderDashboard(e) {
         '<span class="text-gray-400">Solde : </span><span class="text-rouge-400 font-bold">' + fmt$(a?.balance) + "</span>"));
     const _licPrice = fmtPrice(t.license_price || 97);
     e.innerHTML =
-      '\n\n    <div class="space-y-6">\n\n      <div>\n\n        <h1 class="text-2xl font-bold text-white">Bonjour, ' +
-      n.first_name +
-      (' ! </h1>\n\n        <p class="text-gray-400 mt-1">Voici votre tableau de bord LEADER</p>\n\n      </div>\n\n\n\n      <!-- Widget Fast Start Bonus — EN ' +
-        "ÉVIDENCE, disparaît uniquement à la fin des 30j -->\n\n      ") +
-      (() => {
-        const e = n.fast_start_start_date;
-        if (!e) return "";
-        const a = new Date(e.replace(" ", "T")),
-          s = new Date(),
-          r = Math.floor((s - a) / 864e5),
-          i = t.fastStartDays || 30,
-          l = Math.max(0, i - r);
-        if (l <= 0) return "";
-        const d = Math.min(100, Math.round((r / i) * 100)),
-          o = n.fast_start_bv || 0,
-          c = t.fastStartPaliers || [];
-        let x = null,
-          p = null;
-        for (const e of c) o >= e.bv_threshold ? (x = e) : p || (p = e);
-        const m = p ? Math.min(100, Math.round((o / p.bv_threshold) * 100)) : x ? 100 : 0,
-          u = l <= 7,
-          g = l <= 14,
-          f = u ? "border-red-500/60" : g ? "border-orange-500/50" : "border-emerald-500/50",
-          b = u ? "rgba(239,68,68,0.08)" : g ? "rgba(249,115,22,0.07)" : "rgba(16,185,129,0.07)",
-          v = u ? "text-red-400" : g ? "text-orange-400" : "text-emerald-400",
-          y = u ? "#ef4444,#dc2626" : g ? "#f97316,#ea580c" : "#10b981,#059669",
-          h = u ? "animate-pulse" : "",
-          w = new Date(a.getTime() + 864e5 * i).toLocaleDateString("fr-FR");
-        return (
-          '\n\n        <div class="rounded-xl border ' +
-          f +
-          ' overflow-hidden relative"\n\n             style="background: linear-gradient(135deg, #0f1a14 0%, #0d1a16 100%); box-shadow: 0 0 24px ' +
-          b +
-          '">\n\n\n\n          <!-- Bande sup\xE9rieure color\xE9e -->\n\n          <div class="h-0.5 w-full" style="background:linear-gradient(90deg,' +
-          y +
-          (')"></div>\n\n\n\n          <!-- En-tête -->\n\n          <div class="px-4 py-3 flex items-center justify-between flex-wrap gap-2">\n\n            <div ' +
-            'class="flex items-center gap-2.5">\n\n              <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ') +
-          h +
-          '"\n\n                   style="background:linear-gradient(135deg,' +
-          y.split(",")[0] +
-          "33," +
-          y.split(",")[0] +
-          '11)">\n\n                <i class="fas fa-rocket ' +
-          v +
-          (' text-sm"></i>\n\n              </div>\n\n              <div>\n\n                <div class="font-bold text-white text-sm flex items-center gap-2">\n\n        ' +
-            "          Fast Start Bonus\n\n                  ") +
-          (x
-            ? x.paid
-              ? '<span class="text-[10px] bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-1.5 py-0.5 rounded-full font-semibold"><i class="fas ' +
-                'fa-wallet mr-0.5"></i>Bonus ' +
-                x.bv_threshold +
-                " BV vers\xE9 !</span>"
-              : '<span class="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 rounded-full font-semibold"><i class="fas ' +
-                'fa-check mr-0.5"></i>Palier ' +
-                x.bv_threshold +
-                " BV atteint !</span>"
-            : "") +
-          '\n\n                </div>\n\n                <div class="text-[11px] text-gray-400 mt-0.5">Filleuls directs avant le <span class="font-medium text-white">' +
-          w +
-          '</span></div>\n\n              </div>\n\n            </div>\n\n            <div class="flex flex-col items-end">\n\n              <span class="' +
-          v +
-          ' font-black text-xl leading-none">' +
-          l +
-          '</span>\n\n              <span class="text-[10px] text-gray-400">jour' +
-          (1 !== l ? "s" : "") +
-          " restant" +
-          (1 !== l ? "s" : "") +
-          ('</span>\n\n            </div>\n\n          </div>\n\n\n\n          <!-- Corps -->\n\n          <div class="px-4 pb-3 space-y-2.5">\n\n\n\n            <!-- Barre de ' +
-            'temps -->\n\n            <div>\n\n              <div class="flex justify-between text-[11px] text-gray-400 mb-1">\n\n                <span>Temps écoulé<' +
-            '/span>\n\n                <span class="') +
-          v +
-          ' font-semibold">' +
-          d +
-          "% \u2014 " +
-          r +
-          "j / " +
-          i +
-          ('j</span>\n\n              </div>\n\n              <div class="h-1.5 rounded-full bg-dark-700 overflow-hidden">\n\n                <div class="h-full ' +
-            'rounded-full transition-all" style="width:') +
-          d +
-          "%; background:linear-gradient(90deg," +
-          y +
-          (')"></div>\n\n              </div>\n\n            </div>\n\n\n\n            <!-- BV + progression -->\n\n            <div>\n\n              <div class="flex ' +
-            'justify-between text-[11px] text-gray-400 mb-1">\n\n                <span>BV filleuls directs accumulés</span>\n\n                <span ' +
-            'class="text-emerald-400 font-bold">') +
-          fmtBV(o) +
-          ('</span>\n\n              </div>\n\n              <div class="h-1.5 rounded-full bg-dark-700 overflow-hidden">\n\n                <div class="h-full ' +
-            'rounded-full transition-all" style="width:') +
-          m +
-          ('%; background:linear-gradient(90deg,#10b981,#059669)"></div>\n\n              </div>\n\n              <div class="flex justify-between text-[10px] ' +
-            'text-gray-500 mt-1">\n\n                ') +
-          (p
-            ? "<span>" +
-              fmtBV(o) +
-              " / " +
-              fmtBV(p.bv_threshold) +
-              ' BV pour d\xE9crocher <span class="text-emerald-400 font-bold">' +
-              fmt$(p.bonus_amount) +
-              '</span></span><span class="text-emerald-400">' +
-              m +
-              "%</span>"
-            : x
-              ? x.paid
-                ? '<span class="text-indigo-400 font-semibold"><i class="fas fa-wallet mr-1"></i>Palier max atteint \u2014 bonus ' +
-                  fmt$(x.bonus_amount) +
-                  " vers\xE9 dans votre wallet</span><span></span>"
-                : '<span class="text-emerald-400 font-semibold"><i class="fas fa-check-circle mr-1"></i>Palier max atteint \u2014 bonus ' +
-                  fmt$(x.bonus_amount) +
-                  " en cours de versement</span><span></span>"
-              : "<span>Premier palier : " + (c[0] ? fmtBV(c[0].bv_threshold) + " BV" : "—") + "</span><span></span>") +
-          ('\n\n              </div>\n\n            </div>\n\n\n\n            <!-- Paliers -->\n\n            <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5">\n\n        ' +
-            "      ") +
-          c
-            .map((e) => {
-              const t = o >= e.bv_threshold,
-                n = t && e.paid,
-                a = n ? "border-indigo-500/50 bg-indigo-500/10" : t ? "border-emerald-500/50 bg-emerald-500/10" : "border-dark-500/60 bg-dark-800/60",
-                s = n ? "text-indigo-300" : t ? "text-emerald-300" : "text-gray-500",
-                r = n ? "text-indigo-400" : t ? "text-emerald-400" : "text-gray-600",
-                i = n
-                  ? '<div class="mt-0.5 text-[9px] text-indigo-400 font-semibold"><i class="fas fa-wallet mr-0.5"></i>Versé ✓</div>'
-                  : t
-                    ? '<div class="mt-0.5 text-[9px] text-emerald-500 font-semibold"><i class="fas fa-check-circle mr-0.5"></i>Atteint</div>'
-                    : '<div class="mt-0.5 text-[9px] text-gray-600">' + fmtBV(e.bv_threshold - o) + " manquants</div>";
-              return (
-                '\n\n                <div class="rounded-lg px-2.5 py-2 text-center border transition-all ' +
+      [
+        [
+          [
+            [
+              [
+                [
+                  [
+                    [
+                      [
+                        '\n\n    <div class="space-y-6">\n\n      <div>\n\n        <h1 class="text-2xl font-bold text-white">Bonjour, ',
+                        n.first_name,
+                        ' ! </h1>\n\n        <p class="text-gray-400 mt-1">Voici votre tableau de bord LEADER</p>\n\n      </div>\n\n\n\n      <!-- Widget Fast Start Bonus — EN ' +
+                          "ÉVIDENCE, disparaît uniquement à la fin des 30j -->\n\n      ",
+                        (() => {
+                          const e = n.fast_start_start_date;
+                          if (!e) return "";
+                          const a = new Date(e.replace(" ", "T")),
+                            s = new Date(),
+                            r = Math.floor((s - a) / 864e5),
+                            i = t.fastStartDays || 30,
+                            l = Math.max(0, i - r);
+                          if (l <= 0) return "";
+                          const d = Math.min(100, Math.round((r / i) * 100)),
+                            o = n.fast_start_bv || 0,
+                            c = t.fastStartPaliers || [];
+                          let x = null,
+                            p = null;
+                          for (const e of c) o >= e.bv_threshold ? (x = e) : p || (p = e);
+                          const m = p ? Math.min(100, Math.round((o / p.bv_threshold) * 100)) : x ? 100 : 0,
+                            u = l <= 7,
+                            g = l <= 14,
+                            f = u ? "border-red-500/60" : g ? "border-orange-500/50" : "border-emerald-500/50",
+                            b = u ? "rgba(239,68,68,0.08)" : g ? "rgba(249,115,22,0.07)" : "rgba(16,185,129,0.07)",
+                            v = u ? "text-red-400" : g ? "text-orange-400" : "text-emerald-400",
+                            y = u ? "#ef4444,#dc2626" : g ? "#f97316,#ea580c" : "#10b981,#059669",
+                            h = u ? "animate-pulse" : "",
+                            w = new Date(a.getTime() + 864e5 * i).toLocaleDateString("fr-FR");
+                          return (
+                            [
+                              [
+                                [
+                                  [
+                                    [
+                                      '\n\n        <div class="rounded-xl border ',
+                                      f,
+                                      ' overflow-hidden relative"\n\n             style="background: linear-gradient(135deg, #0f1a14 0%, #0d1a16 100%); box-shadow: 0 0 24px ',
+                                      b,
+                                      '">\n\n\n\n          <!-- Bande sup\xE9rieure color\xE9e -->\n\n          <div class="h-0.5 w-full" style="background:linear-gradient(90deg,',
+                                      y,
+                                      ')"></div>\n\n\n\n          <!-- En-tête -->\n\n          <div class="px-4 py-3 flex items-center justify-between flex-wrap gap-2">\n\n            <div ' +
+                                        'class="flex items-center gap-2.5">\n\n              <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ',
+                                      h,
+                                      '"\n\n                   style="background:linear-gradient(135deg,'
+                                    ].join(""),
+                                    y.split(",")[0],
+                                    "33,",
+                                    y.split(",")[0],
+                                    '11)">\n\n                <i class="fas fa-rocket ',
+                                    v,
+                                    ' text-sm"></i>\n\n              </div>\n\n              <div>\n\n                <div class="font-bold text-white text-sm flex items-center gap-2">\n\n        ' +
+                                      "          Fast Start Bonus\n\n                  ",
+                                    x
+                                      ? x.paid
+                                        ? '<span class="text-[10px] bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-1.5 py-0.5 rounded-full font-semibold"><i class="fas ' +
+                                          'fa-wallet mr-0.5"></i>Bonus ' +
+                                          x.bv_threshold +
+                                          " BV vers\xE9 !</span>"
+                                        : '<span class="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 rounded-full font-semibold"><i class="fas ' +
+                                          'fa-check mr-0.5"></i>Palier ' +
+                                          x.bv_threshold +
+                                          " BV atteint !</span>"
+                                      : "",
+                                    '\n\n                </div>\n\n                <div class="text-[11px] text-gray-400 mt-0.5">Filleuls directs avant le <span class="font-medium text-white">'
+                                  ].join(""),
+                                  w,
+                                  '</span></div>\n\n              </div>\n\n            </div>\n\n            <div class="flex flex-col items-end">\n\n              <span class="',
+                                  v,
+                                  ' font-black text-xl leading-none">',
+                                  l,
+                                  '</span>\n\n              <span class="text-[10px] text-gray-400">jour',
+                                  1 !== l ? "s" : "",
+                                  " restant"
+                                ].join(""),
+                                1 !== l ? "s" : "",
+                                '</span>\n\n            </div>\n\n          </div>\n\n\n\n          <!-- Corps -->\n\n          <div class="px-4 pb-3 space-y-2.5">\n\n\n\n            <!-- Barre de ' +
+                                  'temps -->\n\n            <div>\n\n              <div class="flex justify-between text-[11px] text-gray-400 mb-1">\n\n                <span>Temps écoulé<' +
+                                  '/span>\n\n                <span class="',
+                                v,
+                                ' font-semibold">',
+                                d,
+                                "% \u2014 ",
+                                r,
+                                "j / "
+                              ].join(""),
+                              i,
+                              'j</span>\n\n              </div>\n\n              <div class="h-1.5 rounded-full bg-dark-700 overflow-hidden">\n\n                <div class="h-full ' +
+                                'rounded-full transition-all" style="width:',
+                              d,
+                              "%; background:linear-gradient(90deg,",
+                              y,
+                              ')"></div>\n\n              </div>\n\n            </div>\n\n\n\n            <!-- BV + progression -->\n\n            <div>\n\n              <div class="flex ' +
+                                'justify-between text-[11px] text-gray-400 mb-1">\n\n                <span>BV filleuls directs accumulés</span>\n\n                <span ' +
+                                'class="text-emerald-400 font-bold">',
+                              fmtBV(o),
+                              '</span>\n\n              </div>\n\n              <div class="h-1.5 rounded-full bg-dark-700 overflow-hidden">\n\n                <div class="h-full ' +
+                                'rounded-full transition-all" style="width:'
+                            ].join("") +
+                            m +
+                            ('%; background:linear-gradient(90deg,#10b981,#059669)"></div>\n\n              </div>\n\n              <div class="flex justify-between text-[10px] ' +
+                              'text-gray-500 mt-1">\n\n                ') +
+                            (p
+                              ? [
+                                  "<span>",
+                                  fmtBV(o),
+                                  " / ",
+                                  fmtBV(p.bv_threshold),
+                                  ' BV pour d\xE9crocher <span class="text-emerald-400 font-bold">',
+                                  fmt$(p.bonus_amount),
+                                  '</span></span><span class="text-emerald-400">',
+                                  m,
+                                  "%</span>"
+                                ].join("")
+                              : x
+                                ? x.paid
+                                  ? '<span class="text-indigo-400 font-semibold"><i class="fas fa-wallet mr-1"></i>Palier max atteint \u2014 bonus ' +
+                                    fmt$(x.bonus_amount) +
+                                    " vers\xE9 dans votre wallet</span><span></span>"
+                                  : '<span class="text-emerald-400 font-semibold"><i class="fas fa-check-circle mr-1"></i>Palier max atteint \u2014 bonus ' +
+                                    fmt$(x.bonus_amount) +
+                                    " en cours de versement</span><span></span>"
+                                : "<span>Premier palier : " + (c[0] ? fmtBV(c[0].bv_threshold) + " BV" : "—") + "</span><span></span>") +
+                            ('\n\n              </div>\n\n            </div>\n\n\n\n            <!-- Paliers -->\n\n            <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5">\n\n        ' +
+                              "      ") +
+                            c
+                              .map((e) => {
+                                const t = o >= e.bv_threshold,
+                                  n = t && e.paid,
+                                  a = n
+                                    ? "border-indigo-500/50 bg-indigo-500/10"
+                                    : t
+                                      ? "border-emerald-500/50 bg-emerald-500/10"
+                                      : "border-dark-500/60 bg-dark-800/60",
+                                  s = n ? "text-indigo-300" : t ? "text-emerald-300" : "text-gray-500",
+                                  r = n ? "text-indigo-400" : t ? "text-emerald-400" : "text-gray-600",
+                                  i = n
+                                    ? '<div class="mt-0.5 text-[9px] text-indigo-400 font-semibold"><i class="fas fa-wallet mr-0.5"></i>Versé ✓</div>'
+                                    : t
+                                      ? '<div class="mt-0.5 text-[9px] text-emerald-500 font-semibold"><i class="fas fa-check-circle mr-0.5"></i>Atteint</div>'
+                                      : '<div class="mt-0.5 text-[9px] text-gray-600">' + fmtBV(e.bv_threshold - o) + " manquants</div>";
+                                return (
+                                  [
+                                    '\n\n                <div class="rounded-lg px-2.5 py-2 text-center border transition-all ',
+                                    a,
+                                    '">\n\n                  <div class="text-[11px] font-bold ',
+                                    s,
+                                    ' mb-0.5">',
+                                    fmtBV(e.bv_threshold),
+                                    '</div>\n\n                  <div class="text-sm font-black ',
+                                    r,
+                                    '">'
+                                  ].join("") +
+                                  fmt$(e.bonus_amount) +
+                                  "</div>\n\n                  " +
+                                  i +
+                                  "\n\n                </div>"
+                                );
+                              })
+                              .join("") +
+                            "\n\n            </div>\n\n\n\n          </div>\n\n        </div>"
+                          );
+                        })(),
+                        "\n\n\n      <!-- Widget Prime du Jour (Q70/Q108) >\n      ",
+                        (() => {
+                          const drt = t.dailyReleaseTotal || 0;
+                          const drb = t.dailyReleaseByType || [];
+                          if (drt <= 0) return "";
+                          const rows = drb
+                            .map(
+                              (x) =>
+                                '<div class="flex justify-between text-xs py-0.5"><span class="text-gray-400">' +
+                                x.label +
+                                '</span><span class="text-emerald-300 font-medium">+' +
+                                fmt$(x.amount_per_day) +
+                                "/j</span></div>"
+                            )
+                            .join("");
+                          return [
+                            '\n        <div class="rounded-xl border border-emerald-500/30 overflow-hidden"\n             style="background:linear-gradient(135deg,#0a1a0f 0%,#071209 ',
+                            '100%)">\n          <div class="h-0.5 w-full" style="background:linear-gradient(90deg,#10b981,#059669)"></div>\n          <div class="px-4 py-3 flex ',
+                            'items-center justify-between flex-wrap gap-3">\n            <div class="flex items-center gap-2.5">\n              <div class="w-8 h-8 rounded-lg ',
+                            'bg-emerald-500/20 flex items-center justify-center flex-shrink-0">\n',
+                            '                <i class="fas fa-droplet text-emerald-400 text-sm"></i>\n              </div>\n              <div>\n                <div class="text-xs ' +
+                              'text-gray-400 uppercase tracking-wider">Prime libérée aujourd\'hui</div>\n                <div class="text-xl font-black text-emerald-400">',
+                            fmt$(drt),
+                            '<span class="text-xs text-gray-400 font-normal ml-1">/jour</span></div>\n              </div>\n            </div>\n            <div class="text-right">\n  ' +
+                              '            <button onclick="showPage(\'commissions\')"\n                      class="text-xs text-emerald-400/70 hover:text-emerald-400 ' +
+                              'transition-colors">\n                <i class="fas fa-arrow-right mr-1"></i>Voir mes commissions\n              </button>\n            </div>\n          <' +
+                              "/div>\n          ",
+                            drb.length > 1 ? '<div class="px-4 pb-3 border-t border-emerald-500/10 pt-2 space-y-0.5">' + rows + "</div>" : "",
+                            "\n        </div>"
+                          ].join("");
+                        })(),
+                        '\n\n      <!-- Stats principales -->\n\n      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">\n\n        <div class="stat-card cursor-pointer ' +
+                          'hover:border-rouge-500/30 transition-all group" onclick="showPage(\'wallet\')" title="Voir mon portefeuille complet">\n\n          <div class="flex ' +
+                          'items-center justify-between mb-3">\n\n            <span class="text-xs text-gray-400 uppercase tracking-wider">Solde</span>\n\n            <div ' +
+                          'class="w-8 h-8 rounded-lg bg-rouge-500/15 flex items-center justify-center"><i class="fas fa-wallet text-rouge-400 text-sm group-hover:scale-110 ' +
+                          'transition-transform"></i></div>\n' +
+                          '\n          </div>\n\n          <div class="text-2xl font-bold text-rouge-400">',
+                        fmt$(a?.balance),
+                        '</div>\n\n          <div class="text-xs text-gray-500 mt-1">Disponible au retrait</div>\n\n          '
+                      ].join(""),
+                      s > 0
+                        ? '<div class="text-xs text-orange-400 mt-1"><i class="fas fa-hourglass-half mr-1"></i>' + fmt$(s) + " en attente</div>"
+                        : "",
+                      '\n\n          <div class="text-xs text-rouge-500/50 mt-2 group-hover:text-rouge-400 transition-colors"><i class="fas fa-arrow-right mr-1"></i>Voir ' +
+                        'portefeuille</div>\n\n        </div>\n\n        <div class="stat-card">\n\n          <div class="flex items-center justify-between mb-3">\n\n            <span ' +
+                        'class="text-xs text-gray-400 uppercase tracking-wider">BV Gauche</span>\n\n            <div class="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center ' +
+                        'justify-center"><i class="fas fa-arrow-left text-blue-400 text-sm"></i></div>\n' +
+                        '\n          </div>\n\n          <div class="text-2xl font-bold text-blue-400">',
+                      fmtBV(n.left_bv_total),
+                      '</div>\n\n          <div class="text-xs text-gray-500 mt-1">\xC0 vie &nbsp;<span class="text-gray-600">/</span>&nbsp; <span class="text-blue-300/70">',
+                      fmtBV(n.left_bv_monthly),
+                      ' ce mois</span></div>\n\n        </div>\n\n        <div class="stat-card">\n\n          <div class="flex items-center justify-between mb-3">\n\n            <' +
+                        'span class="text-xs text-gray-400 uppercase tracking-wider">BV Droit</span>\n\n            <div class="w-8 h-8 rounded-lg bg-green-500/20 flex ' +
+                        'items-center justify-center"><i class="fas fa-arrow-right text-green-400 text-sm"></i></div>\n\n          </div>\n\n          <div class="text-2xl ' +
+                        'font-bold text-green-400">',
+                      fmtBV(n.right_bv_total),
+                      '</div>\n\n          <div class="text-xs text-gray-500 mt-1">\xC0 vie &nbsp;<span class="text-gray-600">/</span>&nbsp; <span class="text-green-300/70">'
+                    ].join(""),
+                    fmtBV(n.right_bv_monthly),
+                    ' ce mois</span></div>\n\n        </div>\n\n        <div class="stat-card">\n\n          <div class="flex items-center justify-between mb-3">\n\n            <' +
+                      'span class="text-xs text-gray-400 uppercase tracking-wider">Équipe directe</span>\n\n            <div class="w-8 h-8 rounded-lg bg-purple-500/20 flex ' +
+                      'items-center justify-center"><i class="fas fa-users text-purple-400 text-sm"></i></div>\n\n          </div>\n\n          <div class="text-2xl font-bold ' +
+                      'text-purple-400">',
+                    t.directTeamCount || 0,
+                    '</div>\n\n          <div class="text-xs text-gray-500 mt-1">Membres parrainés</div>\n\n        </div>\n\n      </div>\n\n\n\n      <!-- Rang + BV côte à côte -->' +
+                      '\n\n      <div style="display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:1rem; align-items:start;">\n\n\n\n        <!-- GAUCHE : Rang ' +
+                      'actuel -->\n\n        <div class="stat-card overflow-hidden relative" style="align-self:start">\n\n          ',
+                    (() => {
+                      const e = n.current_rank && "none" !== n.current_rank,
+                        a = t.rankConfig?.badge_url || null,
+                        s = e ? n.current_rank : null;
+                      return e
+                        ? [
+                            '\n\n              <div class="absolute inset-0 opacity-5 pointer-events-none"\n\n                   style="background: radial-gradient(ellipse at 50% 0%, ',
+                            'var(--rank-glow-color, #d4af37) 0%, transparent 70%)"></div>\n\n              <div class="flex items-start justify-between mb-5">\n\n                <h3 ',
+                            'class="font-semibold text-white text-sm uppercase tracking-wider">Mon Rang Actuel</h3>\n\n                ',
+                            rankBadge(n.current_rank),
+                            '\n\n              </div>\n\n              <!-- Badge SVG central premium -->\n\n              <div class="flex flex-col items-center mb-5">\n\n                ' +
+                              '<div class="relative group">\n\n\n\n                  <div class="relative w-28 h-28 rounded-full overflow-hidden shadow-2xl"\n\n                       ' +
+                              'style="filter: drop-shadow(0 0 16px rgba(212,175,55,0.35));">\n\n                    ',
+                            a
+                              ? '<img src="' +
+                                a +
+                                '" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" style="border-radius:50%">'
+                              : '<div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-rouge-500/20 to-gold-800/30"><i class="fas fa-medal text-rouge-400 ' +
+                                'text-4xl"></i></div>',
+                            '\n\n                  </div>\n\n\n\n                </div>\n\n                <div class="mt-4 text-center">\n\n                  <div class="text-lg font-bold ' +
+                              'text-rouge-400 tracking-wide" style="text-shadow: 0 0 12px rgba(212,175,55,0.5)">',
+                            s,
+                            "</div>\n\n\n\n                </div>\n\n              </div>\n\n              <!-- Progression -->\n\n              "
+                          ].join("") +
+                            (t.nextRankConfig
+                              ? [
+                                  [
+                                    '\n\n              <div class="border-t border-dark-600 pt-4">\n\n                <div class="flex justify-between text-xs text-gray-400 mb-2">\n\n           ',
+                                    '       <span class="flex items-center gap-1"><i class="fas fa-arrow-up text-[9px] text-green-400"></i>Vers <span class="text-white font-medium ml-1">',
+                                    t.nextRank,
+                                    '</span></span>\n\n                  <span class="font-bold ',
+                                    t.progressToNext >= 80 ? "text-green-400" : t.progressToNext >= 50 ? "text-yellow-400" : "text-gray-400",
+                                    '">',
+                                    t.progressToNext,
+                                    '%</span>\n\n                </div>\n\n                <div class="progress-bar">\n\n                  <div class="progress-fill" style="width:',
+                                    t.progressToNext
+                                  ].join(""),
+                                  "%; background: linear-gradient(90deg, ",
+                                  t.progressToNext >= 80 ? "#22c55e,#16a34a" : t.progressToNext >= 50 ? "#eab308,#ca8a04" : "#d4af37,#b8860b",
+                                  ')"></div>\n\n                </div>\n\n                <div class="text-xs text-gray-500 mt-1.5 flex justify-between">\n\n                  <span>',
+                                  fmtBV(t.progressMinLeg),
+                                  " / ",
+                                  fmtBV(t.nextRankConfig.min_bv_leg),
+                                  ' BV jambe faible</span>\n\n                  <span class="',
+                                  "total" === t.progressBVMode ? "text-rouge-400/70" : "text-blue-400/70"
+                                ].join("") +
+                                '">' +
+                                ("total" === t.progressBVMode ? "∞ à vie" : "mensuel") +
+                                "</span>\n\n                </div>\n\n              </div>"
+                              : '\n              <div class="border-t border-dark-600 pt-3 text-center">\n                <span class="text-xs text-rouge-400/70 flex items-center ' +
+                                'justify-center gap-1"><i class="fas fa-crown text-[10px]"></i>Rang maximum atteint</span>\n              </div>') +
+                            "\n\n            "
+                        : '\n              <div class="flex items-center justify-between mb-4">\n                <h3 class="font-semibold text-white">Mon Rang Actuel</h3>\n         ' +
+                            '     </div>\n              <div class="flex flex-col items-center py-4 gap-3">\n                <div class="w-20 h-20 rounded-full bg-dark-700 border-2 ' +
+                            'border-dark-500 flex items-center justify-center opacity-40">\n                  <i class="fas fa-medal text-gray-500 text-3xl"></i>\n                <' +
+                            '/div>\n                <p class="text-gray-500 text-sm text-center">Aucun rang actif<br><span class="text-xs">Activez votre package pour débloquer<' +
+                            "/span></p>\n" +
+                            "              </div>\n              " +
+                            (t.nextRankConfig
+                              ? [
+                                  [
+                                    '\n\n              <div class="border-t border-dark-600 pt-4 mt-2">\n\n                <div class="flex justify-between text-xs text-gray-400 mb-2">\n\n      ',
+                                    '            <span class="flex items-center gap-1"><i class="fas fa-arrow-up text-[9px] text-green-400"></i>Vers <span class="text-white font-medium ',
+                                    'ml-1">',
+                                    t.nextRank,
+                                    '</span></span>\n\n                  <span class="font-bold ',
+                                    t.progressToNext >= 80 ? "text-green-400" : t.progressToNext >= 50 ? "text-yellow-400" : "text-gray-400",
+                                    '">',
+                                    t.progressToNext,
+                                    '%</span>\n\n                </div>\n\n                <div class="progress-bar">\n\n                  <div class="progress-fill" style="width:'
+                                  ].join(""),
+                                  t.progressToNext,
+                                  "%; background: linear-gradient(90deg, ",
+                                  t.progressToNext >= 80 ? "#22c55e,#16a34a" : t.progressToNext >= 50 ? "#eab308,#ca8a04" : "#d4af37,#b8860b",
+                                  ')"></div>\n\n                </div>\n\n                <div class="text-xs text-gray-500 mt-1.5 flex justify-between">\n\n                  <span>',
+                                  fmtBV(t.progressMinLeg),
+                                  " / ",
+                                  fmtBV(t.nextRankConfig.min_bv_leg),
+                                  ' BV jambe faible</span>\n\n                  <span class="'
+                                ].join("") +
+                                ("total" === t.progressBVMode ? "text-rouge-400/70" : "text-blue-400/70") +
+                                '">' +
+                                ("total" === t.progressBVMode ? "∞ à vie" : "mensuel") +
+                                "</span>\n\n                </div>\n\n              </div>"
+                              : "");
+                    })(),
+                    '\n\n        </div>\n\n\n\n        <!-- DROITE : Volumes BV — aligné en haut, ne s\'étire pas -->\n\n        <div class="stat-card" style="align-self:start">\n\n  ' +
+                      '        <h3 class="font-semibold text-white mb-4">Volumes BV détaillés</h3>\n\n          <div class="space-y-2">\n\n            <div class="text-xs ' +
+                      'text-rouge-400 font-semibold uppercase tracking-wider mb-1 flex items-center gap-1">\n\n              <i class="fas fa-infinity text-[10px]"></i> BV ' +
+                      'Total à vie <span class="text-gray-500 font-normal normal-case">(pour les rangs)</span>\n' +
+                      ('\n            </div>\n\n            <div class="flex justify-between text-sm"><span class="text-gray-400">↳ Jambe gauche</span><span ' +
+                        'class="text-rouge-400 font-bold">'),
+                    fmtBV(n.left_bv_total),
+                    '</span></div>\n\n            <div class="flex justify-between text-sm"><span class="text-gray-400">↳ Jambe droite</span><span class="text-rouge-400 ' +
+                      'font-bold">'
+                  ].join(""),
+                  fmtBV(n.right_bv_total),
+                  '</span></div>\n\n                        <div class="border-t border-dark-600 pt-2 mt-2 text-xs text-blue-400 font-semibold uppercase tracking-wider ' +
+                    'mb-1 flex items-center gap-1">\n\n              <i class="fas fa-calendar-alt text-[10px]"></i> BV Mensuel <span class="text-gray-500 font-normal ' +
+                    'normal-case">(commissions — reset le 1er)</span>\n\n            </div>\n\n            <div class="flex justify-between text-sm"><span ' +
+                    'class="text-gray-400">↳ Jambe gauche</span><span class="text-blue-300">',
+                  fmtBV(n.left_bv_monthly),
+                  '</span></div>\n\n            <div class="flex justify-between text-sm"><span class="text-gray-400">\u21B3 Jambe droite</span><span class="text-blue-300">',
+                  fmtBV(n.right_bv_monthly),
+                  '</span></div>\n\n                        <div class="border-t border-dark-600 pt-2 mt-2"></div>\n\n            <div class="flex justify-between text-sm"><' +
+                    'span class="text-gray-400">Total gagné</span><span class="text-green-400">',
+                  fmt$(a?.total_earned),
+                  '</span></div>\n\n            <div class="flex justify-between text-sm"><span class="text-gray-400">Total retir\xE9</span><span class="text-red-400">'
+                ].join(""),
+                fmt$(a?.total_withdrawn),
+                "</span></div>\n\n            ",
+                (t.ccBalance?.total || 0) > 0
+                  ? '<div class="flex justify-between text-sm"><span class="text-gray-400">Cr\xE9dit Croissance</span><span class="text-pink-400">' +
+                    fmt$(t.ccBalance.total) +
+                    "</span></div>"
+                  : "",
+                "\n\n            ",
+                n.reserve_strategique > 0
+                  ? '<div class="flex justify-between text-sm"><span class="text-gray-400">R\xE9serve Strat\xE9gique</span><span class="text-cyan-400">' +
+                    fmt$(n.reserve_strategique) +
+                    "</span></div>"
+                  : "",
+                '\n\n          </div>\n\n        </div>\n\n\n\n      </div>\n\n\n\n      <!-- Bloc A+B : Prime de Leadership -->\n\n      <div class="grid grid-cols-1 md:grid-cols-2 ' +
+                  'gap-4">\n\n        <!-- Bloc A : Directs qualifiés rang à vie -->\n\n        <div class="stat-card" style="align-self:start">\n\n          <h3 ' +
+                  'class="font-semibold text-white mb-3 flex items-center gap-2"><i class="fas fa-user-check text-rouge-400"></i> Directs Qualifiés (Rang à vie)</h3>\n\n   ' +
+                  '       <div class="space-y-2">\n\n            <div class="flex ' +
+                  'justify-between text-sm"><span class="text-gray-400">Directs actifs validés</span><span class="text-rouge-400 font-bold">',
+                t.directActiveCount || 0,
+                "</span></div>\n\n            "
+              ].join(""),
+              t.nextRankConfig
+                ? '<div class="flex justify-between text-sm"><span class="text-gray-400">Requis prochain rang (' +
+                  (t.nextRankConfig.rank_name || "") +
+                  ')</span><span class="text-blue-400">' +
+                  (t.nextRankConfig.min_directs || 0) +
+                  " direct(s) \u2265 " +
+                  fmt$(+(t.nextRankConfig.min_monthly_package_value || 0)) +
+                  "</span></div>"
+                : "",
+              '\n\n            <div class="border-t border-dark-600 pt-2 mt-2">\n\n              <p class="text-xs text-gray-500">Directs avec package validé ≥ au seuil ' +
+                "configuré. Valeurs lues depuis la configuration admin.</p>\n\n            </div>\n\n          </div>\n\n        </div>\n\n        <!-- Bloc B : Prime " +
+                'mensuelle de Leadership -->\n\n        <div class="stat-card" style="align-self:start">\n\n          <h3 class="font-semibold text-white mb-3 flex ' +
+                'items-center gap-2"><i class="fas fa-trophy text-rouge-400"></i> Prime Mensuelle de Leadership</h3>\n' +
+                ('\n          <div class="space-y-2">\n\n            <div class="text-xs text-rouge-400 font-semibold uppercase tracking-wider mb-1">BV Jambe Faible ' +
+                  '(petite jambe)</div>\n\n            <div class="flex justify-between text-sm"><span class="text-gray-400">Ce mois</span><span class="text-rouge-400 ' +
+                  'font-bold">'),
+              fmtBV(t.monthlyBvLegCurrent || 0),
+              '</span></div>\n\n            <div class="flex justify-between text-sm"><span class="text-gray-400">Requis',
+              t.rankConfig ? " (" + t.rankConfig.rank_name + ")" : "",
+              '</span><span class="text-blue-400">',
+              fmtBV(t.monthlyBvLegRequired || 0),
+              '</span></div>\n\n            <div class="w-full bg-dark-600 rounded-full h-1.5 my-1"><div class="bg-rouge-500 h-1.5 rounded-full" style="width:'
+            ].join(""),
+            t.monthlyBvLegRequired > 0 ? Math.min(100, Math.round((t.monthlyBvLegCurrent / t.monthlyBvLegRequired) * 100)) : 0,
+            '%"></div></div>\n\n            <div class="border-t border-dark-600 pt-1 mt-1"></div>\n\n            <div class="text-xs text-rouge-400 font-semibold ' +
+              'uppercase tracking-wider mb-1">Nouvelles Recrues (ce mois)</div>\n\n            <div class="flex justify-between text-sm"><span class="text-gray-400">Ce ' +
+              'mois</span><span class="text-rouge-400 font-bold">',
+            t.monthlyRecruitsCurrent || 0,
+            '</span></div>\n\n            <div class="flex justify-between text-sm"><span class="text-gray-400">Requis',
+            t.rankConfig ? " (" + t.rankConfig.rank_name + ")" : "",
+            '</span><span class="text-blue-400">',
+            t.monthlyRecruitsRequired || 0,
+            " recrue(s) \u2265 "
+          ].join(""),
+          fmt$(+(t.monthlyPkgMinValue || 0)),
+          '</span></div>\n\n            <div class="border-t border-dark-600 pt-1 mt-1"></div>\n\n            <div class="flex justify-between text-sm"><span ' +
+            'class="text-gray-400">Plancher rang</span><span class="text-yellow-400">',
+          t.monthlyFloorRanks || 0,
+          ' rang(s) en dessous accepté(s)</span></div>\n\n            <div class="flex justify-between text-sm font-semibold"><span class="text-gray-300">Rang ' +
+            'effectif</span><span class="',
+          t.monthlyEffectiveRank && t.monthlyEffectiveRank !== "none" ? "text-green-400" : "text-red-400",
+          '">',
+          t.monthlyEffectiveRank && t.monthlyEffectiveRank !== "none" ? t.monthlyEffectiveRank : "Non qualifié",
+          "</span></div>\n\n          </div>\n\n        </div>\n\n      </div>\n\n\n\n      <!-- Bloc Licence Finstrategia \u2014 CDC v2 A7 : 4 \xE9tats -->\n\n      "
+        ].join(""),
+        (() => {
+          const e = new Date(),
+            t = n.license_expires_at ? new Date(n.license_expires_at) : null,
+            a = t ? Math.ceil((t - e) / 864e5) : null,
+            s = n.license_active && null !== a && a <= 30 && a > 0,
+            r = !n.license_active && null !== t;
+          return n.license_active || null !== t
+            ? s
+              ? '\n\n        <div class="bg-orange-900/20 border border-orange-500/40 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4">\n\n          <div ' +
+                'class="flex items-start gap-3 flex-1">\n\n            <div class="w-9 h-9 rounded-lg bg-orange-500/20 flex items-center justify-center flex-shrink-0"><i ' +
+                'class="fas fa-triangle-exclamation text-orange-400"></i></div>\n\n            <div>\n\n              <p class="text-orange-300 font-semibold text-sm">' +
+                "Licence bientôt expirée — " +
                 a +
-                '">\n\n                  <div class="text-[11px] font-bold ' +
-                s +
-                ' mb-0.5">' +
-                fmtBV(e.bv_threshold) +
-                '</div>\n\n                  <div class="text-sm font-black ' +
-                r +
-                '">' +
-                fmt$(e.bonus_amount) +
-                "</div>\n\n                  " +
-                i +
-                "\n\n                </div>"
-              );
-            })
-            .join("") +
-          "\n\n            </div>\n\n\n\n          </div>\n\n        </div>"
-        );
-      })() +
-      "\n\n\n      <!-- Widget Prime du Jour (Q70/Q108) >\n      " +
-      (() => {
-        const drt = t.dailyReleaseTotal || 0;
-        const drb = t.dailyReleaseByType || [];
-        if (drt <= 0) return "";
-        const rows = drb
-          .map(
-            (x) =>
-              '<div class="flex justify-between text-xs py-0.5"><span class="text-gray-400">' +
-              x.label +
-              '</span><span class="text-emerald-300 font-medium">+' +
-              fmt$(x.amount_per_day) +
-              "/j</span></div>"
-          )
-          .join("");
-        return (
-          '\n        <div class="rounded-xl border border-emerald-500/30 overflow-hidden"\n             style="background:linear-gradient(135deg,#0a1a0f 0%,#071209 ' +
-          '100%)">\n          <div class="h-0.5 w-full" style="background:linear-gradient(90deg,#10b981,#059669)"></div>\n          <div class="px-4 py-3 flex ' +
-          'items-center justify-between flex-wrap gap-3">\n            <div class="flex items-center gap-2.5">\n              <div class="w-8 h-8 rounded-lg ' +
-          'bg-emerald-500/20 flex items-center justify-center flex-shrink-0">\n' +
-          ('                <i class="fas fa-droplet text-emerald-400 text-sm"></i>\n              </div>\n              <div>\n                <div class="text-xs ' +
-            'text-gray-400 uppercase tracking-wider">Prime libérée aujourd\'hui</div>\n                <div class="text-xl font-black text-emerald-400">') +
-          fmt$(drt) +
-          ('<span class="text-xs text-gray-400 font-normal ml-1">/jour</span></div>\n              </div>\n            </div>\n            <div class="text-right">\n  ' +
-            '            <button onclick="showPage(\'commissions\')"\n                      class="text-xs text-emerald-400/70 hover:text-emerald-400 ' +
-            'transition-colors">\n                <i class="fas fa-arrow-right mr-1"></i>Voir mes commissions\n              </button>\n            </div>\n          <' +
-            "/div>\n          ") +
-          (drb.length > 1 ? '<div class="px-4 pb-3 border-t border-emerald-500/10 pt-2 space-y-0.5">' + rows + "</div>" : "") +
-          "\n        </div>"
-        );
-      })() +
-      ('\n\n      <!-- Stats principales -->\n\n      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">\n\n        <div class="stat-card cursor-pointer ' +
-        'hover:border-rouge-500/30 transition-all group" onclick="showPage(\'wallet\')" title="Voir mon portefeuille complet">\n\n          <div class="flex ' +
-        'items-center justify-between mb-3">\n\n            <span class="text-xs text-gray-400 uppercase tracking-wider">Solde</span>\n\n            <div ' +
-        'class="w-8 h-8 rounded-lg bg-rouge-500/15 flex items-center justify-center"><i class="fas fa-wallet text-rouge-400 text-sm group-hover:scale-110 ' +
-        'transition-transform"></i></div>\n' +
-        '\n          </div>\n\n          <div class="text-2xl font-bold text-rouge-400">') +
-      fmt$(a?.balance) +
-      '</div>\n\n          <div class="text-xs text-gray-500 mt-1">Disponible au retrait</div>\n\n          ' +
-      (s > 0 ? '<div class="text-xs text-orange-400 mt-1"><i class="fas fa-hourglass-half mr-1"></i>' + fmt$(s) + " en attente</div>" : "") +
-      ('\n\n          <div class="text-xs text-rouge-500/50 mt-2 group-hover:text-rouge-400 transition-colors"><i class="fas fa-arrow-right mr-1"></i>Voir ' +
-        'portefeuille</div>\n\n        </div>\n\n        <div class="stat-card">\n\n          <div class="flex items-center justify-between mb-3">\n\n            <span ' +
-        'class="text-xs text-gray-400 uppercase tracking-wider">BV Gauche</span>\n\n            <div class="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center ' +
-        'justify-center"><i class="fas fa-arrow-left text-blue-400 text-sm"></i></div>\n' +
-        '\n          </div>\n\n          <div class="text-2xl font-bold text-blue-400">') +
-      fmtBV(n.left_bv_total) +
-      '</div>\n\n          <div class="text-xs text-gray-500 mt-1">\xC0 vie &nbsp;<span class="text-gray-600">/</span>&nbsp; <span class="text-blue-300/70">' +
-      fmtBV(n.left_bv_monthly) +
-      (' ce mois</span></div>\n\n        </div>\n\n        <div class="stat-card">\n\n          <div class="flex items-center justify-between mb-3">\n\n            <' +
-        'span class="text-xs text-gray-400 uppercase tracking-wider">BV Droit</span>\n\n            <div class="w-8 h-8 rounded-lg bg-green-500/20 flex ' +
-        'items-center justify-center"><i class="fas fa-arrow-right text-green-400 text-sm"></i></div>\n\n          </div>\n\n          <div class="text-2xl ' +
-        'font-bold text-green-400">') +
-      fmtBV(n.right_bv_total) +
-      '</div>\n\n          <div class="text-xs text-gray-500 mt-1">\xC0 vie &nbsp;<span class="text-gray-600">/</span>&nbsp; <span class="text-green-300/70">' +
-      fmtBV(n.right_bv_monthly) +
-      (' ce mois</span></div>\n\n        </div>\n\n        <div class="stat-card">\n\n          <div class="flex items-center justify-between mb-3">\n\n            <' +
-        'span class="text-xs text-gray-400 uppercase tracking-wider">Équipe directe</span>\n\n            <div class="w-8 h-8 rounded-lg bg-purple-500/20 flex ' +
-        'items-center justify-center"><i class="fas fa-users text-purple-400 text-sm"></i></div>\n\n          </div>\n\n          <div class="text-2xl font-bold ' +
-        'text-purple-400">') +
-      (t.directTeamCount || 0) +
-      ('</div>\n\n          <div class="text-xs text-gray-500 mt-1">Membres parrainés</div>\n\n        </div>\n\n      </div>\n\n\n\n      <!-- Rang + BV côte à côte -->' +
-        '\n\n      <div style="display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:1rem; align-items:start;">\n\n\n\n        <!-- GAUCHE : Rang ' +
-        'actuel -->\n\n        <div class="stat-card overflow-hidden relative" style="align-self:start">\n\n          ') +
-      (() => {
-        const e = n.current_rank && "none" !== n.current_rank,
-          a = t.rankConfig?.badge_url || null,
-          s = e ? n.current_rank : null;
-        return e
-          ? '\n\n              <div class="absolute inset-0 opacity-5 pointer-events-none"\n\n                   style="background: radial-gradient(ellipse at 50% 0%, ' +
-              'var(--rank-glow-color, #d4af37) 0%, transparent 70%)"></div>\n\n              <div class="flex items-start justify-between mb-5">\n\n                <h3 ' +
-              'class="font-semibold text-white text-sm uppercase tracking-wider">Mon Rang Actuel</h3>\n\n                ' +
-              rankBadge(n.current_rank) +
-              ('\n\n              </div>\n\n              <!-- Badge SVG central premium -->\n\n              <div class="flex flex-col items-center mb-5">\n\n                ' +
-                '<div class="relative group">\n\n\n\n                  <div class="relative w-28 h-28 rounded-full overflow-hidden shadow-2xl"\n\n                       ' +
-                'style="filter: drop-shadow(0 0 16px rgba(212,175,55,0.35));">\n\n                    ') +
-              (a
-                ? '<img src="' +
-                  a +
-                  '" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" style="border-radius:50%">'
-                : '<div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-rouge-500/20 to-gold-800/30"><i class="fas fa-medal text-rouge-400 ' +
-                  'text-4xl"></i></div>') +
-              ('\n\n                  </div>\n\n\n\n                </div>\n\n                <div class="mt-4 text-center">\n\n                  <div class="text-lg font-bold ' +
-                'text-rouge-400 tracking-wide" style="text-shadow: 0 0 12px rgba(212,175,55,0.5)">') +
-              s +
-              "</div>\n\n\n\n                </div>\n\n              </div>\n\n              <!-- Progression -->\n\n              " +
-              (t.nextRankConfig
-                ? '\n\n              <div class="border-t border-dark-600 pt-4">\n\n                <div class="flex justify-between text-xs text-gray-400 mb-2">\n\n           ' +
-                  '       <span class="flex items-center gap-1"><i class="fas fa-arrow-up text-[9px] text-green-400"></i>Vers <span class="text-white font-medium ml-1">' +
-                  t.nextRank +
-                  '</span></span>\n\n                  <span class="font-bold ' +
-                  (t.progressToNext >= 80 ? "text-green-400" : t.progressToNext >= 50 ? "text-yellow-400" : "text-gray-400") +
-                  '">' +
-                  t.progressToNext +
-                  '%</span>\n\n                </div>\n\n                <div class="progress-bar">\n\n                  <div class="progress-fill" style="width:' +
-                  t.progressToNext +
-                  "%; background: linear-gradient(90deg, " +
-                  (t.progressToNext >= 80 ? "#22c55e,#16a34a" : t.progressToNext >= 50 ? "#eab308,#ca8a04" : "#d4af37,#b8860b") +
-                  ')"></div>\n\n                </div>\n\n                <div class="text-xs text-gray-500 mt-1.5 flex justify-between">\n\n                  <span>' +
-                  fmtBV(t.progressMinLeg) +
-                  " / " +
-                  fmtBV(t.nextRankConfig.min_bv_leg) +
-                  ' BV jambe faible</span>\n\n                  <span class="' +
-                  ("total" === t.progressBVMode ? "text-rouge-400/70" : "text-blue-400/70") +
-                  '">' +
-                  ("total" === t.progressBVMode ? "∞ à vie" : "mensuel") +
-                  "</span>\n\n                </div>\n\n              </div>"
-                : '\n              <div class="border-t border-dark-600 pt-3 text-center">\n                <span class="text-xs text-rouge-400/70 flex items-center ' +
-                  'justify-center gap-1"><i class="fas fa-crown text-[10px]"></i>Rang maximum atteint</span>\n              </div>') +
-              "\n\n            "
-          : '\n              <div class="flex items-center justify-between mb-4">\n                <h3 class="font-semibold text-white">Mon Rang Actuel</h3>\n         ' +
-              '     </div>\n              <div class="flex flex-col items-center py-4 gap-3">\n                <div class="w-20 h-20 rounded-full bg-dark-700 border-2 ' +
-              'border-dark-500 flex items-center justify-center opacity-40">\n                  <i class="fas fa-medal text-gray-500 text-3xl"></i>\n                <' +
-              '/div>\n                <p class="text-gray-500 text-sm text-center">Aucun rang actif<br><span class="text-xs">Activez votre package pour débloquer<' +
-              "/span></p>\n" +
-              "              </div>\n              " +
-              (t.nextRankConfig
-                ? '\n\n              <div class="border-t border-dark-600 pt-4 mt-2">\n\n                <div class="flex justify-between text-xs text-gray-400 mb-2">\n\n      ' +
-                  '            <span class="flex items-center gap-1"><i class="fas fa-arrow-up text-[9px] text-green-400"></i>Vers <span class="text-white font-medium ' +
-                  'ml-1">' +
-                  t.nextRank +
-                  '</span></span>\n\n                  <span class="font-bold ' +
-                  (t.progressToNext >= 80 ? "text-green-400" : t.progressToNext >= 50 ? "text-yellow-400" : "text-gray-400") +
-                  '">' +
-                  t.progressToNext +
-                  '%</span>\n\n                </div>\n\n                <div class="progress-bar">\n\n                  <div class="progress-fill" style="width:' +
-                  t.progressToNext +
-                  "%; background: linear-gradient(90deg, " +
-                  (t.progressToNext >= 80 ? "#22c55e,#16a34a" : t.progressToNext >= 50 ? "#eab308,#ca8a04" : "#d4af37,#b8860b") +
-                  ')"></div>\n\n                </div>\n\n                <div class="text-xs text-gray-500 mt-1.5 flex justify-between">\n\n                  <span>' +
-                  fmtBV(t.progressMinLeg) +
-                  " / " +
-                  fmtBV(t.nextRankConfig.min_bv_leg) +
-                  ' BV jambe faible</span>\n\n                  <span class="' +
-                  ("total" === t.progressBVMode ? "text-rouge-400/70" : "text-blue-400/70") +
-                  '">' +
-                  ("total" === t.progressBVMode ? "∞ à vie" : "mensuel") +
-                  "</span>\n\n                </div>\n\n              </div>"
-                : "");
-      })() +
-      ('\n\n        </div>\n\n\n\n        <!-- DROITE : Volumes BV — aligné en haut, ne s\'étire pas -->\n\n        <div class="stat-card" style="align-self:start">\n\n  ' +
-        '        <h3 class="font-semibold text-white mb-4">Volumes BV détaillés</h3>\n\n          <div class="space-y-2">\n\n            <div class="text-xs ' +
-        'text-rouge-400 font-semibold uppercase tracking-wider mb-1 flex items-center gap-1">\n\n              <i class="fas fa-infinity text-[10px]"></i> BV ' +
-        'Total à vie <span class="text-gray-500 font-normal normal-case">(pour les rangs)</span>\n' +
-        ('\n            </div>\n\n            <div class="flex justify-between text-sm"><span class="text-gray-400">↳ Jambe gauche</span><span ' +
-          'class="text-rouge-400 font-bold">')) +
-      fmtBV(n.left_bv_total) +
-      ('</span></div>\n\n            <div class="flex justify-between text-sm"><span class="text-gray-400">↳ Jambe droite</span><span class="text-rouge-400 ' +
-        'font-bold">') +
-      fmtBV(n.right_bv_total) +
-      ('</span></div>\n\n                        <div class="border-t border-dark-600 pt-2 mt-2 text-xs text-blue-400 font-semibold uppercase tracking-wider ' +
-        'mb-1 flex items-center gap-1">\n\n              <i class="fas fa-calendar-alt text-[10px]"></i> BV Mensuel <span class="text-gray-500 font-normal ' +
-        'normal-case">(commissions — reset le 1er)</span>\n\n            </div>\n\n            <div class="flex justify-between text-sm"><span ' +
-        'class="text-gray-400">↳ Jambe gauche</span><span class="text-blue-300">') +
-      fmtBV(n.left_bv_monthly) +
-      '</span></div>\n\n            <div class="flex justify-between text-sm"><span class="text-gray-400">\u21B3 Jambe droite</span><span class="text-blue-300">' +
-      fmtBV(n.right_bv_monthly) +
-      ('</span></div>\n\n                        <div class="border-t border-dark-600 pt-2 mt-2"></div>\n\n            <div class="flex justify-between text-sm"><' +
-        'span class="text-gray-400">Total gagné</span><span class="text-green-400">') +
-      fmt$(a?.total_earned) +
-      '</span></div>\n\n            <div class="flex justify-between text-sm"><span class="text-gray-400">Total retir\xE9</span><span class="text-red-400">' +
-      fmt$(a?.total_withdrawn) +
-      "</span></div>\n\n            " +
-      ((t.ccBalance?.total || 0) > 0
-        ? '<div class="flex justify-between text-sm"><span class="text-gray-400">Cr\xE9dit Croissance</span><span class="text-pink-400">' +
-          fmt$(t.ccBalance.total) +
-          "</span></div>"
-        : "") +
-      "\n\n            " +
-      (n.reserve_strategique > 0
-        ? '<div class="flex justify-between text-sm"><span class="text-gray-400">R\xE9serve Strat\xE9gique</span><span class="text-cyan-400">' +
-          fmt$(n.reserve_strategique) +
-          "</span></div>"
-        : "") +
-      ('\n\n          </div>\n\n        </div>\n\n\n\n      </div>\n\n\n\n      <!-- Bloc A+B : Prime de Leadership -->\n\n      <div class="grid grid-cols-1 md:grid-cols-2 ' +
-        'gap-4">\n\n        <!-- Bloc A : Directs qualifiés rang à vie -->\n\n        <div class="stat-card" style="align-self:start">\n\n          <h3 ' +
-        'class="font-semibold text-white mb-3 flex items-center gap-2"><i class="fas fa-user-check text-rouge-400"></i> Directs Qualifiés (Rang à vie)</h3>\n\n   ' +
-        '       <div class="space-y-2">\n\n            <div class="flex ' +
-        'justify-between text-sm"><span class="text-gray-400">Directs actifs validés</span><span class="text-rouge-400 font-bold">') +
-      (t.directActiveCount || 0) +
-      "</span></div>\n\n            " +
-      (t.nextRankConfig
-        ? '<div class="flex justify-between text-sm"><span class="text-gray-400">Requis prochain rang (' +
-          (t.nextRankConfig.rank_name || "") +
-          ')</span><span class="text-blue-400">' +
-          (t.nextRankConfig.min_directs || 0) +
-          " direct(s) \u2265 " +
-          fmt$(+(t.nextRankConfig.min_monthly_package_value || 0)) +
-          "</span></div>"
-        : "") +
-      ('\n\n            <div class="border-t border-dark-600 pt-2 mt-2">\n\n              <p class="text-xs text-gray-500">Directs avec package validé ≥ au seuil ' +
-        "configuré. Valeurs lues depuis la configuration admin.</p>\n\n            </div>\n\n          </div>\n\n        </div>\n\n        <!-- Bloc B : Prime " +
-        'mensuelle de Leadership -->\n\n        <div class="stat-card" style="align-self:start">\n\n          <h3 class="font-semibold text-white mb-3 flex ' +
-        'items-center gap-2"><i class="fas fa-trophy text-rouge-400"></i> Prime Mensuelle de Leadership</h3>\n' +
-        ('\n          <div class="space-y-2">\n\n            <div class="text-xs text-rouge-400 font-semibold uppercase tracking-wider mb-1">BV Jambe Faible ' +
-          '(petite jambe)</div>\n\n            <div class="flex justify-between text-sm"><span class="text-gray-400">Ce mois</span><span class="text-rouge-400 ' +
-          'font-bold">')) +
-      fmtBV(t.monthlyBvLegCurrent || 0) +
-      '</span></div>\n\n            <div class="flex justify-between text-sm"><span class="text-gray-400">Requis' +
-      (t.rankConfig ? " (" + t.rankConfig.rank_name + ")" : "") +
-      '</span><span class="text-blue-400">' +
-      fmtBV(t.monthlyBvLegRequired || 0) +
-      '</span></div>\n\n            <div class="w-full bg-dark-600 rounded-full h-1.5 my-1"><div class="bg-rouge-500 h-1.5 rounded-full" style="width:' +
-      (t.monthlyBvLegRequired > 0 ? Math.min(100, Math.round((t.monthlyBvLegCurrent / t.monthlyBvLegRequired) * 100)) : 0) +
-      ('%"></div></div>\n\n            <div class="border-t border-dark-600 pt-1 mt-1"></div>\n\n            <div class="text-xs text-rouge-400 font-semibold ' +
-        'uppercase tracking-wider mb-1">Nouvelles Recrues (ce mois)</div>\n\n            <div class="flex justify-between text-sm"><span class="text-gray-400">Ce ' +
-        'mois</span><span class="text-rouge-400 font-bold">') +
-      (t.monthlyRecruitsCurrent || 0) +
-      '</span></div>\n\n            <div class="flex justify-between text-sm"><span class="text-gray-400">Requis' +
-      (t.rankConfig ? " (" + t.rankConfig.rank_name + ")" : "") +
-      '</span><span class="text-blue-400">' +
-      (t.monthlyRecruitsRequired || 0) +
-      " recrue(s) \u2265 " +
-      fmt$(+(t.monthlyPkgMinValue || 0)) +
-      ('</span></div>\n\n            <div class="border-t border-dark-600 pt-1 mt-1"></div>\n\n            <div class="flex justify-between text-sm"><span ' +
-        'class="text-gray-400">Plancher rang</span><span class="text-yellow-400">') +
-      (t.monthlyFloorRanks || 0) +
-      (' rang(s) en dessous accepté(s)</span></div>\n\n            <div class="flex justify-between text-sm font-semibold"><span class="text-gray-300">Rang ' +
-        'effectif</span><span class="') +
-      (t.monthlyEffectiveRank && t.monthlyEffectiveRank !== "none" ? "text-green-400" : "text-red-400") +
-      '">' +
-      (t.monthlyEffectiveRank && t.monthlyEffectiveRank !== "none" ? t.monthlyEffectiveRank : "Non qualifié") +
-      "</span></div>\n\n          </div>\n\n        </div>\n\n      </div>\n\n\n\n      <!-- Bloc Licence Finstrategia \u2014 CDC v2 A7 : 4 \xE9tats -->\n\n      " +
-      (() => {
-        const e = new Date(),
-          t = n.license_expires_at ? new Date(n.license_expires_at) : null,
-          a = t ? Math.ceil((t - e) / 864e5) : null,
-          s = n.license_active && null !== a && a <= 30 && a > 0,
-          r = !n.license_active && null !== t;
-        return n.license_active || null !== t
-          ? s
-            ? '\n\n        <div class="bg-orange-900/20 border border-orange-500/40 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4">\n\n          <div ' +
-              'class="flex items-start gap-3 flex-1">\n\n            <div class="w-9 h-9 rounded-lg bg-orange-500/20 flex items-center justify-center flex-shrink-0"><i ' +
-              'class="fas fa-triangle-exclamation text-orange-400"></i></div>\n\n            <div>\n\n              <p class="text-orange-300 font-semibold text-sm">' +
-              "Licence bientôt expirée — " +
-              a +
-              ' jour(s) restant(s)</p>\n\n              <p class="text-orange-400/70 text-xs mt-0.5">Expire le ' +
-              t.toLocaleDateString("fr-FR") +
-              (". Renouvelez avant l'échéance pour ne pas perdre vos commissions.</p>\n\n            </div>\n\n          </div>\n\n          <button " +
-                'onclick="showPage(\'license\')" class="bg-orange-500 text-white font-bold px-4 py-2 rounded-xl text-sm hover:bg-orange-400 transition whitespace-nowrap ' +
-                'flex-shrink-0"><i class="fas fa-rotate-right mr-2"></i>Renouveler</button>\n\n        </div>')
-            : r
-              ? '\n\n        <div class="bg-red-900/20 border border-red-500/40 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4">\n\n          <div ' +
-                'class="flex items-start gap-3 flex-1">\n\n            <div class="w-9 h-9 rounded-lg bg-red-500/20 flex items-center justify-center flex-shrink-0"><i ' +
-                'class="fas fa-ban text-red-400"></i></div>\n\n            <div>\n\n              <p class="text-red-300 font-semibold text-sm">Licence expirée / suspendue<' +
-                '/p>\n\n              <p class="text-red-400/70 text-xs ' +
-                'mt-0.5">Expirée le ' +
+                ' jour(s) restant(s)</p>\n\n              <p class="text-orange-400/70 text-xs mt-0.5">Expire le ' +
                 t.toLocaleDateString("fr-FR") +
-                (". Les commissions sont stoppées jusqu'au renouvellement.</p>\n\n            </div>\n\n          </div>\n\n          <button onclick=\"showPage('license')\" " +
-                  'class="bg-red-600 text-white font-bold px-4 py-2 rounded-xl text-sm hover:bg-red-500 transition whitespace-nowrap flex-shrink-0"><i class="fas ' +
-                  'fa-rotate-right mr-2"></i>Renouveler</button>\n\n        </div>')
-              : n.license_active
-                ? '\n\n        <div class="bg-green-900/10 border border-green-500/20 rounded-xl p-4 flex items-center gap-3">\n\n          <div class="w-9 h-9 rounded-lg ' +
-                  'bg-green-500/20 flex items-center justify-center flex-shrink-0"><i class="fas fa-check-circle text-green-400"></i></div>\n\n          <div ' +
-                  'class="flex-1">\n\n            <p class="text-green-300 font-semibold text-sm">Licence active</p>\n\n            <p class="text-green-400/60 text-xs ' +
-                  "mt-0.5\">Valide jusqu'au " +
-                  (t ? t.toLocaleDateString("fr-FR") : "—") +
-                  " \xB7 " +
-                  a +
-                  (' jour(s) restant(s)</p>\n\n          </div>\n\n          <button onclick="showPage(\'license\')" class="text-xs text-green-400 hover:underline">Détails →<' +
-                    "/button>\n\n        </div>")
-                : ""
-          : '\n\n        <div class="bg-dark-800 border border-rouge-500/25 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4">\n\n          <div ' +
-              'class="flex items-start gap-3 flex-1">\n\n            <div class="w-9 h-9 rounded-lg bg-rouge-500/15 flex items-center justify-center flex-shrink-0"><i ' +
-              'class="fas fa-id-card text-rouge-400"></i></div>\n\n            <div>\n\n              <p class="text-white font-semibold text-sm">Licence Finstrategia ' +
-              'non activée</p>\n\n              <p class="text-gray-400 ' +
-              'text-xs mt-0.5">Activez votre licence annuelle ($' +
-              _licPrice +
-              ("/an) pour accéder aux commissions LEADER.</p>\n\n            </div>\n\n          </div>\n\n          <button onclick=\"showPage('license')\" " +
-                'class="bg-rouge-500 text-dark-900 font-bold px-4 py-2 rounded-xl text-sm hover:bg-rouge-500 transition whitespace-nowrap flex-shrink-0"><i class="fas ' +
-                'fa-key mr-2"></i>Activer — $') +
-              _licPrice +
-              "/an</button>\n\n        </div>";
-      })() +
-      "\n\n\n\n      <!-- Duree vie package -->\n\n      " +
-      (() => {
-        const ap = t.activePackage;
-        if (!ap || !ap.package_expires_at) return "";
-        const exp = new Date(ap.package_expires_at),
-          now = new Date(),
-          dLeft = Math.ceil((exp - now) / 86400000),
-          soon = dLeft > 0 && dLeft <= 90,
-          expired = dLeft <= 0,
-          fE = exp.toLocaleDateString("fr-FR", {
-            day: "2-digit",
-            month: "long",
-            year: "numeric"
-          });
-        if (expired)
+                (". Renouvelez avant l'échéance pour ne pas perdre vos commissions.</p>\n\n            </div>\n\n          </div>\n\n          <button " +
+                  'onclick="showPage(\'license\')" class="bg-orange-500 text-white font-bold px-4 py-2 rounded-xl text-sm hover:bg-orange-400 transition whitespace-nowrap ' +
+                  'flex-shrink-0"><i class="fas fa-rotate-right mr-2"></i>Renouveler</button>\n\n        </div>')
+              : r
+                ? '\n\n        <div class="bg-red-900/20 border border-red-500/40 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4">\n\n          <div ' +
+                  'class="flex items-start gap-3 flex-1">\n\n            <div class="w-9 h-9 rounded-lg bg-red-500/20 flex items-center justify-center flex-shrink-0"><i ' +
+                  'class="fas fa-ban text-red-400"></i></div>\n\n            <div>\n\n              <p class="text-red-300 font-semibold text-sm">Licence expirée / suspendue<' +
+                  '/p>\n\n              <p class="text-red-400/70 text-xs ' +
+                  'mt-0.5">Expirée le ' +
+                  t.toLocaleDateString("fr-FR") +
+                  (". Les commissions sont stoppées jusqu'au renouvellement.</p>\n\n            </div>\n\n          </div>\n\n          <button onclick=\"showPage('license')\" " +
+                    'class="bg-red-600 text-white font-bold px-4 py-2 rounded-xl text-sm hover:bg-red-500 transition whitespace-nowrap flex-shrink-0"><i class="fas ' +
+                    'fa-rotate-right mr-2"></i>Renouveler</button>\n\n        </div>')
+                : n.license_active
+                  ? '\n\n        <div class="bg-green-900/10 border border-green-500/20 rounded-xl p-4 flex items-center gap-3">\n\n          <div class="w-9 h-9 rounded-lg ' +
+                    'bg-green-500/20 flex items-center justify-center flex-shrink-0"><i class="fas fa-check-circle text-green-400"></i></div>\n\n          <div ' +
+                    'class="flex-1">\n\n            <p class="text-green-300 font-semibold text-sm">Licence active</p>\n\n            <p class="text-green-400/60 text-xs ' +
+                    "mt-0.5\">Valide jusqu'au " +
+                    (t ? t.toLocaleDateString("fr-FR") : "—") +
+                    " \xB7 " +
+                    a +
+                    (' jour(s) restant(s)</p>\n\n          </div>\n\n          <button onclick="showPage(\'license\')" class="text-xs text-green-400 hover:underline">Détails →<' +
+                      "/button>\n\n        </div>")
+                  : ""
+            : [
+                '\n\n        <div class="bg-dark-800 border border-rouge-500/25 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4">\n\n          <div ',
+                'class="flex items-start gap-3 flex-1">\n\n            <div class="w-9 h-9 rounded-lg bg-rouge-500/15 flex items-center justify-center flex-shrink-0"><i ',
+                'class="fas fa-id-card text-rouge-400"></i></div>\n\n            <div>\n\n              <p class="text-white font-semibold text-sm">Licence Finstrategia ',
+                'non activée</p>\n\n              <p class="text-gray-400 ',
+                'text-xs mt-0.5">Activez votre licence annuelle ($',
+                _licPrice,
+                "/an) pour accéder aux commissions LEADER.</p>\n\n            </div>\n\n          </div>\n\n          <button onclick=\"showPage('license')\" " +
+                  'class="bg-rouge-500 text-dark-900 font-bold px-4 py-2 rounded-xl text-sm hover:bg-rouge-500 transition whitespace-nowrap flex-shrink-0"><i class="fas ' +
+                  'fa-key mr-2"></i>Activer — $',
+                _licPrice,
+                "/an</button>\n\n        </div>"
+              ].join("");
+        })(),
+        "\n\n\n\n      <!-- Duree vie package -->\n\n      ",
+        (() => {
+          const ap = t.activePackage;
+          if (!ap || !ap.package_expires_at) return "";
+          const exp = new Date(ap.package_expires_at),
+            now = new Date(),
+            dLeft = Math.ceil((exp - now) / 86400000),
+            soon = dLeft > 0 && dLeft <= 90,
+            expired = dLeft <= 0,
+            fE = exp.toLocaleDateString("fr-FR", {
+              day: "2-digit",
+              month: "long",
+              year: "numeric"
+            });
+          if (expired)
+            return (
+              '<div class="bg-red-900/20 border border-red-500/40 rounded-xl p-4 flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-red-500/20 flex ' +
+              'items-center justify-center"><i class="fas fa-calendar-times text-red-400"></i></div><div class="flex-1"><div class="font-semibold text-red-300 ' +
+              'text-sm">Package expirÃ©</div><div class="text-xs text-gray-400 mt-0.5">' +
+              ap.package_name +
+              " \xe2\x80\x94 expir\xc3\xa9 le " +
+              fE +
+              ('</div><button onclick="showPage(\'packages\')" class="mt-2 text-xs bg-red-600/20 text-red-300 border border-red-500/30 px-3 py-1.5 rounded-lg"><i ' +
+                'class="fas fa-arrow-right mr-1"></i>Renouveler</button></div></div>')
+            );
+          if (soon)
+            return [
+              '<div class="bg-orange-900/20 border border-orange-500/40 rounded-xl p-4 flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-orange-500/20 flex ',
+              'items-center justify-center"><i class="fas fa-calendar-exclamation text-orange-400"></i></div><div class="flex-1"><div class="font-semibold ',
+              'text-orange-300 text-sm">Package expire bientÃ´t</div><div class="text-xs text-gray-400 mt-0.5">',
+              ap.package_name,
+              " \xe2\x80\x94 expire le ",
+              fE,
+              ' <span class="text-orange-400 font-bold">(',
+              dLeft,
+              "j)</span></div></div></div>"
+            ].join("");
           return (
-            '<div class="bg-red-900/20 border border-red-500/40 rounded-xl p-4 flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-red-500/20 flex ' +
-            'items-center justify-center"><i class="fas fa-calendar-times text-red-400"></i></div><div class="flex-1"><div class="font-semibold text-red-300 ' +
-            'text-sm">Package expirÃ©</div><div class="text-xs text-gray-400 mt-0.5">' +
-            ap.package_name +
-            " \xe2\x80\x94 expir\xc3\xa9 le " +
-            fE +
-            ('</div><button onclick="showPage(\'packages\')" class="mt-2 text-xs bg-red-600/20 text-red-300 border border-red-500/30 px-3 py-1.5 rounded-lg"><i ' +
-              'class="fas fa-arrow-right mr-1"></i>Renouveler</button></div></div>')
+            [
+              '<div class="bg-dark-800 border border-dark-600 rounded-xl p-4 flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-green-500/10 flex ',
+              'items-center justify-center"><i class="fas fa-calendar-check text-green-400"></i></div><div class="flex-1"><div class="font-semibold text-white ',
+              'text-sm">',
+              ap.package_name,
+              '</div><div class="text-xs text-gray-400 mt-0.5">Valide jusqu\'au <span class="text-green-400 font-medium">',
+              fE,
+              "</span> \xe2\x80\x94 ",
+              dLeft,
+              " jour"
+            ].join("") +
+            (dLeft > 1 ? "s" : "") +
+            " restant" +
+            (dLeft > 1 ? "s" : "") +
+            (' </div></div><span class="text-xs px-2.5 py-1 rounded-full bg-green-500/10 text-green-400 border border-green-500/30 font-semibold"><i class="fas ' +
+              'fa-check mr-1"></i>Actif</span></div>')
           );
-        if (soon)
-          return (
-            '<div class="bg-orange-900/20 border border-orange-500/40 rounded-xl p-4 flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-orange-500/20 flex ' +
-            'items-center justify-center"><i class="fas fa-calendar-exclamation text-orange-400"></i></div><div class="flex-1"><div class="font-semibold ' +
-            'text-orange-300 text-sm">Package expire bientÃ´t</div><div class="text-xs text-gray-400 mt-0.5">' +
-            ap.package_name +
-            " \xe2\x80\x94 expire le " +
-            fE +
-            ' <span class="text-orange-400 font-bold">(' +
-            dLeft +
-            "j)</span></div></div></div>"
-          );
-        return (
-          '<div class="bg-dark-800 border border-dark-600 rounded-xl p-4 flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-green-500/10 flex ' +
-          'items-center justify-center"><i class="fas fa-calendar-check text-green-400"></i></div><div class="flex-1"><div class="font-semibold text-white ' +
-          'text-sm">' +
-          ap.package_name +
-          '</div><div class="text-xs text-gray-400 mt-0.5">Valide jusqu\'au <span class="text-green-400 font-medium">' +
-          fE +
-          "</span> \xe2\x80\x94 " +
-          dLeft +
-          " jour" +
-          (dLeft > 1 ? "s" : "") +
-          " restant" +
-          (dLeft > 1 ? "s" : "") +
-          (' </div></div><span class="text-xs px-2.5 py-1 rounded-full bg-green-500/10 text-green-400 border border-green-500/30 font-semibold"><i class="fas ' +
-            'fa-check mr-1"></i>Actif</span></div>')
-        );
-      })() +
-      "\n\n\n\n      <!-- Alertes -->\n\n      " +
-      (n.in_holding_tank
-        ? '<div class="bg-orange-900/20 border border-orange-500/30 rounded-xl p-4 flex items-start gap-3"><i class="fas fa-clock text-orange-400 mt-0.5"></i><' +
-          'div><p class="text-orange-300 font-medium text-sm">En attente de placement</p><p class="text-orange-400/70 text-xs mt-1">Votre position dans l\'arbre ' +
-          "binaire sera définie par votre parrain.</p></div></div>"
-        : "") +
-      "\n\n      " +
-      ("not_submitted" === n.kyc_status
-        ? '<div class="bg-yellow-900/20 border border-yellow-500/30 rounded-xl p-4 flex items-start gap-3"><i class="fas fa-triangle-exclamation text-yellow-400 ' +
-          'mt-0.5"></i><div><p class="text-yellow-300 font-medium text-sm">KYC non soumis</p><p class="text-yellow-400/70 text-xs mt-1">Complétez votre ' +
-          'vérification d\'identité pour pouvoir effectuer des retraits. <button onclick="showPage(\'kyc\')" class="underline">Compléter maintenant</button></p><' +
-          "/div></div>"
-        : "") +
-      ('\n\n\n\n      <!-- Dernières commissions -->\n\n      <div class="bg-dark-800 rounded-2xl border border-dark-600 overflow-hidden">\n\n        <div class="px-6 ' +
-        'py-4 border-b border-dark-600 flex items-center justify-between">\n\n          <h3 class="font-semibold text-white">Dernières opérations</h3>\n\n          ' +
-        '<button onclick="showPage(\'transactions\')" class="text-rouge-400 text-xs hover:underline">Voir tout →</button>\n\n        </div>\n\n        <div ' +
-        'class="overflow-x-auto">\n\n          <table class="data-table">\n' +
-        "\n            <thead><tr><th>Type</th><th>Description</th><th>Montant</th><th>Date</th></tr></thead>\n\n            <tbody>\n\n              ") +
+        })(),
+        "\n\n\n\n      <!-- Alertes -->\n\n      ",
+        n.in_holding_tank
+          ? '<div class="bg-orange-900/20 border border-orange-500/30 rounded-xl p-4 flex items-start gap-3"><i class="fas fa-clock text-orange-400 mt-0.5"></i><' +
+            'div><p class="text-orange-300 font-medium text-sm">En attente de placement</p><p class="text-orange-400/70 text-xs mt-1">Votre position dans l\'arbre ' +
+            "binaire sera définie par votre parrain.</p></div></div>"
+          : "",
+        "\n\n      ",
+        "not_submitted" === n.kyc_status
+          ? '<div class="bg-yellow-900/20 border border-yellow-500/30 rounded-xl p-4 flex items-start gap-3"><i class="fas fa-triangle-exclamation text-yellow-400 ' +
+            'mt-0.5"></i><div><p class="text-yellow-300 font-medium text-sm">KYC non soumis</p><p class="text-yellow-400/70 text-xs mt-1">Complétez votre ' +
+            'vérification d\'identité pour pouvoir effectuer des retraits. <button onclick="showPage(\'kyc\')" class="underline">Compléter maintenant</button></p><' +
+            "/div></div>"
+          : "",
+        '\n\n\n\n      <!-- Dernières commissions -->\n\n      <div class="bg-dark-800 rounded-2xl border border-dark-600 overflow-hidden">\n\n        <div class="px-6 ' +
+          'py-4 border-b border-dark-600 flex items-center justify-between">\n\n          <h3 class="font-semibold text-white">Dernières opérations</h3>\n\n          ' +
+          '<button onclick="showPage(\'transactions\')" class="text-rouge-400 text-xs hover:underline">Voir tout →</button>\n\n        </div>\n\n        <div ' +
+          'class="overflow-x-auto">\n\n          <table class="data-table">\n' +
+          "\n            <thead><tr><th>Type</th><th>Description</th><th>Montant</th><th>Date</th></tr></thead>\n\n            <tbody>\n\n              "
+      ].join("") +
       ((t.recentCommissions || [])
         .map((e) => {
           const txType = e.tx_type || e.type || "";
           const cfg = TX_TYPE_CONFIG[txType] || TX_TYPE_CONFIG.commission;
           const isCredit = (e.amount ?? 0) >= 0;
           return (
-            '\n\n              <tr>\n\n                <td><span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ' +
-            (cfg?.badge || "bg-gray-500/15 text-gray-400") +
-            '"><i class="fas ' +
-            (cfg?.icon || "fa-circle") +
-            ' text-[10px]"></i>' +
-            (cfg?.label || txType || "—") +
-            '</span></td>\n\n                <td class="text-gray-300 text-xs truncate max-w-[140px]">' +
-            (e.description || "—").substring(0, 40) +
-            '</td>\n\n                <td class="font-medium ' +
+            [
+              '\n\n              <tr>\n\n                <td><span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ',
+              cfg?.badge || "bg-gray-500/15 text-gray-400",
+              '"><i class="fas ',
+              cfg?.icon || "fa-circle",
+              ' text-[10px]"></i>',
+              cfg?.label || txType || "—",
+              '</span></td>\n\n                <td class="text-gray-300 text-xs truncate max-w-[140px]">',
+              (e.description || "—").substring(0, 40),
+              '</td>\n\n                <td class="font-medium '
+            ].join("") +
             (isCredit ? "text-green-400" : "text-red-400") +
             '">' +
             (isCredit ? "+" : "−") +
@@ -2776,23 +2840,27 @@ async function loadTeam(e = "", page, perPage) {
         ((n.members || [])
           .map(
             (e) =>
-              '\n\n            <tr>\n\n              <td class="text-rouge-400 font-mono text-xs">' +
-              e.unique_id +
-              '</td>\n\n              <td class="font-medium">' +
-              e.first_name +
-              " " +
-              e.last_name +
-              '</td>\n\n              <td class="text-blue-400 font-semibold text-center">' +
-              fmtBV(e.left_bv_monthly) +
-              '</td><td class="text-green-400 font-semibold text-center">' +
-              fmtBV(e.right_bv_monthly) +
-              "</td>\n\n              <td>" +
-              statusBadge(e.member_status) +
-              "</td>\n\n              <td>" +
-              rankBadge(e.current_rank) +
-              '</td>\n\n              <td class="text-center text-sm">' +
-              (e.direct_count || 0) +
-              '</td>\n\n              <td class="text-gray-500 text-xs">' +
+              [
+                [
+                  '\n\n            <tr>\n\n              <td class="text-rouge-400 font-mono text-xs">',
+                  e.unique_id,
+                  '</td>\n\n              <td class="font-medium">',
+                  e.first_name,
+                  " ",
+                  e.last_name,
+                  '</td>\n\n              <td class="text-blue-400 font-semibold text-center">',
+                  fmtBV(e.left_bv_monthly),
+                  '</td><td class="text-green-400 font-semibold text-center">'
+                ].join(""),
+                fmtBV(e.right_bv_monthly),
+                "</td>\n\n              <td>",
+                statusBadge(e.member_status),
+                "</td>\n\n              <td>",
+                rankBadge(e.current_rank),
+                '</td>\n\n              <td class="text-center text-sm">',
+                e.direct_count || 0,
+                '</td>\n\n              <td class="text-gray-500 text-xs">'
+              ].join("") +
               fmtDate(e.created_at) +
               "</td>\n\n            </tr>"
           )
@@ -2852,66 +2920,76 @@ async function loadDownline(e = !1) {
             o = "dn-" + e.id.substring(0, 8),
             c = a(e);
           return (
-            '\n\n      <div class="downline-node" style="margin-left:' +
-            s +
-            'px">\n\n        <!-- Connecteur vertical -->\n\n        ' +
-            (t > 0 ? '<div class="downline-connector" style="margin-left:' + -s + "px;padding-left:" + s + 'px"></div>' : "") +
-            '\n\n        <div class="flex items-center gap-2.5 py-1.5 group">\n\n          <!-- Fil de branche -->\n\n          ' +
-            (t > 0
-              ? '\n          <div class="flex-shrink-0 flex items-center" style="width:20px;margin-left:-20px">\n            <div ' +
-                'style="width:16px;height:1px;background:#374151"></div>\n          </div>'
-              : "") +
-            ('\n\n\n\n          <!-- Avatar initiales + couleur rang -->\n\n          <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ' +
-              'text-xs font-bold"\n\n               style="background:') +
-            i +
-            "22;border:1.5px solid " +
-            i +
-            ";color:" +
-            i +
-            '">\n\n            ' +
-            l +
-            ('\n\n          </div>\n\n\n\n          <!-- Infos membre -->\n\n          <div class="flex-1 min-w-0">\n\n            <div class="flex items-center gap-2 ' +
-              'flex-wrap">\n\n              <span class="font-semibold text-sm text-white">') +
-            e.first_name +
-            " " +
-            e.last_name +
-            "</span>\n\n              " +
-            rankBadge(e.current_rank) +
-            "\n\n              " +
-            (e.activation_done
-              ? ""
-              : '<span class="text-[10px] bg-orange-500/15 text-orange-400 border border-orange-500/30 px-1.5 py-0.5 rounded-full">Non activé</span>') +
-            ('\n\n            </div>\n\n            <div class="flex items-center gap-3 mt-0.5 flex-wrap">\n\n              <span class="text-[11px] text-gray-500 ' +
-              'font-mono">') +
-            e.unique_id +
-            "</span>\n\n              " +
-            (r
-              ? '<span class="text-[10px] text-indigo-400"><i class="fas fa-hand-point-right mr-0.5"></i>Filleul direct</span>'
-              : '<span class="text-[10px] text-gray-600">Profondeur ' + (t + 1) + "</span>") +
-            "\n\n              " +
-            (d
-              ? "<button onclick=\"toggleDownlineNode('" +
-                o +
-                ('\')"\n\n                class="text-[10px] text-rouge-400 hover:text-rouge-400 transition flex items-center gap-1">\n\n                <i class="fas ' +
-                  'fa-chevron-down" id="') +
-                o +
-                '-icon"></i>\n\n                <span>' +
-                e.children.length +
-                " filleul" +
-                (e.children.length > 1 ? "s" : "") +
-                " direct" +
-                (e.children.length > 1 ? "s" : "") +
-                "</span>\n\n                " +
-                (c > e.children.length ? '<span class="text-gray-500">(' + c + " total)</span>" : "") +
-                "\n\n              </button>"
-              : "") +
-            ('\n\n            </div>\n\n          </div>\n\n\n\n          <!-- BV sommaire -->\n\n          <div class="hidden sm:flex gap-3 text-right flex-shrink-0">\n\n      ' +
-              '      <div class="text-xs">\n\n              <div class="text-gray-600 text-[10px]">BV G</div>\n\n              <div class="text-blue-400 font-semibold">') +
-            fmtBV(e.left_bv_total) +
-            ('</div>\n\n            </div>\n\n            <div class="text-xs">\n\n              <div class="text-gray-600 text-[10px]">BV D</div>\n\n              <div ' +
-              'class="text-green-400 font-semibold">') +
-            fmtBV(e.right_bv_total) +
-            "</div>\n\n            </div>\n\n          </div>\n\n        </div>\n\n\n\n        <!-- Enfants (repliables) -->\n\n        " +
+            [
+              [
+                [
+                  [
+                    '\n\n      <div class="downline-node" style="margin-left:',
+                    s,
+                    'px">\n\n        <!-- Connecteur vertical -->\n\n        ',
+                    t > 0 ? '<div class="downline-connector" style="margin-left:' + -s + "px;padding-left:" + s + 'px"></div>' : "",
+                    '\n\n        <div class="flex items-center gap-2.5 py-1.5 group">\n\n          <!-- Fil de branche -->\n\n          ',
+                    t > 0
+                      ? '\n          <div class="flex-shrink-0 flex items-center" style="width:20px;margin-left:-20px">\n            <div ' +
+                        'style="width:16px;height:1px;background:#374151"></div>\n          </div>'
+                      : "",
+                    '\n\n\n\n          <!-- Avatar initiales + couleur rang -->\n\n          <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ' +
+                      'text-xs font-bold"\n\n               style="background:',
+                    i,
+                    "22;border:1.5px solid "
+                  ].join(""),
+                  i,
+                  ";color:",
+                  i,
+                  '">\n\n            ',
+                  l,
+                  '\n\n          </div>\n\n\n\n          <!-- Infos membre -->\n\n          <div class="flex-1 min-w-0">\n\n            <div class="flex items-center gap-2 ' +
+                    'flex-wrap">\n\n              <span class="font-semibold text-sm text-white">',
+                  e.first_name,
+                  " "
+                ].join(""),
+                e.last_name,
+                "</span>\n\n              ",
+                rankBadge(e.current_rank),
+                "\n\n              ",
+                e.activation_done
+                  ? ""
+                  : '<span class="text-[10px] bg-orange-500/15 text-orange-400 border border-orange-500/30 px-1.5 py-0.5 rounded-full">Non activé</span>',
+                '\n\n            </div>\n\n            <div class="flex items-center gap-3 mt-0.5 flex-wrap">\n\n              <span class="text-[11px] text-gray-500 ' +
+                  'font-mono">',
+                e.unique_id,
+                "</span>\n\n              "
+              ].join(""),
+              r
+                ? '<span class="text-[10px] text-indigo-400"><i class="fas fa-hand-point-right mr-0.5"></i>Filleul direct</span>'
+                : '<span class="text-[10px] text-gray-600">Profondeur ' + (t + 1) + "</span>",
+              "\n\n              ",
+              d
+                ? [
+                    "<button onclick=\"toggleDownlineNode('",
+                    o,
+                    '\')"\n\n                class="text-[10px] text-rouge-400 hover:text-rouge-400 transition flex items-center gap-1">\n\n                <i class="fas ' +
+                      'fa-chevron-down" id="',
+                    o,
+                    '-icon"></i>\n\n                <span>',
+                    e.children.length,
+                    " filleul",
+                    e.children.length > 1 ? "s" : "",
+                    " direct"
+                  ].join("") +
+                  (e.children.length > 1 ? "s" : "") +
+                  "</span>\n\n                " +
+                  (c > e.children.length ? '<span class="text-gray-500">(' + c + " total)</span>" : "") +
+                  "\n\n              </button>"
+                : "",
+              '\n\n            </div>\n\n          </div>\n\n\n\n          <!-- BV sommaire -->\n\n          <div class="hidden sm:flex gap-3 text-right flex-shrink-0">\n\n      ' +
+                '      <div class="text-xs">\n\n              <div class="text-gray-600 text-[10px]">BV G</div>\n\n              <div class="text-blue-400 font-semibold">',
+              fmtBV(e.left_bv_total),
+              '</div>\n\n            </div>\n\n            <div class="text-xs">\n\n              <div class="text-gray-600 text-[10px]">BV D</div>\n\n              <div ' +
+                'class="text-green-400 font-semibold">',
+              fmtBV(e.right_bv_total),
+              "</div>\n\n            </div>\n\n          </div>\n\n        </div>\n\n\n\n        <!-- Enfants (repliables) -->\n\n        "
+            ].join("") +
             (d
               ? '\n\n        <div id="' +
                 o +
@@ -2979,7 +3057,7 @@ function svgAssignPositions(e, t, n) {
 }
 function svgBezier(e, t, n, a) {
   const s = (t + a) / 2;
-  return "M" + e + "," + t + " C" + e + "," + s + " " + n + "," + s + " " + n + "," + a;
+  return ["M", e, ",", t, " C", e, ",", s, " "].join("") + n + "," + s + " " + n + "," + a;
 }
 function svgCollectElements(e, t, n, a, s, r, i, l, d, o) {
   if (!e) {
@@ -2990,24 +3068,28 @@ function svgCollectElements(e, t, n, a, s, r, i, l, d, o) {
       const n = currentMember && currentMember.unique_id ? currentMember.unique_id : o,
         s = "/register?sponsor=" + encodeURIComponent(n) + "&parent=" + encodeURIComponent(o) + "&position=" + d;
       r.push(
-        '\n\n        <a href="' +
-          s +
-          '" target="_blank" title="S\'inscrire ici (' +
-          ("L" === d ? "Gauche" : "Droite") +
-          ')">\n\n          <rect x="' +
-          e +
-          '" y="' +
-          t +
-          ('" width="154" height="108" rx="12"\n\n                fill="#111827" stroke="#374151" stroke-width="1.5" stroke-dasharray="6,4"\n\n                ' +
-            'class="svg-slot-view"/>\n\n          <text x="') +
-          (e + 77) +
-          '" y="' +
-          (t + 36) +
-          '" text-anchor="middle" fill="#4B5563" font-size="20" font-family="sans-serif">+</text>\n\n          <text x="' +
-          (e + 77) +
-          '" y="' +
-          (t + 58) +
-          '" text-anchor="middle" fill="#6B7280" font-size="10" font-family="sans-serif">Position libre</text>\n\n          <text x="' +
+        [
+          [
+            '\n\n        <a href="',
+            s,
+            '" target="_blank" title="S\'inscrire ici (',
+            "L" === d ? "Gauche" : "Droite",
+            ')">\n\n          <rect x="',
+            e,
+            '" y="',
+            t,
+            '" width="154" height="108" rx="12"\n\n                fill="#111827" stroke="#374151" stroke-width="1.5" stroke-dasharray="6,4"\n\n                ' +
+              'class="svg-slot-view"/>\n\n          <text x="'
+          ].join(""),
+          e + 77,
+          '" y="',
+          t + 36,
+          '" text-anchor="middle" fill="#4B5563" font-size="20" font-family="sans-serif">+</text>\n\n          <text x="',
+          e + 77,
+          '" y="',
+          t + 58,
+          '" text-anchor="middle" fill="#6B7280" font-size="10" font-family="sans-serif">Position libre</text>\n\n          <text x="'
+        ].join("") +
           (e + 77) +
           '" y="' +
           (t + 72) +
@@ -3021,15 +3103,17 @@ function svgCollectElements(e, t, n, a, s, r, i, l, d, o) {
   if ((null !== i && a.push('<path d="' + svgBezier(i, l + 108, c, x) + '" stroke="#374151" stroke-width="1.5" fill="none"/>'), null !== d)) {
     const e = "L" === d ? "#60A5FA" : "#34D399";
     s.push(
-      '<text x="' +
-        c +
-        '" y="' +
-        (x - 14) +
-        '" text-anchor="middle" fill="' +
-        e +
-        '" font-size="9" font-weight="700" font-family="sans-serif">' +
-        ("L" === d ? "G" : "D") +
+      [
+        '<text x="',
+        c,
+        '" y="',
+        x - 14,
+        '" text-anchor="middle" fill="',
+        e,
+        '" font-size="9" font-weight="700" font-family="sans-serif">',
+        "L" === d ? "G" : "D",
         "</text>"
+      ].join("")
     );
   }
   const p = e.in_holding_tank,
@@ -3062,85 +3146,103 @@ function svgCollectElements(e, t, n, a, s, r, i, l, d, o) {
       "",
     v = m[e.current_rank] || "#9CA3AF";
   (s.push(
-    '\n\n    <g class="svg-node-member" title="' +
-      e.unique_id +
-      '">\n\n      <rect x="' +
-      e._x +
-      '" y="' +
-      x +
-      '" width="154" height="108" rx="12"\n\n            fill="' +
-      g +
-      '" stroke="' +
-      u +
-      '" stroke-width="' +
-      (p ? 2 : 1.5) +
-      '"/>\n\n      <circle cx="' +
-      c +
-      '" cy="' +
-      (x + 28) +
-      '" r="18" fill="#111827" stroke="' +
-      u +
-      '" stroke-width="1.5"/>\n\n      <text x="' +
-      c +
-      '" y="' +
-      (x + 33) +
-      '" text-anchor="middle" fill="' +
-      v +
-      '" font-size="11" font-weight="700" font-family="sans-serif">' +
-      f +
-      '</text>\n\n      <text x="' +
-      c +
-      '" y="' +
-      (x + 56) +
-      '" text-anchor="middle" fill="#F9FAFB" font-size="10" font-weight="600" font-family="sans-serif">' +
-      (e.first_name + " " + e.last_name).substring(0, 18) +
-      '</text>\n\n      <text x="' +
-      c +
-      '" y="' +
-      (x + 68) +
-      '" text-anchor="middle" fill="#9CA3AF" font-size="8.5" font-family="monospace">' +
-      e.unique_id +
-      '</text>\n\n      <rect x="' +
-      (c - 28) +
-      '" y="' +
-      (x + 73) +
-      '" width="56" height="13" rx="6" fill="' +
-      v +
-      '22"/>\n\n      <text x="' +
-      c +
-      '" y="' +
-      (x + 83) +
-      '" text-anchor="middle" fill="' +
-      v +
-      '" font-size="8" font-weight="700" font-family="sans-serif">' +
-      b +
-      '</text>\n\n      <text x="' +
-      c +
-      '" y="' +
-      (x + 93) +
-      '" text-anchor="middle" fill="#6B7280" font-size="8" font-family="sans-serif">' +
-      (e.member_status || "") +
-      '</text>\n\n      <text x="' +
-      (e._x + 8) +
-      '" y="' +
-      (x + 102) +
-      '" fill="#60A5FA" font-size="8" font-family="sans-serif">G:' +
-      fmtBV(e.left_bv_monthly) +
-      '</text>\n\n      <text x="' +
-      (e._x + 154 - 8) +
-      '" y="' +
-      (x + 102) +
-      '" text-anchor="end" fill="#34D399" font-size="8" font-family="sans-serif">D:' +
-      fmtBV(e.right_bv_monthly) +
-      "</text>\n\n      " +
-      (p
+    [
+      [
+        [
+          [
+            [
+              [
+                [
+                  [
+                    [
+                      '\n\n    <g class="svg-node-member" title="',
+                      e.unique_id,
+                      '">\n\n      <rect x="',
+                      e._x,
+                      '" y="',
+                      x,
+                      '" width="154" height="108" rx="12"\n\n            fill="',
+                      g,
+                      '" stroke="'
+                    ].join(""),
+                    u,
+                    '" stroke-width="',
+                    p ? 2 : 1.5,
+                    '"/>\n\n      <circle cx="',
+                    c,
+                    '" cy="',
+                    x + 28,
+                    '" r="18" fill="#111827" stroke="'
+                  ].join(""),
+                  u,
+                  '" stroke-width="1.5"/>\n\n      <text x="',
+                  c,
+                  '" y="',
+                  x + 33,
+                  '" text-anchor="middle" fill="',
+                  v,
+                  '" font-size="11" font-weight="700" font-family="sans-serif">'
+                ].join(""),
+                f,
+                '</text>\n\n      <text x="',
+                c,
+                '" y="',
+                x + 56,
+                '" text-anchor="middle" fill="#F9FAFB" font-size="10" font-weight="600" font-family="sans-serif">',
+                (e.first_name + " " + e.last_name).substring(0, 18),
+                '</text>\n\n      <text x="'
+              ].join(""),
+              c,
+              '" y="',
+              x + 68,
+              '" text-anchor="middle" fill="#9CA3AF" font-size="8.5" font-family="monospace">',
+              e.unique_id,
+              '</text>\n\n      <rect x="',
+              c - 28,
+              '" y="'
+            ].join(""),
+            x + 73,
+            '" width="56" height="13" rx="6" fill="',
+            v,
+            '22"/>\n\n      <text x="',
+            c,
+            '" y="',
+            x + 83,
+            '" text-anchor="middle" fill="'
+          ].join(""),
+          v,
+          '" font-size="8" font-weight="700" font-family="sans-serif">',
+          b,
+          '</text>\n\n      <text x="',
+          c,
+          '" y="',
+          x + 93,
+          '" text-anchor="middle" fill="#6B7280" font-size="8" font-family="sans-serif">'
+        ].join(""),
+        e.member_status || "",
+        '</text>\n\n      <text x="',
+        e._x + 8,
+        '" y="',
+        x + 102,
+        '" fill="#60A5FA" font-size="8" font-family="sans-serif">G:',
+        fmtBV(e.left_bv_monthly),
+        '</text>\n\n      <text x="'
+      ].join(""),
+      e._x + 154 - 8,
+      '" y="',
+      x + 102,
+      '" text-anchor="end" fill="#34D399" font-size="8" font-family="sans-serif">D:',
+      fmtBV(e.right_bv_monthly),
+      "</text>\n\n      ",
+      p
         ? '<text x="' +
           c +
           '" y="' +
           (x + 8) +
           '" text-anchor="middle" fill="#FB923C" font-size="7.5" font-weight="700" font-family="sans-serif">HOLDING</text>'
-        : "") +
+        : "",
       "\n\n    </g>"
+    ].join("")
   ),
     t < n &&
       (svgCollectElements(e.left, t + 1, n, a, s, r, c, x, "L", e.unique_id),
@@ -3155,33 +3257,37 @@ function renderTreeSVG(e) {
     i = [];
   return (
     svgCollectElements(e, 0, t, s, r, i, null, null, null, null),
-    '<svg xmlns="http://www.w3.org/2000/svg" width="' +
-      Math.max(n + 36, 400) +
-      '" height="' +
-      a +
-      ('" style="display:block;overflow:visible">\n\n    <style>\n\n      .svg-slot-view rect { transition: stroke 0.2s, fill 0.2s; }\n\n      .svg-slot-view:hover ' +
+    [
+      '<svg xmlns="http://www.w3.org/2000/svg" width="',
+      Math.max(n + 36, 400),
+      '" height="',
+      a,
+      '" style="display:block;overflow:visible">\n\n    <style>\n\n      .svg-slot-view rect { transition: stroke 0.2s, fill 0.2s; }\n\n      .svg-slot-view:hover ' +
         "rect { stroke: #5A1510 !important; fill: #1C1003 !important; }\n\n      .svg-slot-view:hover text { fill: #791E15 !important; }\n\n      .svg-node-member " +
-        'rect { transition: stroke 0.15s; }\n\n    </style>\n\n    <g transform="translate(18, 20)">\n\n      ') +
-      s.join("\n") +
-      "\n\n      " +
-      i.join("\n") +
-      "\n\n      " +
+        'rect { transition: stroke 0.15s; }\n\n    </style>\n\n    <g transform="translate(18, 20)">\n\n      ',
+      s.join("\n"),
+      "\n\n      ",
+      i.join("\n"),
+      "\n\n      "
+    ].join("") +
       r.join("\n") +
       "\n\n    </g>\n\n  </svg>"
   );
 }
 function svgPanZoomWrapper(e, t, n = "") {
   return (
-    '\n\n  <div style="position:relative; background:#111827; border-radius:16px; border:1px solid #374151; overflow:hidden; height:480px; cursor:grab; ' +
-    'user-select:none;" id="' +
-    t +
-    '-vp">\n\n    <div id="' +
-    t +
-    ('-canvas" style="position:absolute; top:0; left:0; transform-origin:0 0; transform:translate(0px,0px) scale(1); will-change:transform; padding:24px;">\n\n' +
-      "      ") +
-    e +
-    '\n\n    </div>\n\n    <div style="position:absolute; bottom:12px; right:12px; display:flex; gap:6px; z-index:10;">\n\n      ' +
-    n +
+    [
+      '\n\n  <div style="position:relative; background:#111827; border-radius:16px; border:1px solid #374151; overflow:hidden; height:480px; cursor:grab; ',
+      'user-select:none;" id="',
+      t,
+      '-vp">\n\n    <div id="',
+      t,
+      '-canvas" style="position:absolute; top:0; left:0; transform-origin:0 0; transform:translate(0px,0px) scale(1); will-change:transform; padding:24px;">\n\n' +
+        "      ",
+      e,
+      '\n\n    </div>\n\n    <div style="position:absolute; bottom:12px; right:12px; display:flex; gap:6px; z-index:10;">\n\n      ',
+      n
+    ].join("") +
     "\n\n      <button onclick=\"svgZoom('" +
     t +
     ('\',1.25)" style="width:32px;height:32px;background:#1F2937;border:1px solid #374151;border-radius:8px;color:#9CA3AF;font-size:16px;cursor:pointer;displ' +
@@ -3347,24 +3453,28 @@ function renderTreeSearchResults(e) {
         i = fmtBV(e.left_bv_monthly),
         l = fmtBV(e.right_bv_monthly);
       return (
-        '\n\n    <div class="tree-search-result flex items-center gap-3 px-4 py-2.5 hover:bg-dark-700 cursor-pointer transition-colors\n\n                ' +
-        (t > 0 ? "border-t border-dark-600/50" : "") +
-        '"\n\n         onclick="treeSearchNavigateTo(\'' +
-        e.id +
-        ('\')"\n\n         onmousedown="event.preventDefault()">\n\n      <div class="w-8 h-8 rounded-full bg-dark-900 border border-dark-500 flex items-center ' +
-          "justify-center\n\n                  text-[11px] font-bold ") +
-        n +
-        ' flex-shrink-0">\n\n        ' +
-        s +
-        '\n\n      </div>\n\n      <div class="flex-1 min-w-0">\n\n        <div class="text-sm font-semibold text-white truncate">\n\n          ' +
-        e.first_name +
-        " " +
-        e.last_name +
-        "\n\n          " +
-        (r ? '<span class="ml-1.5 text-[9px] text-rouge-500 font-medium bg-rouge-500/10 px-1.5 py-0.5 rounded-full">Vous</span>' : "") +
-        '\n\n        </div>\n\n        <div class="flex items-center gap-2 mt-0.5">\n\n          <span class="text-[10px] text-gray-500 font-mono">' +
-        e.unique_id +
-        '</span>\n\n          <span class="text-[10px] text-blue-400">G:' +
+        [
+          [
+            '\n\n    <div class="tree-search-result flex items-center gap-3 px-4 py-2.5 hover:bg-dark-700 cursor-pointer transition-colors\n\n                ',
+            t > 0 ? "border-t border-dark-600/50" : "",
+            '"\n\n         onclick="treeSearchNavigateTo(\'',
+            e.id,
+            '\')"\n\n         onmousedown="event.preventDefault()">\n\n      <div class="w-8 h-8 rounded-full bg-dark-900 border border-dark-500 flex items-center ' +
+              "justify-center\n\n                  text-[11px] font-bold ",
+            n,
+            ' flex-shrink-0">\n\n        ',
+            s,
+            '\n\n      </div>\n\n      <div class="flex-1 min-w-0">\n\n        <div class="text-sm font-semibold text-white truncate">\n\n          '
+          ].join(""),
+          e.first_name,
+          " ",
+          e.last_name,
+          "\n\n          ",
+          r ? '<span class="ml-1.5 text-[9px] text-rouge-500 font-medium bg-rouge-500/10 px-1.5 py-0.5 rounded-full">Vous</span>' : "",
+          '\n\n        </div>\n\n        <div class="flex items-center gap-2 mt-0.5">\n\n          <span class="text-[10px] text-gray-500 font-mono">',
+          e.unique_id,
+          '</span>\n\n          <span class="text-[10px] text-blue-400">G:'
+        ].join("") +
         i +
         '</span>\n\n          <span class="text-[10px] text-green-400">D:' +
         l +
@@ -3435,43 +3545,48 @@ function renderClassicNode(e, t, n = !1) {
       (r ? "cursor-pointer hover:border-rouge-500/60 hover:bg-dark-700 transition-all" : "cursor-default") +
       "\n\n  ",
     l =
-      '\n\n    <div class="w-9 h-9 rounded-full bg-dark-900 flex items-center justify-center mx-auto mb-2 text-xs font-bold ' +
-      ({
-        captain: "text-yellow-400",
-        commander: "text-purple-400",
-        admiral: "text-blue-400",
-        vice_admiral: "text-green-400",
-        ambassador: "text-orange-400",
-        diamond: "text-sky-400",
-        triple_diamond: "text-fuchsia-400",
-        crown: "text-red-400"
-      }[e.current_rank] || "text-rouge-400") +
-      " " +
-      (a ? "ring-2 ring-gold-500/40" : "") +
-      '">\n\n      ' +
-      (e.first_name || "?")[0] +
-      (e.last_name || "?")[0] +
-      '\n\n    </div>\n\n    <div class="text-xs font-semibold text-white truncate">' +
-      e.first_name +
-      " " +
-      e.last_name +
-      '</div>\n\n    <div class="text-[10px] text-gray-400 font-mono">' +
-      e.unique_id +
-      '</div>\n\n    <div class="mt-1">' +
-      rankBadge(e.current_rank) +
-      "</div>\n\n    " +
-      s +
-      "\n\n    " +
-      (e.member_status ? '<div class="text-[9px] text-gray-400 mt-0.5">' + e.member_status + "</div>" : "") +
-      '\n\n    <div class="mt-1 flex justify-center gap-2 text-[9px]">\n\n      <span class="text-blue-400">G:' +
-      fmtBV(e.left_bv_monthly) +
-      '</span>\n\n      <span class="text-green-400">D:' +
-      fmtBV(e.right_bv_monthly) +
-      "</span>\n\n    </div>\n\n    " +
-      (a ? '<div class="text-[9px] text-rouge-500/70 mt-1 font-medium">Vue actuelle</div>' : "") +
-      "\n\n  ",
+      [
+        [
+          [
+            '\n\n    <div class="w-9 h-9 rounded-full bg-dark-900 flex items-center justify-center mx-auto mb-2 text-xs font-bold ',
+            {
+              captain: "text-yellow-400",
+              commander: "text-purple-400",
+              admiral: "text-blue-400",
+              vice_admiral: "text-green-400",
+              ambassador: "text-orange-400",
+              diamond: "text-sky-400",
+              triple_diamond: "text-fuchsia-400",
+              crown: "text-red-400"
+            }[e.current_rank] || "text-rouge-400",
+            " ",
+            a ? "ring-2 ring-gold-500/40" : "",
+            '">\n\n      ',
+            (e.first_name || "?")[0],
+            (e.last_name || "?")[0],
+            '\n\n    </div>\n\n    <div class="text-xs font-semibold text-white truncate">',
+            e.first_name
+          ].join(""),
+          " ",
+          e.last_name,
+          '</div>\n\n    <div class="text-[10px] text-gray-400 font-mono">',
+          e.unique_id,
+          '</div>\n\n    <div class="mt-1">',
+          rankBadge(e.current_rank),
+          "</div>\n\n    ",
+          s
+        ].join(""),
+        "\n\n    ",
+        e.member_status ? '<div class="text-[9px] text-gray-400 mt-0.5">' + e.member_status + "</div>" : "",
+        '\n\n    <div class="mt-1 flex justify-center gap-2 text-[9px]">\n\n      <span class="text-blue-400">G:',
+        fmtBV(e.left_bv_monthly),
+        '</span>\n\n      <span class="text-green-400">D:',
+        fmtBV(e.right_bv_monthly),
+        "</span>\n\n    </div>\n\n    ",
+        a ? '<div class="text-[9px] text-rouge-500/70 mt-1 font-medium">Vue actuelle</div>' : ""
+      ].join("") + "\n\n  ",
     d = r
-      ? '<div class="' + i + '" onclick="classicNavigateTo(\'' + e.id + "')\" title=\"Voir l'arbre depuis " + e.first_name + '">' + l + "</div>"
+      ? ['<div class="', i, '" onclick="classicNavigateTo(\'', e.id, "')\" title=\"Voir l'arbre depuis ", e.first_name, '">', l, "</div>"].join("")
       : '<div class="' + i + '">' + l + "</div>";
   if (t >= 3) return '<div class="tree-node">' + d + "</div>";
   const o = (e, t) => {
@@ -3520,28 +3635,31 @@ function renderClassicTreeInner() {
             .join("")
         : "";
   e.innerHTML =
-    '\n\n  <!-- Barre de navigation -->\n\n  <div class="flex items-center gap-2 mb-3 flex-wrap">\n\n    <button onclick="classicGoHome()"\n\n      class="flex ' +
-    "items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition\n\n             " +
-    (t ? "bg-dark-700 text-gray-500 cursor-default" : "bg-dark-700 text-gray-300 hover:bg-dark-600 hover:text-white border border-dark-500") +
-    '"\n\n      ' +
-    (t ? "disabled" : "") +
-    ('>\n\n      <i class="fas fa-home text-[11px]"></i> Racine\n\n    </button>\n\n    <button onclick="classicGoBack()"\n\n      class="flex items-center gap-1.5 ' +
-      "px-3 py-1.5 rounded-lg text-xs font-medium transition\n\n             ") +
-    (n ? "bg-dark-700 text-gray-300 hover:bg-dark-600 hover:text-white border border-dark-500" : "bg-dark-700 text-gray-500 cursor-default") +
-    '"\n\n      ' +
-    (n ? "" : "disabled") +
-    ('>\n\n      <i class="fas fa-arrow-left text-[11px]"></i> Remonter\n\n    </button>\n\n    <!-- Breadcrumb -->\n\n    <div class="flex items-center gap-1 ' +
-      'text-xs text-gray-500 overflow-x-auto flex-1 min-w-0">\n\n      ') +
-    a +
-    '\n\n      <span class="text-rouge-400 font-semibold text-xs">' +
-    _classicFocus.first_name +
-    " " +
-    _classicFocus.last_name +
-    ('</span>\n\n    </div>\n\n    <span class="text-[10px] text-gray-600 hidden sm:block">\n\n      <i class="fas fa-hand-pointer mr-1"></i>Cliquer un membre ' +
-      'pour descendre\n\n    </span>\n\n  </div>\n\n\n\n  <!-- Arbre HTML -->\n\n  <div class="bg-dark-800 rounded-2xl border border-dark-600 p-6 overflow-x-auto">\n\n   ' +
-      ' <div class="flex justify-center">\n\n      <div class="inline-flex flex-col items-center text-center">\n\n        ') +
-    renderClassicNode(_classicFocus, 0, !0) +
-    "\n\n      </div>\n\n    </div>\n\n  </div>";
+    [
+      [
+        '\n\n  <!-- Barre de navigation -->\n\n  <div class="flex items-center gap-2 mb-3 flex-wrap">\n\n    <button onclick="classicGoHome()"\n\n      class="flex ',
+        "items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition\n\n             ",
+        t ? "bg-dark-700 text-gray-500 cursor-default" : "bg-dark-700 text-gray-300 hover:bg-dark-600 hover:text-white border border-dark-500",
+        '"\n\n      ',
+        t ? "disabled" : "",
+        '>\n\n      <i class="fas fa-home text-[11px]"></i> Racine\n\n    </button>\n\n    <button onclick="classicGoBack()"\n\n      class="flex items-center gap-1.5 ' +
+          "px-3 py-1.5 rounded-lg text-xs font-medium transition\n\n             ",
+        n ? "bg-dark-700 text-gray-300 hover:bg-dark-600 hover:text-white border border-dark-500" : "bg-dark-700 text-gray-500 cursor-default",
+        '"\n\n      ',
+        n ? "" : "disabled"
+      ].join(""),
+      '>\n\n      <i class="fas fa-arrow-left text-[11px]"></i> Remonter\n\n    </button>\n\n    <!-- Breadcrumb -->\n\n    <div class="flex items-center gap-1 ' +
+        'text-xs text-gray-500 overflow-x-auto flex-1 min-w-0">\n\n      ',
+      a,
+      '\n\n      <span class="text-rouge-400 font-semibold text-xs">',
+      _classicFocus.first_name,
+      " ",
+      _classicFocus.last_name,
+      '</span>\n\n    </div>\n\n    <span class="text-[10px] text-gray-600 hidden sm:block">\n\n      <i class="fas fa-hand-pointer mr-1"></i>Cliquer un membre ' +
+        'pour descendre\n\n    </span>\n\n  </div>\n\n\n\n  <!-- Arbre HTML -->\n\n  <div class="bg-dark-800 rounded-2xl border border-dark-600 p-6 overflow-x-auto">\n\n   ' +
+        ' <div class="flex justify-center">\n\n      <div class="inline-flex flex-col items-center text-center">\n\n        ',
+      renderClassicNode(_classicFocus, 0, !0)
+    ].join("") + "\n\n      </div>\n\n    </div>\n\n  </div>";
 }
 function getTreeMode() {
   return localStorage.getItem("tree_mode") || "classic";
@@ -3643,45 +3761,44 @@ async function renderBV(e, page, perPage) {
               "</div>"
             : '<span class="text-gray-600">—</span>';
           return (
-            "<tr>" +
-            "<td>" +
-            bvBadge(l.bv_type) +
-            "</td>" +
-            '<td class="text-rouge-400 font-bold">' +
-            fmtBV(l.bv_amount) +
-            "</td>" +
-            "<td>" +
-            src +
-            "</td>" +
-            "<td>" +
-            srcRank(l.source_rank) +
-            "</td>" +
-            "<td>" +
-            bvCell(l.source_left_bv, "text-blue-400") +
-            "</td>" +
-            "<td>" +
-            bvCell(l.source_right_bv, "text-green-400") +
-            "</td>" +
-            '<td class="text-gray-400">' +
-            (l.period || "—") +
-            "</td>" +
-            '<td class="text-gray-500 text-xs">' +
-            fmtDate(l.created_at) +
-            "</td>" +
-            "</tr>"
+            [
+              [
+                ["<tr>", "<td>", bvBadge(l.bv_type), "</td>", '<td class="text-rouge-400 font-bold">', fmtBV(l.bv_amount), "</td>", "<td>", src].join(
+                  ""
+                ),
+                "</td>",
+                "<td>",
+                srcRank(l.source_rank),
+                "</td>",
+                "<td>",
+                bvCell(l.source_left_bv, "text-blue-400"),
+                "</td>",
+                "<td>"
+              ].join(""),
+              bvCell(l.source_right_bv, "text-green-400"),
+              "</td>",
+              '<td class="text-gray-400">',
+              l.period || "—",
+              "</td>",
+              '<td class="text-gray-500 text-xs">',
+              fmtDate(l.created_at),
+              "</td>"
+            ].join("") + "</tr>"
           );
         })
         .join("") || '<tr><td colspan="8" class="text-center text-gray-500 py-8">Aucun BV enregistr\u00e9</td></tr>';
     document.getElementById("bv-table").innerHTML =
-      '<div class="overflow-x-auto"><table class="data-table"><thead><tr>' +
-      "<th>Type</th><th>Montant BV</th><th>Source</th><th>Rang</th>" +
-      '<th class="text-blue-400"><i class="fas fa-arrow-left mr-1"></i>BV Gauche</th>' +
-      '<th class="text-green-400"><i class="fas fa-arrow-right mr-1"></i>BV Droite</th>' +
-      "<th>P\u00e9riode</th><th>Date</th>" +
-      "</tr></thead><tbody>" +
-      rows +
-      "</tbody></table></div>" +
-      '<div class="px-6 py-3 text-sm text-gray-500 border-t border-dark-600">' +
+      [
+        '<div class="overflow-x-auto"><table class="data-table"><thead><tr>',
+        "<th>Type</th><th>Montant BV</th><th>Source</th><th>Rang</th>",
+        '<th class="text-blue-400"><i class="fas fa-arrow-left mr-1"></i>BV Gauche</th>',
+        '<th class="text-green-400"><i class="fas fa-arrow-right mr-1"></i>BV Droite</th>',
+        "<th>P\u00e9riode</th><th>Date</th>",
+        "</tr></thead><tbody>",
+        rows,
+        "</tbody></table></div>",
+        '<div class="px-6 py-3 text-sm text-gray-500 border-t border-dark-600">'
+      ].join("") +
       (d.total || 0) +
       " entr\u00e9e(s)</div>" +
       '<div id="bv-pagination" class="px-6 py-3 border-t border-dark-600"></div>';
@@ -3835,16 +3952,17 @@ async function renderCommissions(e, page, perPage) {
       const grad = gradients[color] || "#d4af37,#b8860b";
       const safeP = Math.min(100, Math.max(0, pct));
       return (
-        '\n        <div class="flex items-center gap-2">\n          <div class="flex-1 h-2 rounded-full bg-dark-700 overflow-hidden">\n            <div ' +
-        'class="h-full rounded-full transition-all" style="width:' +
-        safeP +
-        "%;background:linear-gradient(90deg," +
-        grad +
-        ')"></div>\n          </div>\n          <span class="text-[11px] font-bold ' +
-        (safeP >= 100 ? "text-emerald-400" : "text-gray-300") +
-        '">' +
-        safeP +
-        "%</span>\n        </div>"
+        [
+          '\n        <div class="flex items-center gap-2">\n          <div class="flex-1 h-2 rounded-full bg-dark-700 overflow-hidden">\n            <div ',
+          'class="h-full rounded-full transition-all" style="width:',
+          safeP,
+          "%;background:linear-gradient(90deg,",
+          grad,
+          ')"></div>\n          </div>\n          <span class="text-[11px] font-bold ',
+          safeP >= 100 ? "text-emerald-400" : "text-gray-300",
+          '">',
+          safeP
+        ].join("") + "%</span>\n        </div>"
       );
     }
     function fmtDate(d) {
@@ -3875,85 +3993,99 @@ async function renderCommissions(e, page, perPage) {
       const pct = p.progress_pct || 0;
       const daysLeft = p.days_remaining || 0;
       return (
-        '\n      <div class="rounded-xl border ' +
-        cc.border +
-        " " +
-        cc.bg +
-        (' overflow-hidden">\n        <!-- En-tête -->\n        <div class="px-4 py-3 flex items-center justify-between gap-2 flex-wrap">\n          <div ' +
-          'class="flex items-center gap-2.5">\n            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ') +
-        cc.bg +
-        " border " +
-        cc.border +
-        '">\n              <i class="fas ' +
-        tc.icon +
-        " " +
-        cc.icon +
-        ' text-sm"></i>\n            </div>\n            <div>\n              <div class="font-bold text-white text-sm">' +
-        (p.type_label || p.commission_type) +
-        '</div>\n              <div class="text-[11px] text-gray-400">P\xE9riode : ' +
-        (p.period || "—") +
-        '</div>\n            </div>\n          </div>\n          <div class="flex flex-col items-end gap-1">\n            ' +
-        statusBadge(p.status, p.status_label) +
-        "\n            " +
-        (isCompleted ? '<span class="text-[10px] text-emerald-400 font-bold">✅ 100% libéré</span>' : "") +
-        ('\n          </div>\n        </div>\n\n        <!-- Corps : chiffres clés -->\n        <div class="px-4 pb-1 grid grid-cols-2 sm:grid-cols-4 gap-2 ' +
-          'text-center">\n          <div class="bg-dark-800/60 rounded-lg p-2">\n            <div class="text-[10px] text-gray-400 mb-0.5">Commission totale</div>\n ' +
-          '           <div class="font-bold ') +
-        cc.text +
-        ' text-sm">' +
-        fmt$(p.total_amount) +
-        ('</div>\n          </div>\n          <div class="bg-dark-800/60 rounded-lg p-2">\n            <div class="text-[10px] text-gray-400 mb-0.5">Prime ' +
-          'journalière</div>\n            <div class="font-bold text-white text-sm">') +
-        fmt$(p.amount_per_day) +
-        ('<span class="text-[10px] text-gray-500">/j</span></div>\n          </div>\n          <div class="bg-dark-800/60 rounded-lg p-2">\n            <div ' +
-          'class="text-[10px] text-gray-400 mb-0.5">Déjà libéré</div>\n            <div class="font-bold text-emerald-400 text-sm">') +
-        fmt$(dejaLiberé) +
-        ('</div>\n          </div>\n          <div class="bg-dark-800/60 rounded-lg p-2">\n            <div class="text-[10px] text-gray-400 mb-0.5">Reste à ' +
-          'libérer</div>\n            <div class="font-bold ') +
-        (aLiberér > 0 ? "text-orange-400" : "text-gray-500") +
-        ' text-sm">' +
-        fmt$(aLiberér) +
-        '</div>\n          </div>\n        </div>\n\n        <!-- Barre de progression -->\n        <div class="px-4 py-2">\n          ' +
-        progressBar(pct, tc.color) +
-        '\n          <div class="flex justify-between text-[10px] text-gray-500 mt-1">\n            <span>' +
-        (p.days_paid || 0) +
-        " jour" +
-        ((p.days_paid || 0) > 1 ? "s" : "") +
-        " vers\xE9" +
-        ((p.days_paid || 0) > 1 ? "s" : "") +
-        "</span>\n            <span>" +
-        daysLeft +
-        " jour" +
-        (daysLeft > 1 ? "s" : "") +
-        " restant" +
-        (daysLeft > 1 ? "s" : "") +
-        " / " +
-        (p.days_in_month || 30) +
-        (' jours total</span>\n          </div>\n        </div>\n\n        <!-- Dates -->\n        <div class="px-4 pb-3 grid grid-cols-2 gap-2 text-[11px]">\n        ' +
-          '  <div class="flex items-center gap-1.5">\n            <i class="fas fa-calendar-alt text-gray-500 text-[10px]"></i>\n            <span ' +
-          'class="text-gray-400">Début libération :</span>\n            <span class="text-white font-medium">') +
-        fmtDate(p.eligible_date) +
-        ('</span>\n          </div>\n          <div class="flex items-center gap-1.5">\n            <i class="fas fa-flag-checkered text-gray-500 text-[10px]"></i>\n' +
-          '            <span class="text-gray-400">Fin prévue :</span>\n            <span class="text-white font-medium">') +
-        fmtDate(p.end_date) +
-        "</span>\n          </div>\n        </div>\n\n        <!-- Message explicatif -->\n        " +
-        (p.status_message
-          ? '\n        <div class="mx-4 mb-3 px-3 py-2 rounded-lg bg-dark-800/80 border border-dark-600 text-[11px] text-gray-300">\n          <i class="fas ' +
-            'fa-info-circle text-blue-400 mr-1.5"></i>' +
-            p.status_message +
-            "\n        </div>"
-          : "") +
-        "\n\n        " +
-        (isWaiting
-          ? '\n        <div class="mx-4 mb-3 px-3 py-2 rounded-lg bg-orange-500/10 border border-orange-500/20 text-[11px] text-orange-300">\n          <i class="fas ' +
-            'fa-hourglass-half mr-1.5"></i>\n          Votre commission est en attente de libération. Le délai de 14 jours garantit la sécurité de votre gain.\n      ' +
-            "    Dès le <strong>" +
-            fmtDate(p.eligible_date) +
-            "</strong>, tous les jours \xE9coul\xE9s seront vers\xE9s d'un coup (rattrapage),\n          puis une prime journali\xE8re de <strong>" +
-            fmt$(p.amount_per_day) +
-            "</strong> sera vers\xE9e chaque jour jusqu'\xE0 la fin du mois.\n        </div>"
-          : "") +
-        '\n      <div class="px-4 pb-3 flex justify-end">\n        <button onclick="showCommissionCalendar(\'' +
+        [
+          [
+            [
+              [
+                [
+                  [
+                    [
+                      '\n      <div class="rounded-xl border ',
+                      cc.border,
+                      " ",
+                      cc.bg,
+                      ' overflow-hidden">\n        <!-- En-tête -->\n        <div class="px-4 py-3 flex items-center justify-between gap-2 flex-wrap">\n          <div ' +
+                        'class="flex items-center gap-2.5">\n            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ',
+                      cc.bg,
+                      " border ",
+                      cc.border,
+                      '">\n              <i class="fas '
+                    ].join(""),
+                    tc.icon,
+                    " ",
+                    cc.icon,
+                    ' text-sm"></i>\n            </div>\n            <div>\n              <div class="font-bold text-white text-sm">',
+                    p.type_label || p.commission_type,
+                    '</div>\n              <div class="text-[11px] text-gray-400">P\xE9riode : ',
+                    p.period || "—",
+                    '</div>\n            </div>\n          </div>\n          <div class="flex flex-col items-end gap-1">\n            '
+                  ].join(""),
+                  statusBadge(p.status, p.status_label),
+                  "\n            ",
+                  isCompleted ? '<span class="text-[10px] text-emerald-400 font-bold">✅ 100% libéré</span>' : "",
+                  '\n          </div>\n        </div>\n\n        <!-- Corps : chiffres clés -->\n        <div class="px-4 pb-1 grid grid-cols-2 sm:grid-cols-4 gap-2 ' +
+                    'text-center">\n          <div class="bg-dark-800/60 rounded-lg p-2">\n            <div class="text-[10px] text-gray-400 mb-0.5">Commission totale</div>\n ' +
+                    '           <div class="font-bold ',
+                  cc.text,
+                  ' text-sm">',
+                  fmt$(p.total_amount),
+                  '</div>\n          </div>\n          <div class="bg-dark-800/60 rounded-lg p-2">\n            <div class="text-[10px] text-gray-400 mb-0.5">Prime ' +
+                    'journalière</div>\n            <div class="font-bold text-white text-sm">'
+                ].join(""),
+                fmt$(p.amount_per_day),
+                '<span class="text-[10px] text-gray-500">/j</span></div>\n          </div>\n          <div class="bg-dark-800/60 rounded-lg p-2">\n            <div ' +
+                  'class="text-[10px] text-gray-400 mb-0.5">Déjà libéré</div>\n            <div class="font-bold text-emerald-400 text-sm">',
+                fmt$(dejaLiberé),
+                '</div>\n          </div>\n          <div class="bg-dark-800/60 rounded-lg p-2">\n            <div class="text-[10px] text-gray-400 mb-0.5">Reste à ' +
+                  'libérer</div>\n            <div class="font-bold ',
+                aLiberér > 0 ? "text-orange-400" : "text-gray-500",
+                ' text-sm">',
+                fmt$(aLiberér),
+                '</div>\n          </div>\n        </div>\n\n        <!-- Barre de progression -->\n        <div class="px-4 py-2">\n          '
+              ].join(""),
+              progressBar(pct, tc.color),
+              '\n          <div class="flex justify-between text-[10px] text-gray-500 mt-1">\n            <span>',
+              p.days_paid || 0,
+              " jour",
+              (p.days_paid || 0) > 1 ? "s" : "",
+              " vers\xE9",
+              (p.days_paid || 0) > 1 ? "s" : "",
+              "</span>\n            <span>"
+            ].join(""),
+            daysLeft,
+            " jour",
+            daysLeft > 1 ? "s" : "",
+            " restant",
+            daysLeft > 1 ? "s" : "",
+            " / ",
+            p.days_in_month || 30,
+            ' jours total</span>\n          </div>\n        </div>\n\n        <!-- Dates -->\n        <div class="px-4 pb-3 grid grid-cols-2 gap-2 text-[11px]">\n        ' +
+              '  <div class="flex items-center gap-1.5">\n            <i class="fas fa-calendar-alt text-gray-500 text-[10px]"></i>\n            <span ' +
+              'class="text-gray-400">Début libération :</span>\n            <span class="text-white font-medium">'
+          ].join(""),
+          fmtDate(p.eligible_date),
+          '</span>\n          </div>\n          <div class="flex items-center gap-1.5">\n            <i class="fas fa-flag-checkered text-gray-500 text-[10px]"></i>\n' +
+            '            <span class="text-gray-400">Fin prévue :</span>\n            <span class="text-white font-medium">',
+          fmtDate(p.end_date),
+          "</span>\n          </div>\n        </div>\n\n        <!-- Message explicatif -->\n        ",
+          p.status_message
+            ? '\n        <div class="mx-4 mb-3 px-3 py-2 rounded-lg bg-dark-800/80 border border-dark-600 text-[11px] text-gray-300">\n          <i class="fas ' +
+              'fa-info-circle text-blue-400 mr-1.5"></i>' +
+              p.status_message +
+              "\n        </div>"
+            : "",
+          "\n\n        ",
+          isWaiting
+            ? '\n        <div class="mx-4 mb-3 px-3 py-2 rounded-lg bg-orange-500/10 border border-orange-500/20 text-[11px] text-orange-300">\n          <i class="fas ' +
+              'fa-hourglass-half mr-1.5"></i>\n          Votre commission est en attente de libération. Le délai de 14 jours garantit la sécurité de votre gain.\n      ' +
+              "    Dès le <strong>" +
+              fmtDate(p.eligible_date) +
+              "</strong>, tous les jours \xE9coul\xE9s seront vers\xE9s d'un coup (rattrapage),\n          puis une prime journali\xE8re de <strong>" +
+              fmt$(p.amount_per_day) +
+              "</strong> sera vers\xE9e chaque jour jusqu'\xE0 la fin du mois.\n        </div>"
+            : "",
+          '\n      <div class="px-4 pb-3 flex justify-end">\n        <button onclick="showCommissionCalendar(\''
+        ].join("") +
         p.id +
         ('\')"\n                class="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white border border-dark-500/60 hover:border-gray-500 rounded-lg ' +
           'px-3 py-1.5 transition-all">\n          <i class="fas fa-calendar-days text-[10px]"></i>Calendrier jour par jour\n        </button>\n      </div>\n      <' +
@@ -3970,18 +4102,19 @@ async function renderCommissions(e, page, perPage) {
       const totalDailyToday = inProgressPWE.reduce((sum, p) => sum + (p.amount_per_day || 0), 0);
       const totalPending = activePWE.reduce((sum, p) => sum + (p.amount_remaining || 0), 0);
       html +=
-        '\n      <!-- Résumé global -->\n      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">\n        <div class="stat-card text-center">\n          <div ' +
-        'class="text-xs text-gray-400 mb-1 uppercase tracking-wider">Total en libération</div>\n          <div class="text-2xl font-bold text-orange-400">' +
-        fmt$(totalPending) +
-        '</div>\n          <div class="text-xs text-gray-500 mt-1">' +
-        activePWE.filter((p) => p.status !== "completed").length +
-        (' commission(s) active(s)</div>\n        </div>\n        <div class="stat-card text-center">\n          <div class="text-xs text-gray-400 mb-1 uppercase ' +
-          'tracking-wider">Prime quotidienne actuelle</div>\n          <div class="text-2xl font-bold text-emerald-400">') +
-        fmt$(totalDailyToday) +
-        ('</div>\n          <div class="text-xs text-gray-500 mt-1">versée chaque jour</div>\n        </div>\n        <div class="stat-card text-center">\n          ' +
-          '<div class="text-xs text-gray-400 mb-1 uppercase tracking-wider">Commissions terminées</div>\n          <div class="text-2xl font-bold text-blue-400">') +
-        completedPWE.length +
-        '</div>\n          <div class="text-xs text-gray-500 mt-1">enti\xE8rement lib\xE9r\xE9es</div>\n        </div>\n      </div>';
+        [
+          '\n      <!-- Résumé global -->\n      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">\n        <div class="stat-card text-center">\n          <div ',
+          'class="text-xs text-gray-400 mb-1 uppercase tracking-wider">Total en libération</div>\n          <div class="text-2xl font-bold text-orange-400">',
+          fmt$(totalPending),
+          '</div>\n          <div class="text-xs text-gray-500 mt-1">',
+          activePWE.filter((p) => p.status !== "completed").length,
+          ' commission(s) active(s)</div>\n        </div>\n        <div class="stat-card text-center">\n          <div class="text-xs text-gray-400 mb-1 uppercase ' +
+            'tracking-wider">Prime quotidienne actuelle</div>\n          <div class="text-2xl font-bold text-emerald-400">',
+          fmt$(totalDailyToday),
+          '</div>\n          <div class="text-xs text-gray-500 mt-1">versée chaque jour</div>\n        </div>\n        <div class="stat-card text-center">\n          ' +
+            '<div class="text-xs text-gray-400 mb-1 uppercase tracking-wider">Commissions terminées</div>\n          <div class="text-2xl font-bold text-blue-400">',
+          completedPWE.length
+        ].join("") + '</div>\n          <div class="text-xs text-gray-500 mt-1">enti\xE8rement lib\xE9r\xE9es</div>\n        </div>\n      </div>';
       if (pendingPWE.length > 0) {
         html +=
           '\n        <div>\n          <h2 class="text-sm font-bold text-orange-400 uppercase tracking-wider mb-3 flex items-center gap-2">\n            <i ' +
@@ -4058,23 +4191,27 @@ async function renderCommissions(e, page, perPage) {
           label: c.status
         };
         html +=
-          '\n        <div class="flex items-center gap-3 p-3 rounded-xl bg-dark-700/50 border border-dark-600 hover:border-dark-500 transition-colors">\n          <' +
-          'div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ' +
-          cc.bg +
-          '">\n            <i class="fas ' +
-          tc.icon +
-          " " +
-          cc.icon +
-          ' text-xs"></i>\n          </div>\n          <div class="flex-1 min-w-0">\n            <div class="text-sm font-medium text-white truncate">' +
-          (c.description || c.type) +
-          '</div>\n            <div class="text-[11px] text-gray-400">' +
-          (c.period || "") +
-          " \xB7 " +
-          fmtDate(c.created_at) +
-          '</div>\n          </div>\n          <div class="text-right flex-shrink-0">\n            <div class="font-bold ' +
-          cc.text +
-          ' text-sm">' +
-          fmt$(c.amount) +
+          [
+            [
+              '\n        <div class="flex items-center gap-3 p-3 rounded-xl bg-dark-700/50 border border-dark-600 hover:border-dark-500 transition-colors">\n          <',
+              'div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ',
+              cc.bg,
+              '">\n            <i class="fas ',
+              tc.icon,
+              " ",
+              cc.icon,
+              ' text-xs"></i>\n          </div>\n          <div class="flex-1 min-w-0">\n            <div class="text-sm font-medium text-white truncate">',
+              c.description || c.type
+            ].join(""),
+            '</div>\n            <div class="text-[11px] text-gray-400">',
+            c.period || "",
+            " \xB7 ",
+            fmtDate(c.created_at),
+            '</div>\n          </div>\n          <div class="text-right flex-shrink-0">\n            <div class="font-bold ',
+            cc.text,
+            ' text-sm">',
+            fmt$(c.amount)
+          ].join("") +
           '</div>\n            <div class="text-[10px] ' +
           statusCfg.cls +
           '">' +
@@ -4083,24 +4220,25 @@ async function renderCommissions(e, page, perPage) {
       }
       html += "</div>";
       if (totalPages > 1) {
-        html +=
-          '\n        <div class="flex justify-center items-center gap-2 mt-4">\n          ' +
-          (page > 1
+        html += [
+          '\n        <div class="flex justify-center items-center gap-2 mt-4">\n          ',
+          page > 1
             ? "<button onclick=\"renderCommissions(document.getElementById('page-content')," +
               (page - 1) +
               ')" class="px-3 py-1.5 text-xs rounded-lg bg-dark-700 text-gray-300 hover:bg-dark-600 border border-dark-600">\u2190 Pr\xE9c\xE9dent</button>'
-            : "") +
-          '\n          <span class="text-xs text-gray-400">Page ' +
-          page +
-          " / " +
-          totalPages +
-          "</span>\n          " +
-          (page < totalPages
+            : "",
+          '\n          <span class="text-xs text-gray-400">Page ',
+          page,
+          " / ",
+          totalPages,
+          "</span>\n          ",
+          page < totalPages
             ? "<button onclick=\"renderCommissions(document.getElementById('page-content')," +
               (page + 1) +
               ')" class="px-3 py-1.5 text-xs rounded-lg bg-dark-700 text-gray-300 hover:bg-dark-600 border border-dark-600">Suivant \u2192</button>'
-            : "") +
-          "\n        </div>";
+            : "",
+          "\n        </div>"
+        ].join("");
       }
     }
     html += "</div></div>";
@@ -4114,128 +4252,136 @@ async function renderCommissions(e, page, perPage) {
 }
 function renderCommissionsFAQ(e) {
   e.innerHTML =
-    '\n  <div class="space-y-6 max-w-4xl mx-auto">\n\n    <!-- En-tête -->\n    <div class="flex items-center gap-3">\n      <button ' +
-    'onclick="showPage(\'commissions\')"\n              class="w-9 h-9 rounded-lg bg-dark-700 border border-dark-500 flex items-center justify-center ' +
-    'hover:border-rouge-500/30 transition-all">\n        <i class="fas fa-arrow-left text-gray-400 text-sm"></i>\n      </button>\n      <div>\n        <h1 ' +
-    'class="text-2xl font-bold text-white flex items-center gap-2">\n          <i class="fas fa-book-open text-rouge-400"></i>\n' +
-    ('          Comprendre mes commissions\n        </h1>\n        <p class="text-gray-400 text-sm mt-0.5">Guide complet — comment fonctionne la libération ' +
-      'progressive</p>\n      </div>\n    </div>\n\n    <!-- Résumé visuel du principe -->\n    <div class="rounded-xl border border-rouge-500/25 overflow-hidden"\n' +
-      '         style="background: linear-gradient(135deg, #1a1500 0%, #120f00 100%);">\n      <div class="h-0.5 w-full" ' +
-      'style="background:linear-gradient(90deg,#d4af37,#b8860b)"></div>\n      <div class="p-5">\n') +
-    ('        <div class="flex items-center gap-2 mb-3">\n          <i class="fas fa-lightbulb text-rouge-400"></i>\n          <h2 class="font-bold ' +
-      'text-rouge-400 text-lg">Le principe en 1 phrase</h2>\n        </div>\n        <p class="text-white text-base leading-relaxed">\n          Chaque ' +
-      'commission gagnée est <strong class="text-rouge-400">libérée progressivement</strong> dans votre portefeuille,\n          à raison d\'<strong ' +
-      'class="text-rouge-400">1/30ème par jour</strong>, sur la durée du mois où elle a été calculée.\n') +
-    ('          Elle ne peut pas commencer avant <strong class="text-rouge-400">le 1er du mois suivant</strong> ni avant\n          <strong ' +
-      'class="text-rouge-400">14 jours après son calcul</strong>.\n        </p>\n      </div>\n    </div>\n\n    <!-- Exemple concret 70 000$ -->\n    <div ' +
-      'class="rounded-xl border border-emerald-500/30 overflow-hidden bg-dark-800/60">\n      <div class="h-0.5 w-full" ' +
-      'style="background:linear-gradient(90deg,#10b981,#059669)"></div>\n      <div class="p-5">\n        <div class="flex items-center gap-2 mb-4">\n') +
-    ('          <div class="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">\n            <i class="fas fa-calculator text-emerald-400 ' +
-      'text-sm"></i>\n          </div>\n          <h2 class="font-bold text-white text-lg">Exemple concret : Prime de Leadership de 70 000 $</h2>\n        </div>' +
-      '\n\n        <!-- Données de l\'exemple -->\n        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">\n          <div class="bg-dark-700/80 ' +
-      'rounded-lg p-3 border border-dark-500/60">\n            <div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Montant total</div>\n') +
-    ('            <div class="text-xl font-black text-emerald-400">70 000 $</div>\n          </div>\n          <div class="bg-dark-700/80 rounded-lg p-3 ' +
-      'border border-dark-500/60">\n            <div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Mois de calcul</div>\n            <div ' +
-      'class="text-xl font-black text-white">31 jours</div>\n          </div>\n          <div class="bg-dark-700/80 rounded-lg p-3 border border-dark-500/60">\n ' +
-      '           <div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Prime / jour</div>\n') +
-    ('            <div class="text-xl font-black text-rouge-400">2 258,06 $</div>\n            <div class="text-[10px] text-gray-500 mt-0.5">70 000 ÷ 31</div>' +
-      '\n          </div>\n          <div class="bg-dark-700/80 rounded-lg p-3 border border-dark-500/60">\n            <div class="text-[10px] text-gray-400 ' +
-      'uppercase tracking-wider mb-1">Durée totale</div>\n            <div class="text-xl font-black text-white">31 jours</div>\n          </div>\n        </div>' +
-      '\n\n        <!-- Timeline de libération -->\n        <div class="mb-4">\n') +
-    ('          <div class="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">\n            <i class="fas fa-timeline text-rouge-400 text-xs">' +
-      '</i>\n            Scénario : commission calculée le 12 juillet → mois de juillet (31 jours)\n          </div>\n          <div class="space-y-2">\n\n        ' +
-      '    <!-- Étape 1 : Calcul -->\n            <div class="flex items-start gap-3">\n              <div class="w-7 h-7 rounded-full bg-blue-500/20 border ' +
-      'border-blue-500/40 flex items-center justify-center flex-shrink-0 mt-0.5">\n') +
-    ('                <i class="fas fa-check text-blue-400 text-[10px]"></i>\n              </div>\n              <div class="flex-1 bg-blue-500/5 border ' +
-      'border-blue-500/20 rounded-lg px-3 py-2">\n                <div class="text-sm font-semibold text-blue-300">12 juillet — Commission calculée</div>\n     ' +
-      '           <div class="text-xs text-gray-400 mt-0.5">\n                  Votre Prime de Leadership de 70 000 $ est enregistrée. Une fiche de libération ' +
-      "est créée.\n                </div>\n              </div>\n") +
-    ('            </div>\n\n            <!-- Étape 2 : Délai 14j -->\n            <div class="flex items-start gap-3">\n              <div class="w-7 h-7 ' +
-      'rounded-full bg-orange-500/20 border border-orange-500/40 flex items-center justify-center flex-shrink-0 mt-0.5">\n                <i class="fas ' +
-      'fa-hourglass-half text-orange-400 text-[10px]"></i>\n              </div>\n              <div class="flex-1 bg-orange-500/5 border border-orange-500/20 ' +
-      'rounded-lg px-3 py-2">\n                <div class="text-sm font-semibold text-orange-300">12 → 26 juillet — Délai de sécurité 14 jours</div>\n') +
-    ('                <div class="text-xs text-gray-400 mt-0.5">\n                  Période de vérification anti-fraude. Aucun versement pendant cette ' +
-      'période.\n                  La fiche affiche le statut <span class="text-orange-300 font-medium">« En attente (14j) »</span>.\n                </div>\n   ' +
-      '           </div>\n            </div>\n\n            <!-- Étape 3 : eligible_date -->\n            <div class="flex items-start gap-3">\n              <div ' +
-      'class="w-7 h-7 rounded-full bg-yellow-500/20 border border-yellow-500/40 flex items-center justify-center flex-shrink-0 mt-0.5">\n') +
-    ('                <i class="fas fa-calendar-check text-yellow-400 text-[10px]"></i>\n              </div>\n              <div class="flex-1 ' +
-      'bg-yellow-500/5 border border-yellow-500/20 rounded-lg px-3 py-2">\n                <div class="text-sm font-semibold text-yellow-300">1er août — Date ' +
-      'éligible (règle MAX)</div>\n                <div class="text-xs text-gray-400 mt-0.5">\n                  <strong class="text-white">Règle :</strong> ' +
-      'eligible_date = MAX(1er août, 26 juillet) = <strong class="text-yellow-300">1er août</strong>.\n') +
-    ("                  Le 1er du mois suivant prend priorité ici.\n                </div>\n              </div>\n            </div>\n\n            <!-- Étape 4 " +
-      ': Rattrapage -->\n            <div class="flex items-start gap-3">\n              <div class="w-7 h-7 rounded-full bg-emerald-500/20 border ' +
-      'border-emerald-500/40 flex items-center justify-center flex-shrink-0 mt-0.5">\n                <i class="fas fa-coins text-emerald-400 text-[10px]"></i>' +
-      '\n              </div>\n              <div class="flex-1 bg-emerald-500/5 border border-emerald-500/20 rounded-lg px-3 py-2">\n') +
-    ('                <div class="text-sm font-semibold text-emerald-300">1er août — Premier versement (avec rattrapage)</div>\n                <div ' +
-      'class="text-xs text-gray-400 mt-0.5">\n                  La libération couvre les jours 1 à 1 du mois d\'août.\n                  Versement : <strong ' +
-      'class="text-emerald-300">1 × 2 258,06 $ = 2 258,06 $</strong> (pas de rattrapage ici car eligible_date = start_date).\n                </div>\n          ' +
-      "    </div>\n            </div>\n\n            <!-- Étape 5 : Libération quotidienne -->\n") +
-    ('            <div class="flex items-start gap-3">\n              <div class="w-7 h-7 rounded-full bg-emerald-500/30 border border-emerald-500/50 flex ' +
-      'items-center justify-center flex-shrink-0 mt-0.5">\n                <i class="fas fa-droplet text-emerald-400 text-[10px]"></i>\n              </div>\n   ' +
-      '           <div class="flex-1 bg-emerald-500/8 border border-emerald-500/30 rounded-lg px-3 py-2">\n                <div class="text-sm font-semibold ' +
-      'text-emerald-300">2 → 31 août — 2 258,06 $ chaque jour</div>\n') +
-    ('                <div class="text-xs text-gray-400 mt-0.5">\n                  Chaque nuit, le système verse automatiquement 2 258,06 $ dans votre ' +
-      'portefeuille disponible.\n                  La fiche affiche le statut <span class="text-emerald-300 font-medium">« En cours de libération »</span>.\n   ' +
-      '             </div>\n              </div>\n            </div>\n\n            <!-- Étape 6 : 100% libéré -->\n            <div class="flex items-start ' +
-      'gap-3">\n              <div class="w-7 h-7 rounded-full bg-rouge-500/20 border border-rouge-500/40 flex items-center justify-center flex-shrink-0 ' +
-      'mt-0.5">\n') +
-    ('                <i class="fas fa-trophy text-rouge-400 text-[10px]"></i>\n              </div>\n              <div class="flex-1 bg-rouge-500/5 border ' +
-      'border-rouge-500/25 rounded-lg px-3 py-2">\n                <div class="text-sm font-semibold text-rouge-400">31 août — 100% libéré !</div>\n            ' +
-      '    <div class="text-xs text-gray-400 mt-0.5">\n                  Les 70 000 $ sont intégralement dans votre portefeuille disponible.\n                  ' +
-      'Vous recevez une notification <strong class="text-rouge-400">✅ Commission entièrement libérée</strong>.\n') +
-    ('                  La fiche passe au statut <span class="text-rouge-400 font-medium">« Entièrement libéré »</span>.\n                </div>\n             ' +
-      ' </div>\n            </div>\n\n          </div>\n        </div>\n\n        <!-- Barre de progression visuelle -->\n        <div class="bg-dark-700/60 ' +
-      'rounded-lg p-3 border border-dark-500/40">\n          <div class="flex justify-between text-xs text-gray-400 mb-2">\n            <span>Progression de ' +
-      'libération</span>\n            <span class="text-emerald-400 font-bold">0% → 100% sur 31 jours</span>\n') +
-    ('          </div>\n          <div class="h-3 bg-dark-600 rounded-full overflow-hidden">\n            <div class="h-full rounded-full" style="width:100%; ' +
-      'background:linear-gradient(90deg,#10b981,#059669)"></div>\n          </div>\n          <div class="flex justify-between text-[10px] text-gray-500 mt-1">\n' +
-      "            <span>Jour 1 — 2 258,06 $</span>\n            <span>Jour 31 — 70 000 $ ✓</span>\n          </div>\n        </div>\n      </div>\n    </div>\n\n   " +
-      ' <!-- Cas spécial : Rattrapage -->\n    <div class="rounded-xl border border-orange-500/30 overflow-hidden bg-dark-800/60">\n') +
-    ('      <div class="p-5">\n        <div class="flex items-center gap-2 mb-3">\n          <div class="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center ' +
-      'justify-center">\n            <i class="fas fa-bolt text-orange-400 text-sm"></i>\n          </div>\n          <h2 class="font-bold text-white text-lg">' +
-      'Le rattrapage — quand eligible_date > start_date</h2>\n        </div>\n        <p class="text-gray-300 text-sm mb-4">\n          Si votre date éligible ' +
-      "tombe <em>au milieu du mois</em> (14j + date_commission < 1er M+1),\n") +
-    ('          le premier versement couvre <strong class="text-orange-300">tous les jours manqués d\'un coup</strong>.\n        </p>\n        <div ' +
-      'class="bg-orange-500/5 border border-orange-500/20 rounded-lg p-4">\n          <div class="text-sm font-semibold text-orange-300 mb-2">\n            ' +
-      'Exemple : commission calculée le 2 août (mois d\'août = 31j)\n          </div>\n          <div class="space-y-1 text-xs text-gray-300">\n            <div ' +
-      'class="flex gap-2"><span class="text-gray-500 w-36">14j après :</span><span>16 août</span></div>\n') +
-    ('            <div class="flex gap-2"><span class="text-gray-500 w-36">1er M+1 :</span><span>1er septembre</span></div>\n            <div class="flex ' +
-      'gap-2"><span class="text-gray-500 w-36">eligible_date :</span><span class="text-orange-300 font-medium">MAX(1er sept, 16 août) = 1er septembre</span><' +
-      '/div>\n            <div class="flex gap-2"><span class="text-gray-500 w-36">start_date :</span><span>1er août (début du mois)</span></div>\n            <' +
-      'div class="flex gap-2 mt-2 pt-2 border-t border-orange-500/20">\n') +
-    ('              <span class="text-gray-500 w-36">Jours manqués :</span>\n              <span class="text-orange-300 font-bold">31 jours (tout le mois ' +
-      'd\'août)</span>\n            </div>\n            <div class="flex gap-2">\n              <span class="text-gray-500 w-36">Rattrapage versé :</span>\n       ' +
-      '       <span class="text-orange-300 font-bold">31 × APD$ en une seule fois</span>\n            </div>\n          </div>\n          <div class="mt-3 ' +
-      'text-xs text-orange-400/80 flex items-start gap-1.5">\n            <i class="fas fa-bell mt-0.5"></i>\n') +
-    ("            <span>Vous recevrez la notification <strong>💰 Rattrapage de commission versé</strong> avec le montant exact.</span>\n          </div>\n     " +
-      '   </div>\n      </div>\n    </div>\n\n    <!-- Les 5 types de bonus -->\n    <div class="rounded-xl border border-dark-500/60 overflow-hidden ' +
-      'bg-dark-800/60">\n      <div class="p-5">\n        <div class="flex items-center gap-2 mb-4">\n          <i class="fas fa-layer-group text-rouge-400"></i>' +
-      '\n          <h2 class="font-bold text-white text-lg">Les 5 types de commissions</h2>\n') +
-    ('        </div>\n        <div class="space-y-2">\n\n          <div class="flex items-center gap-3 p-3 rounded-lg bg-rouge-500/5 border ' +
-      'border-rouge-500/20">\n            <div class="w-8 h-8 rounded-lg bg-rouge-500/15 flex items-center justify-center flex-shrink-0">\n              <i ' +
-      'class="fas fa-crown text-rouge-400 text-sm"></i>\n            </div>\n            <div class="flex-1">\n              <div class="text-sm font-bold ' +
-      'text-rouge-400">Prime de Leadership</div>\n              <div class="text-xs text-gray-400">Basée sur le volume BV de votre organisation — la plus ' +
-      "importante</div>\n") +
-    ('            </div>\n            <div class="text-xs text-rouge-400/60 font-mono">prime_leadership</div>\n          </div>\n\n          <div class="flex ' +
-      'items-center gap-3 p-3 rounded-lg bg-purple-500/5 border border-purple-500/20">\n            <div class="w-8 h-8 rounded-lg bg-purple-500/20 flex ' +
-      'items-center justify-center flex-shrink-0">\n              <i class="fas fa-sitemap text-purple-400 text-sm"></i>\n            </div>\n            <div ' +
-      'class="flex-1">\n              <div class="text-sm font-bold text-purple-300">Bonus d\'Influence</div>\n') +
-    ('              <div class="text-xs text-gray-400">Revenus sur les rangs qualifiés de votre réseau en profondeur</div>\n            </div>\n            <' +
-      'div class="text-xs text-purple-400/60 font-mono">bonus_influence</div>\n          </div>\n\n          <div class="flex items-center gap-3 p-3 rounded-lg ' +
-      'bg-yellow-500/5 border border-yellow-500/20">\n            <div class="w-8 h-8 rounded-lg bg-yellow-500/20 flex items-center justify-center ' +
-      'flex-shrink-0">\n              <i class="fas fa-sun text-yellow-400 text-sm"></i>\n') +
-    ('            </div>\n            <div class="flex-1">\n              <div class="text-sm font-bold text-yellow-300">Bonus de Rayonnement</div>\n           ' +
-      '   <div class="text-xs text-gray-400">Pourcentage sur les primes de leadership de vos filleuls de rang</div>\n            </div>\n            <div ' +
-      'class="text-xs text-yellow-400/60 font-mono">bonus_rayonnement</div>\n          </div>\n\n          <div class="flex items-center gap-3 p-3 rounded-lg ' +
-      'bg-blue-500/5 border border-blue-500/20">\n            <div class="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">\n') +
-    ('              <i class="fas fa-handshake text-blue-400 text-sm"></i>\n            </div>\n            <div class="flex-1">\n              <div ' +
-      'class="text-sm font-bold text-blue-300">Valorisation Recommandation</div>\n              <div class="text-xs text-gray-400">Commission sur les packages ' +
-      'achetés par vos filleuls directs</div>\n            </div>\n            <div class="text-xs text-blue-400/60 font-mono">valorisation_recommandation</div>' +
-      '\n          </div>\n\n          <div class="flex items-center gap-3 p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20">\n') +
-    ('            <div class="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center flex-shrink-0">\n              <i class="fas fa-rocket ' +
-      'text-emerald-400 text-sm"></i>\n            </div>\n            <div class="flex-1">\n              <div class="text-sm font-bold text-emerald-300">Fast ' +
-      'Start Bonus</div>\n              <div class="text-xs text-gray-400">Bonus par palier BV atteint dans les 30 premiers jours</div>\n            </div>\n    ' +
-      '        <div class="text-xs text-emerald-400/60 font-mono">fast_start</div>\n') +
+    [
+      [
+        [
+          [
+            '\n  <div class="space-y-6 max-w-4xl mx-auto">\n\n    <!-- En-tête -->\n    <div class="flex items-center gap-3">\n      <button ',
+            'onclick="showPage(\'commissions\')"\n              class="w-9 h-9 rounded-lg bg-dark-700 border border-dark-500 flex items-center justify-center ',
+            'hover:border-rouge-500/30 transition-all">\n        <i class="fas fa-arrow-left text-gray-400 text-sm"></i>\n      </button>\n      <div>\n        <h1 ',
+            'class="text-2xl font-bold text-white flex items-center gap-2">\n          <i class="fas fa-book-open text-rouge-400"></i>\n',
+            '          Comprendre mes commissions\n        </h1>\n        <p class="text-gray-400 text-sm mt-0.5">Guide complet — comment fonctionne la libération ' +
+              'progressive</p>\n      </div>\n    </div>\n\n    <!-- Résumé visuel du principe -->\n    <div class="rounded-xl border border-rouge-500/25 overflow-hidden"\n' +
+              '         style="background: linear-gradient(135deg, #1a1500 0%, #120f00 100%);">\n      <div class="h-0.5 w-full" ' +
+              'style="background:linear-gradient(90deg,#d4af37,#b8860b)"></div>\n      <div class="p-5">\n',
+            '        <div class="flex items-center gap-2 mb-3">\n          <i class="fas fa-lightbulb text-rouge-400"></i>\n          <h2 class="font-bold ' +
+              'text-rouge-400 text-lg">Le principe en 1 phrase</h2>\n        </div>\n        <p class="text-white text-base leading-relaxed">\n          Chaque ' +
+              'commission gagnée est <strong class="text-rouge-400">libérée progressivement</strong> dans votre portefeuille,\n          à raison d\'<strong ' +
+              'class="text-rouge-400">1/30ème par jour</strong>, sur la durée du mois où elle a été calculée.\n',
+            '          Elle ne peut pas commencer avant <strong class="text-rouge-400">le 1er du mois suivant</strong> ni avant\n          <strong ' +
+              'class="text-rouge-400">14 jours après son calcul</strong>.\n        </p>\n      </div>\n    </div>\n\n    <!-- Exemple concret 70 000$ -->\n    <div ' +
+              'class="rounded-xl border border-emerald-500/30 overflow-hidden bg-dark-800/60">\n      <div class="h-0.5 w-full" ' +
+              'style="background:linear-gradient(90deg,#10b981,#059669)"></div>\n      <div class="p-5">\n        <div class="flex items-center gap-2 mb-4">\n',
+            '          <div class="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">\n            <i class="fas fa-calculator text-emerald-400 ' +
+              'text-sm"></i>\n          </div>\n          <h2 class="font-bold text-white text-lg">Exemple concret : Prime de Leadership de 70 000 $</h2>\n        </div>' +
+              '\n\n        <!-- Données de l\'exemple -->\n        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">\n          <div class="bg-dark-700/80 ' +
+              'rounded-lg p-3 border border-dark-500/60">\n            <div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Montant total</div>\n',
+            '            <div class="text-xl font-black text-emerald-400">70 000 $</div>\n          </div>\n          <div class="bg-dark-700/80 rounded-lg p-3 ' +
+              'border border-dark-500/60">\n            <div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Mois de calcul</div>\n            <div ' +
+              'class="text-xl font-black text-white">31 jours</div>\n          </div>\n          <div class="bg-dark-700/80 rounded-lg p-3 border border-dark-500/60">\n ' +
+              '           <div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Prime / jour</div>\n'
+          ].join(""),
+          '            <div class="text-xl font-black text-rouge-400">2 258,06 $</div>\n            <div class="text-[10px] text-gray-500 mt-0.5">70 000 ÷ 31</div>' +
+            '\n          </div>\n          <div class="bg-dark-700/80 rounded-lg p-3 border border-dark-500/60">\n            <div class="text-[10px] text-gray-400 ' +
+            'uppercase tracking-wider mb-1">Durée totale</div>\n            <div class="text-xl font-black text-white">31 jours</div>\n          </div>\n        </div>' +
+            '\n\n        <!-- Timeline de libération -->\n        <div class="mb-4">\n',
+          '          <div class="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">\n            <i class="fas fa-timeline text-rouge-400 text-xs">' +
+            '</i>\n            Scénario : commission calculée le 12 juillet → mois de juillet (31 jours)\n          </div>\n          <div class="space-y-2">\n\n        ' +
+            '    <!-- Étape 1 : Calcul -->\n            <div class="flex items-start gap-3">\n              <div class="w-7 h-7 rounded-full bg-blue-500/20 border ' +
+            'border-blue-500/40 flex items-center justify-center flex-shrink-0 mt-0.5">\n',
+          '                <i class="fas fa-check text-blue-400 text-[10px]"></i>\n              </div>\n              <div class="flex-1 bg-blue-500/5 border ' +
+            'border-blue-500/20 rounded-lg px-3 py-2">\n                <div class="text-sm font-semibold text-blue-300">12 juillet — Commission calculée</div>\n     ' +
+            '           <div class="text-xs text-gray-400 mt-0.5">\n                  Votre Prime de Leadership de 70 000 $ est enregistrée. Une fiche de libération ' +
+            "est créée.\n                </div>\n              </div>\n",
+          '            </div>\n\n            <!-- Étape 2 : Délai 14j -->\n            <div class="flex items-start gap-3">\n              <div class="w-7 h-7 ' +
+            'rounded-full bg-orange-500/20 border border-orange-500/40 flex items-center justify-center flex-shrink-0 mt-0.5">\n                <i class="fas ' +
+            'fa-hourglass-half text-orange-400 text-[10px]"></i>\n              </div>\n              <div class="flex-1 bg-orange-500/5 border border-orange-500/20 ' +
+            'rounded-lg px-3 py-2">\n                <div class="text-sm font-semibold text-orange-300">12 → 26 juillet — Délai de sécurité 14 jours</div>\n',
+          '                <div class="text-xs text-gray-400 mt-0.5">\n                  Période de vérification anti-fraude. Aucun versement pendant cette ' +
+            'période.\n                  La fiche affiche le statut <span class="text-orange-300 font-medium">« En attente (14j) »</span>.\n                </div>\n   ' +
+            '           </div>\n            </div>\n\n            <!-- Étape 3 : eligible_date -->\n            <div class="flex items-start gap-3">\n              <div ' +
+            'class="w-7 h-7 rounded-full bg-yellow-500/20 border border-yellow-500/40 flex items-center justify-center flex-shrink-0 mt-0.5">\n',
+          '                <i class="fas fa-calendar-check text-yellow-400 text-[10px]"></i>\n              </div>\n              <div class="flex-1 ' +
+            'bg-yellow-500/5 border border-yellow-500/20 rounded-lg px-3 py-2">\n                <div class="text-sm font-semibold text-yellow-300">1er août — Date ' +
+            'éligible (règle MAX)</div>\n                <div class="text-xs text-gray-400 mt-0.5">\n                  <strong class="text-white">Règle :</strong> ' +
+            'eligible_date = MAX(1er août, 26 juillet) = <strong class="text-yellow-300">1er août</strong>.\n',
+          "                  Le 1er du mois suivant prend priorité ici.\n                </div>\n              </div>\n            </div>\n\n            <!-- Étape 4 " +
+            ': Rattrapage -->\n            <div class="flex items-start gap-3">\n              <div class="w-7 h-7 rounded-full bg-emerald-500/20 border ' +
+            'border-emerald-500/40 flex items-center justify-center flex-shrink-0 mt-0.5">\n                <i class="fas fa-coins text-emerald-400 text-[10px]"></i>' +
+            '\n              </div>\n              <div class="flex-1 bg-emerald-500/5 border border-emerald-500/20 rounded-lg px-3 py-2">\n',
+          '                <div class="text-sm font-semibold text-emerald-300">1er août — Premier versement (avec rattrapage)</div>\n                <div ' +
+            'class="text-xs text-gray-400 mt-0.5">\n                  La libération couvre les jours 1 à 1 du mois d\'août.\n                  Versement : <strong ' +
+            'class="text-emerald-300">1 × 2 258,06 $ = 2 258,06 $</strong> (pas de rattrapage ici car eligible_date = start_date).\n                </div>\n          ' +
+            "    </div>\n            </div>\n\n            <!-- Étape 5 : Libération quotidienne -->\n"
+        ].join(""),
+        '            <div class="flex items-start gap-3">\n              <div class="w-7 h-7 rounded-full bg-emerald-500/30 border border-emerald-500/50 flex ' +
+          'items-center justify-center flex-shrink-0 mt-0.5">\n                <i class="fas fa-droplet text-emerald-400 text-[10px]"></i>\n              </div>\n   ' +
+          '           <div class="flex-1 bg-emerald-500/8 border border-emerald-500/30 rounded-lg px-3 py-2">\n                <div class="text-sm font-semibold ' +
+          'text-emerald-300">2 → 31 août — 2 258,06 $ chaque jour</div>\n',
+        '                <div class="text-xs text-gray-400 mt-0.5">\n                  Chaque nuit, le système verse automatiquement 2 258,06 $ dans votre ' +
+          'portefeuille disponible.\n                  La fiche affiche le statut <span class="text-emerald-300 font-medium">« En cours de libération »</span>.\n   ' +
+          '             </div>\n              </div>\n            </div>\n\n            <!-- Étape 6 : 100% libéré -->\n            <div class="flex items-start ' +
+          'gap-3">\n              <div class="w-7 h-7 rounded-full bg-rouge-500/20 border border-rouge-500/40 flex items-center justify-center flex-shrink-0 ' +
+          'mt-0.5">\n',
+        '                <i class="fas fa-trophy text-rouge-400 text-[10px]"></i>\n              </div>\n              <div class="flex-1 bg-rouge-500/5 border ' +
+          'border-rouge-500/25 rounded-lg px-3 py-2">\n                <div class="text-sm font-semibold text-rouge-400">31 août — 100% libéré !</div>\n            ' +
+          '    <div class="text-xs text-gray-400 mt-0.5">\n                  Les 70 000 $ sont intégralement dans votre portefeuille disponible.\n                  ' +
+          'Vous recevez une notification <strong class="text-rouge-400">✅ Commission entièrement libérée</strong>.\n',
+        '                  La fiche passe au statut <span class="text-rouge-400 font-medium">« Entièrement libéré »</span>.\n                </div>\n             ' +
+          ' </div>\n            </div>\n\n          </div>\n        </div>\n\n        <!-- Barre de progression visuelle -->\n        <div class="bg-dark-700/60 ' +
+          'rounded-lg p-3 border border-dark-500/40">\n          <div class="flex justify-between text-xs text-gray-400 mb-2">\n            <span>Progression de ' +
+          'libération</span>\n            <span class="text-emerald-400 font-bold">0% → 100% sur 31 jours</span>\n',
+        '          </div>\n          <div class="h-3 bg-dark-600 rounded-full overflow-hidden">\n            <div class="h-full rounded-full" style="width:100%; ' +
+          'background:linear-gradient(90deg,#10b981,#059669)"></div>\n          </div>\n          <div class="flex justify-between text-[10px] text-gray-500 mt-1">\n' +
+          "            <span>Jour 1 — 2 258,06 $</span>\n            <span>Jour 31 — 70 000 $ ✓</span>\n          </div>\n        </div>\n      </div>\n    </div>\n\n   " +
+          ' <!-- Cas spécial : Rattrapage -->\n    <div class="rounded-xl border border-orange-500/30 overflow-hidden bg-dark-800/60">\n',
+        '      <div class="p-5">\n        <div class="flex items-center gap-2 mb-3">\n          <div class="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center ' +
+          'justify-center">\n            <i class="fas fa-bolt text-orange-400 text-sm"></i>\n          </div>\n          <h2 class="font-bold text-white text-lg">' +
+          'Le rattrapage — quand eligible_date > start_date</h2>\n        </div>\n        <p class="text-gray-300 text-sm mb-4">\n          Si votre date éligible ' +
+          "tombe <em>au milieu du mois</em> (14j + date_commission < 1er M+1),\n",
+        '          le premier versement couvre <strong class="text-orange-300">tous les jours manqués d\'un coup</strong>.\n        </p>\n        <div ' +
+          'class="bg-orange-500/5 border border-orange-500/20 rounded-lg p-4">\n          <div class="text-sm font-semibold text-orange-300 mb-2">\n            ' +
+          'Exemple : commission calculée le 2 août (mois d\'août = 31j)\n          </div>\n          <div class="space-y-1 text-xs text-gray-300">\n            <div ' +
+          'class="flex gap-2"><span class="text-gray-500 w-36">14j après :</span><span>16 août</span></div>\n',
+        '            <div class="flex gap-2"><span class="text-gray-500 w-36">1er M+1 :</span><span>1er septembre</span></div>\n            <div class="flex ' +
+          'gap-2"><span class="text-gray-500 w-36">eligible_date :</span><span class="text-orange-300 font-medium">MAX(1er sept, 16 août) = 1er septembre</span><' +
+          '/div>\n            <div class="flex gap-2"><span class="text-gray-500 w-36">start_date :</span><span>1er août (début du mois)</span></div>\n            <' +
+          'div class="flex gap-2 mt-2 pt-2 border-t border-orange-500/20">\n'
+      ].join(""),
+      '              <span class="text-gray-500 w-36">Jours manqués :</span>\n              <span class="text-orange-300 font-bold">31 jours (tout le mois ' +
+        'd\'août)</span>\n            </div>\n            <div class="flex gap-2">\n              <span class="text-gray-500 w-36">Rattrapage versé :</span>\n       ' +
+        '       <span class="text-orange-300 font-bold">31 × APD$ en une seule fois</span>\n            </div>\n          </div>\n          <div class="mt-3 ' +
+        'text-xs text-orange-400/80 flex items-start gap-1.5">\n            <i class="fas fa-bell mt-0.5"></i>\n',
+      "            <span>Vous recevrez la notification <strong>💰 Rattrapage de commission versé</strong> avec le montant exact.</span>\n          </div>\n     " +
+        '   </div>\n      </div>\n    </div>\n\n    <!-- Les 5 types de bonus -->\n    <div class="rounded-xl border border-dark-500/60 overflow-hidden ' +
+        'bg-dark-800/60">\n      <div class="p-5">\n        <div class="flex items-center gap-2 mb-4">\n          <i class="fas fa-layer-group text-rouge-400"></i>' +
+        '\n          <h2 class="font-bold text-white text-lg">Les 5 types de commissions</h2>\n',
+      '        </div>\n        <div class="space-y-2">\n\n          <div class="flex items-center gap-3 p-3 rounded-lg bg-rouge-500/5 border ' +
+        'border-rouge-500/20">\n            <div class="w-8 h-8 rounded-lg bg-rouge-500/15 flex items-center justify-center flex-shrink-0">\n              <i ' +
+        'class="fas fa-crown text-rouge-400 text-sm"></i>\n            </div>\n            <div class="flex-1">\n              <div class="text-sm font-bold ' +
+        'text-rouge-400">Prime de Leadership</div>\n              <div class="text-xs text-gray-400">Basée sur le volume BV de votre organisation — la plus ' +
+        "importante</div>\n",
+      '            </div>\n            <div class="text-xs text-rouge-400/60 font-mono">prime_leadership</div>\n          </div>\n\n          <div class="flex ' +
+        'items-center gap-3 p-3 rounded-lg bg-purple-500/5 border border-purple-500/20">\n            <div class="w-8 h-8 rounded-lg bg-purple-500/20 flex ' +
+        'items-center justify-center flex-shrink-0">\n              <i class="fas fa-sitemap text-purple-400 text-sm"></i>\n            </div>\n            <div ' +
+        'class="flex-1">\n              <div class="text-sm font-bold text-purple-300">Bonus d\'Influence</div>\n',
+      '              <div class="text-xs text-gray-400">Revenus sur les rangs qualifiés de votre réseau en profondeur</div>\n            </div>\n            <' +
+        'div class="text-xs text-purple-400/60 font-mono">bonus_influence</div>\n          </div>\n\n          <div class="flex items-center gap-3 p-3 rounded-lg ' +
+        'bg-yellow-500/5 border border-yellow-500/20">\n            <div class="w-8 h-8 rounded-lg bg-yellow-500/20 flex items-center justify-center ' +
+        'flex-shrink-0">\n              <i class="fas fa-sun text-yellow-400 text-sm"></i>\n',
+      '            </div>\n            <div class="flex-1">\n              <div class="text-sm font-bold text-yellow-300">Bonus de Rayonnement</div>\n           ' +
+        '   <div class="text-xs text-gray-400">Pourcentage sur les primes de leadership de vos filleuls de rang</div>\n            </div>\n            <div ' +
+        'class="text-xs text-yellow-400/60 font-mono">bonus_rayonnement</div>\n          </div>\n\n          <div class="flex items-center gap-3 p-3 rounded-lg ' +
+        'bg-blue-500/5 border border-blue-500/20">\n            <div class="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">\n',
+      '              <i class="fas fa-handshake text-blue-400 text-sm"></i>\n            </div>\n            <div class="flex-1">\n              <div ' +
+        'class="text-sm font-bold text-blue-300">Valorisation Recommandation</div>\n              <div class="text-xs text-gray-400">Commission sur les packages ' +
+        'achetés par vos filleuls directs</div>\n            </div>\n            <div class="text-xs text-blue-400/60 font-mono">valorisation_recommandation</div>' +
+        '\n          </div>\n\n          <div class="flex items-center gap-3 p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20">\n',
+      '            <div class="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center flex-shrink-0">\n              <i class="fas fa-rocket ' +
+        'text-emerald-400 text-sm"></i>\n            </div>\n            <div class="flex-1">\n              <div class="text-sm font-bold text-emerald-300">Fast ' +
+        'Start Bonus</div>\n              <div class="text-xs text-gray-400">Bonus par palier BV atteint dans les 30 premiers jours</div>\n            </div>\n    ' +
+        '        <div class="text-xs text-emerald-400/60 font-mono">fast_start</div>\n'
+    ].join("") +
     ('          </div>\n\n        </div>\n      </div>\n    </div>\n\n    <!-- Glossaire des statuts -->\n    <div class="rounded-xl border border-dark-500/60 ' +
       'overflow-hidden bg-dark-800/60">\n      <div class="p-5">\n        <div class="flex items-center gap-2 mb-4">\n          <i class="fas fa-tags ' +
       'text-gray-400"></i>\n          <h2 class="font-bold text-white text-lg">Glossaire des statuts</h2>\n        </div>\n        <div class="space-y-2">\n\n     ' +
@@ -4293,16 +4439,18 @@ function renderCommissionsFAQ(e) {
     ]
       .map(
         (item, i) =>
-          '\n            <div class="border border-dark-500/60 rounded-lg overflow-hidden">\n              <button onclick="toggleFAQ(' +
-          i +
-          (')"\n                      class="w-full flex items-center justify-between p-3 text-left hover:bg-dark-700/40 transition-all">\n                <span ' +
-            'class="text-sm font-medium text-white pr-3">') +
-          item.q +
-          '</span>\n                <i id="faq-icon-' +
-          i +
-          '" class="fas fa-chevron-down text-gray-400 text-xs flex-shrink-0 transition-transform"></i>\n              </button>\n              <div id="faq-body-' +
-          i +
-          '" class="hidden px-3 pb-3">\n                <p class="text-sm text-gray-400">' +
+          [
+            '\n            <div class="border border-dark-500/60 rounded-lg overflow-hidden">\n              <button onclick="toggleFAQ(',
+            i,
+            ')"\n                      class="w-full flex items-center justify-between p-3 text-left hover:bg-dark-700/40 transition-all">\n                <span ' +
+              'class="text-sm font-medium text-white pr-3">',
+            item.q,
+            '</span>\n                <i id="faq-icon-',
+            i,
+            '" class="fas fa-chevron-down text-gray-400 text-xs flex-shrink-0 transition-transform"></i>\n              </button>\n              <div id="faq-body-',
+            i,
+            '" class="hidden px-3 pb-3">\n                <p class="text-sm text-gray-400">'
+          ].join("") +
           item.a +
           "</p>\n              </div>\n            </div>\n          "
       )
@@ -4349,70 +4497,79 @@ async function showCommissionCalendar(pweId) {
     const rows = d.calendar
       .map(
         (day) =>
-          '\n      <div class="flex items-center gap-2 py-1 border-b border-dark-600/40 last:border-0">\n        <div class="w-6 text-[10px] text-gray-500 ' +
-          'text-right flex-shrink-0">' +
-          day.day_index +
-          '</div>\n        <div class="text-xs text-gray-400 w-20 flex-shrink-0">' +
-          day.date +
-          '</div>\n        <div class="flex-1 text-xs text-gray-300">' +
-          (day.is_catchup
-            ? '<span class="text-orange-300 font-medium">Rattrapage</span>'
-            : day.status === "waiting"
-              ? '<span class="text-orange-400">Délai 14j</span>'
-              : day.status === "paid"
-                ? '<span class="text-emerald-400">Versé</span>'
-                : '<span class="text-blue-400">À venir</span>') +
-          '</div>\n        <div class="text-xs font-mono ' +
-          (day.status === "paid" ? "text-emerald-400" : day.status === "waiting" ? "text-gray-600" : "text-blue-400") +
+          [
+            '\n      <div class="flex items-center gap-2 py-1 border-b border-dark-600/40 last:border-0">\n        <div class="w-6 text-[10px] text-gray-500 ',
+            'text-right flex-shrink-0">',
+            day.day_index,
+            '</div>\n        <div class="text-xs text-gray-400 w-20 flex-shrink-0">',
+            day.date,
+            '</div>\n        <div class="flex-1 text-xs text-gray-300">',
+            day.is_catchup
+              ? '<span class="text-orange-300 font-medium">Rattrapage</span>'
+              : day.status === "waiting"
+                ? '<span class="text-orange-400">Délai 14j</span>'
+                : day.status === "paid"
+                  ? '<span class="text-emerald-400">Versé</span>'
+                  : '<span class="text-blue-400">À venir</span>',
+            '</div>\n        <div class="text-xs font-mono ',
+            day.status === "paid" ? "text-emerald-400" : day.status === "waiting" ? "text-gray-600" : "text-blue-400"
+          ].join("") +
           '">' +
           (day.status !== "waiting" ? "+" + fmt$(day.amount) : "—") +
           "</div>\n      </div>"
       )
       .join("");
-    modal.innerHTML =
-      '\n      <div class="bg-dark-800 rounded-xl border border-dark-500 max-w-lg w-full overflow-hidden max-h-[90vh] flex flex-col">\n        <div ' +
-      'class="h-0.5 w-full" style="background:linear-gradient(90deg,#10b981,#d4af37)"></div>\n        <div class="p-4 border-b border-dark-600 flex ' +
-      'items-center justify-between">\n          <div>\n            <div class="font-bold text-white">' +
-      d.type_label +
-      '</div>\n            <div class="text-xs text-gray-400">' +
-      d.period +
-      " \xB7 " +
-      fmt$(d.total_amount) +
-      (' total</div>\n          </div>\n          <button onclick="document.getElementById(\'calendar-modal\').remove()"\n                  class="w-8 h-8 ' +
-        'rounded-lg bg-dark-700 flex items-center justify-center hover:bg-dark-600 transition-all">\n            <i class="fas fa-xmark text-gray-400"></i>\n     ' +
-        '     </button>\n        </div>\n        <div class="p-4 grid grid-cols-3 gap-3 border-b border-dark-600">\n          <div class="text-center">\n           ' +
-        ' <div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Libéré</div>\n' +
-        '            <div class="text-lg font-black text-emerald-400">') +
-      fmt$(d.total_released) +
-      '</div>\n            <div class="text-[10px] text-gray-500">' +
-      d.days_paid +
-      "j / " +
-      d.days_in_month +
-      ('j</div>\n          </div>\n          <div class="text-center">\n            <div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Restant<' +
-        '/div>\n            <div class="text-lg font-black text-blue-400">') +
-      fmt$(d.total_remaining) +
-      '</div>\n            <div class="text-[10px] text-gray-500">' +
-      d.days_remaining +
-      (' jours</div>\n          </div>\n          <div class="text-center">\n            <div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">' +
-        'Prime/jour</div>\n            <div class="text-lg font-black text-rouge-400">') +
-      fmt$(d.amount_per_day) +
-      '</div>\n            <div class="text-[10px] text-gray-500">\xD7 ' +
-      d.days_in_month +
-      (' jours</div>\n          </div>\n        </div>\n        <div class="p-4 border-b border-dark-600">\n          <div class="h-2 bg-dark-600 rounded-full ' +
-        'overflow-hidden">\n            <div class="h-full rounded-full transition-all" style="width:') +
-      d.progress_pct +
-      ('%; background:linear-gradient(90deg,#10b981,#059669)"></div>\n          </div>\n          <div class="flex justify-between text-[10px] text-gray-500 ' +
-        'mt-1">\n            <span>') +
-      d.start_date +
-      '</span>\n            <span class="text-emerald-400 font-medium">' +
-      d.progress_pct +
-      "% lib\xE9r\xE9</span>\n            <span>" +
-      d.end_date +
-      ('</span>\n          </div>\n        </div>\n        <div class="overflow-y-auto flex-1 p-4">\n          <div class="text-[10px] text-gray-500 uppercase ' +
+    modal.innerHTML = [
+      [
+        [
+          [
+            '\n      <div class="bg-dark-800 rounded-xl border border-dark-500 max-w-lg w-full overflow-hidden max-h-[90vh] flex flex-col">\n        <div ',
+            'class="h-0.5 w-full" style="background:linear-gradient(90deg,#10b981,#d4af37)"></div>\n        <div class="p-4 border-b border-dark-600 flex ',
+            'items-center justify-between">\n          <div>\n            <div class="font-bold text-white">',
+            d.type_label,
+            '</div>\n            <div class="text-xs text-gray-400">',
+            d.period,
+            " \xB7 ",
+            fmt$(d.total_amount),
+            ' total</div>\n          </div>\n          <button onclick="document.getElementById(\'calendar-modal\').remove()"\n                  class="w-8 h-8 ' +
+              'rounded-lg bg-dark-700 flex items-center justify-center hover:bg-dark-600 transition-all">\n            <i class="fas fa-xmark text-gray-400"></i>\n     ' +
+              '     </button>\n        </div>\n        <div class="p-4 grid grid-cols-3 gap-3 border-b border-dark-600">\n          <div class="text-center">\n           ' +
+              ' <div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Libéré</div>\n' +
+              '            <div class="text-lg font-black text-emerald-400">'
+          ].join(""),
+          fmt$(d.total_released),
+          '</div>\n            <div class="text-[10px] text-gray-500">',
+          d.days_paid,
+          "j / ",
+          d.days_in_month,
+          'j</div>\n          </div>\n          <div class="text-center">\n            <div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Restant<' +
+            '/div>\n            <div class="text-lg font-black text-blue-400">',
+          fmt$(d.total_remaining),
+          '</div>\n            <div class="text-[10px] text-gray-500">'
+        ].join(""),
+        d.days_remaining,
+        ' jours</div>\n          </div>\n          <div class="text-center">\n            <div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">' +
+          'Prime/jour</div>\n            <div class="text-lg font-black text-rouge-400">',
+        fmt$(d.amount_per_day),
+        '</div>\n            <div class="text-[10px] text-gray-500">\xD7 ',
+        d.days_in_month,
+        ' jours</div>\n          </div>\n        </div>\n        <div class="p-4 border-b border-dark-600">\n          <div class="h-2 bg-dark-600 rounded-full ' +
+          'overflow-hidden">\n            <div class="h-full rounded-full transition-all" style="width:',
+        d.progress_pct,
+        '%; background:linear-gradient(90deg,#10b981,#059669)"></div>\n          </div>\n          <div class="flex justify-between text-[10px] text-gray-500 ' +
+          'mt-1">\n            <span>'
+      ].join(""),
+      d.start_date,
+      '</span>\n            <span class="text-emerald-400 font-medium">',
+      d.progress_pct,
+      "% lib\xE9r\xE9</span>\n            <span>",
+      d.end_date,
+      '</span>\n          </div>\n        </div>\n        <div class="overflow-y-auto flex-1 p-4">\n          <div class="text-[10px] text-gray-500 uppercase ' +
         'tracking-wider mb-2 grid grid-cols-4 gap-2 px-1">\n            <span>Jour</span><span>Date</span><span>Statut</span><span class="text-right">Montant<' +
-        "/span>\n          </div>\n          ") +
-      rows +
-      "\n        </div>\n      </div>";
+        "/span>\n          </div>\n          ",
+      rows,
+      "\n        </div>\n      </div>"
+    ].join("");
   } catch (e) {
     modal.innerHTML =
       '<div class="bg-dark-800 rounded-xl border border-red-500/30 p-6 max-w-sm w-full text-center">\n      <i class="fas fa-circle-exclamation text-red-400 ' +
@@ -4463,209 +4620,235 @@ async function renderWallet(e) {
       y = v.total || 0,
       h = (n?.balance || 0) + p + y + (a?.reserve_strategique || 0);
     e.innerHTML =
-      '\n\n    <div class="space-y-6">\n\n\n\n      <!-- En-tête -->\n\n      <div class="flex items-center justify-between">\n\n        <div>\n\n          <h2 ' +
-      'class="text-xl font-bold text-white">Mon Portefeuille</h2>\n\n          <p class="text-xs text-gray-500 mt-0.5">Cliquez sur un wallet pour voir ' +
-      'l\'historique des mouvements</p>\n\n        </div>\n\n        <div class="text-right">\n\n          <div class="text-xs text-gray-500">Patrimoine total</div>\n' +
-      '\n          <div class="text-2xl font-bold text-white">' +
-      fmt$(h) +
-      ('</div>\n\n        </div>\n\n      </div>\n\n\n\n      <!-- Ligne 1 : Principal + Pending + Crédit de Croissance -->\n\n      <div class="flex flex-wrap gap-3 ' +
-        'mb-4">\n\n        <button onclick="_showTopupModal()" class="flex items-center gap-2 px-4 py-2.5 bg-green-600/20 hover:bg-green-600/40 border ' +
-        'border-green-500/40 rounded-xl text-sm text-green-300 font-medium transition-all"><i class="fas fa-plus-circle mr-1"></i>Recharger mon wallet</button>\n' +
-        '\n        <button onclick="_showTransferModal()" class="flex items-center gap-2 px-4 py-2.5 bg-blue-600/20 hover:bg-blue-600/40 border ' +
-        'border-blue-500/40 rounded-xl text-sm text-blue-300 font-medium transition-all"><i class="fas fa-exchange-alt mr-1"></i>Transférer à un membre</button>' +
-        "\n" +
-        ('\n        <button onclick="_showTopupHistoryModal()" class="flex items-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 ' +
-          'rounded-xl text-sm text-gray-400 font-medium transition-all"><i class="fas fa-history mr-1"></i>Historique recharges &amp; transferts</button>\n\n      <' +
-          '/div>\n\n      <div id="wallet-cards-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">\n\n\n\n        <!-- W1 — Portefeuille Principal -->\n' +
-          '\n        <div class="wallet-card stat-card border-rouge-500/25 cursor-pointer hover:border-rouge-500/60 transition-all select-none"\n') +
-        ('\n             data-wallet="principal" onclick="openWalletDetail(\'principal\')">\n\n          <div class="flex items-center justify-between mb-3">\n\n       ' +
-          '     <div class="flex items-center gap-2">\n\n              <div class="w-8 h-8 rounded-lg bg-rouge-500/15 flex items-center justify-center">\n\n          ' +
-          '      <i class="fas fa-wallet text-rouge-400 text-sm"></i>\n\n              </div>\n\n              <div>\n\n                <div class="text-sm font-medium ' +
-          'text-white">Portefeuille Principal</div>\n\n                <div class="text-xs text-green-400">✓ Retirable</div>\n') +
-        ('\n              </div>\n\n            </div>\n\n            <i class="fas fa-chevron-right text-gray-600 text-xs"></i>\n\n          </div>\n\n          <div ' +
-          'class="text-3xl font-bold text-rouge-400">')) +
-      fmt$(n?.balance ?? a?.wallet_balance) +
-      "</div>\n\n          " +
-      (a?.pending_withdrawal > 0
-        ? '\n\n          <div class="mt-2 text-xs text-yellow-400 bg-yellow-900/20 rounded-lg px-3 py-1.5">\n\n            <i class="fas fa-clock mr-1"></i>' +
-          fmt$(a.pending_withdrawal) +
-          " retrait en cours\n\n          </div>"
-        : "") +
-      '\n\n          <div class="mt-3 flex items-center justify-between text-xs text-gray-500">\n\n            <span>Total gagn\xE9 : <span class="text-green-400">' +
-      fmt$(n?.total_earned) +
-      '</span></span>\n\n            <span>Retir\xE9 : <span class="text-red-400">' +
-      fmt$(n?.total_withdrawn) +
-      '</span></span>\n\n          </div>\n\n          <button onclick="event.stopPropagation(); showPage(\'withdraw\')"\n\n            class="mt-3 w-full ' +
-      (i ? "bg-rouge-500 text-dark-900 hover:bg-rouge-500" : "bg-dark-600 text-gray-400") +
-      ' font-bold py-2 rounded-lg transition text-xs">\n\n            <i class="fas fa-paper-plane mr-1"></i>' +
-      (i ? "Demander un retrait" : "Retrait · " + o) +
-      ('\n\n          </button>\n\n        </div>\n\n\n\n        <!-- W2 — Wallet en Attente (Pending) -->\n\n        <div class="wallet-card stat-card ' +
-        'border-orange-500/20 cursor-pointer hover:border-orange-400/50 transition-all select-none"\n\n             data-wallet="pending" ' +
-        'onclick="openWalletDetail(\'pending\')">\n\n          <div class="flex items-center justify-between mb-3">\n\n            <div class="flex items-center ' +
-        'gap-2">\n\n              <div class="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center">\n' +
-        ('\n                <i class="fas fa-hourglass-half text-orange-400 text-sm"></i>\n\n              </div>\n\n              <div>\n\n                <div ' +
-          'class="text-sm font-medium text-white">Wallet en Attente</div>\n\n                <div class="text-xs text-orange-400">Libération progressive M+1</div>\n\n' +
-          '              </div>\n\n            </div>\n\n            <i class="fas fa-chevron-right text-gray-600 text-xs"></i>\n\n          </div>\n\n          <div ' +
-          'class="text-3xl font-bold text-orange-400">')) +
-      fmt$(p) +
-      '</div>\n\n          <div class="text-xs text-gray-500 mt-1">\n\n            ' +
-      (u ? 'Prochain versement : <span class="text-orange-300">' + u + "</span>" : p > 0 ? "Versements en cours" : "Aucune commission en attente") +
-      "\n\n          </div>\n\n          " +
-      (m.length > 0
-        ? '\n\n          <div class="mt-3 space-y-1.5 border-t border-dark-600 pt-2">\n\n            ' +
-          m
-            .slice(0, 2)
-            .map((e) => {
-              const t = Math.max(0, (e.total_amount || 0) - (e.amount_per_day || 0) * (e.days_paid || 0)),
-                n = e.days_in_month > 0 ? Math.round((e.days_paid / e.days_in_month) * 100) : 0;
-              return (
-                '<div>\n\n                <div class="flex justify-between text-xs"><span class="text-gray-400 truncate">' +
-                (WALLET_COMMISSION_LABELS[e.commission_type] || e.commission_type) +
-                (e.source_name
-                  ? ' \xB7 <span class="text-gray-300">' +
-                    e.source_name +
-                    '</span> <span class="text-gray-500">' +
-                    (e.source_unique_id || "") +
-                    "</span>"
-                  : "") +
-                '</span><span class="text-orange-300 ml-2 flex-shrink-0">' +
-                fmt$(t) +
-                '</span></div>\n\n                <div class="text-xs mt-0.5">' +
-                (e.status === "pending_release"
-                  ? '<span class="text-yellow-500/70">Lib\xE9ration le ' +
-                    (e.eligible_date
-                      ? new Date(e.eligible_date).toLocaleDateString("fr-FR", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric"
+      [
+        [
+          [
+            [
+              [
+                [
+                  [
+                    [
+                      '\n\n    <div class="space-y-6">\n\n\n\n      <!-- En-tête -->\n\n      <div class="flex items-center justify-between">\n\n        <div>\n\n          <h2 ',
+                      'class="text-xl font-bold text-white">Mon Portefeuille</h2>\n\n          <p class="text-xs text-gray-500 mt-0.5">Cliquez sur un wallet pour voir ',
+                      'l\'historique des mouvements</p>\n\n        </div>\n\n        <div class="text-right">\n\n          <div class="text-xs text-gray-500">Patrimoine total</div>\n',
+                      '\n          <div class="text-2xl font-bold text-white">',
+                      fmt$(h),
+                      [
+                        '</div>\n\n        </div>\n\n      </div>\n\n\n\n      <!-- Ligne 1 : Principal + Pending + Crédit de Croissance -->\n\n      <div class="flex flex-wrap gap-3 ',
+                        'mb-4">\n\n        <button onclick="_showTopupModal()" class="flex items-center gap-2 px-4 py-2.5 bg-green-600/20 hover:bg-green-600/40 border ',
+                        'border-green-500/40 rounded-xl text-sm text-green-300 font-medium transition-all"><i class="fas fa-plus-circle mr-1"></i>Recharger mon wallet</button>\n',
+                        '\n        <button onclick="_showTransferModal()" class="flex items-center gap-2 px-4 py-2.5 bg-blue-600/20 hover:bg-blue-600/40 border ',
+                        'border-blue-500/40 rounded-xl text-sm text-blue-300 font-medium transition-all"><i class="fas fa-exchange-alt mr-1"></i>Transférer à un membre</button>',
+                        "\n",
+                        '\n        <button onclick="_showTopupHistoryModal()" class="flex items-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 ' +
+                          'rounded-xl text-sm text-gray-400 font-medium transition-all"><i class="fas fa-history mr-1"></i>Historique recharges &amp; transferts</button>\n\n      <' +
+                          '/div>\n\n      <div id="wallet-cards-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">\n\n\n\n        <!-- W1 — Portefeuille Principal -->\n' +
+                          '\n        <div class="wallet-card stat-card border-rouge-500/25 cursor-pointer hover:border-rouge-500/60 transition-all select-none"\n',
+                        '\n             data-wallet="principal" onclick="openWalletDetail(\'principal\')">\n\n          <div class="flex items-center justify-between mb-3">\n\n       ' +
+                          '     <div class="flex items-center gap-2">\n\n              <div class="w-8 h-8 rounded-lg bg-rouge-500/15 flex items-center justify-center">\n\n          ' +
+                          '      <i class="fas fa-wallet text-rouge-400 text-sm"></i>\n\n              </div>\n\n              <div>\n\n                <div class="text-sm font-medium ' +
+                          'text-white">Portefeuille Principal</div>\n\n                <div class="text-xs text-green-400">✓ Retirable</div>\n',
+                        '\n              </div>\n\n            </div>\n\n            <i class="fas fa-chevron-right text-gray-600 text-xs"></i>\n\n          </div>\n\n          <div ' +
+                          'class="text-3xl font-bold text-rouge-400">'
+                      ].join(""),
+                      fmt$(n?.balance ?? a?.wallet_balance),
+                      "</div>\n\n          ",
+                      a?.pending_withdrawal > 0
+                        ? '\n\n          <div class="mt-2 text-xs text-yellow-400 bg-yellow-900/20 rounded-lg px-3 py-1.5">\n\n            <i class="fas fa-clock mr-1"></i>' +
+                          fmt$(a.pending_withdrawal) +
+                          " retrait en cours\n\n          </div>"
+                        : ""
+                    ].join(""),
+                    '\n\n          <div class="mt-3 flex items-center justify-between text-xs text-gray-500">\n\n            <span>Total gagn\xE9 : <span class="text-green-400">',
+                    fmt$(n?.total_earned),
+                    '</span></span>\n\n            <span>Retir\xE9 : <span class="text-red-400">',
+                    fmt$(n?.total_withdrawn),
+                    '</span></span>\n\n          </div>\n\n          <button onclick="event.stopPropagation(); showPage(\'withdraw\')"\n\n            class="mt-3 w-full ',
+                    i ? "bg-rouge-500 text-dark-900 hover:bg-rouge-500" : "bg-dark-600 text-gray-400",
+                    ' font-bold py-2 rounded-lg transition text-xs">\n\n            <i class="fas fa-paper-plane mr-1"></i>',
+                    i ? "Demander un retrait" : "Retrait · " + o
+                  ].join(""),
+                  '\n\n          </button>\n\n        </div>\n\n\n\n        <!-- W2 — Wallet en Attente (Pending) -->\n\n        <div class="wallet-card stat-card ' +
+                    'border-orange-500/20 cursor-pointer hover:border-orange-400/50 transition-all select-none"\n\n             data-wallet="pending" ' +
+                    'onclick="openWalletDetail(\'pending\')">\n\n          <div class="flex items-center justify-between mb-3">\n\n            <div class="flex items-center ' +
+                    'gap-2">\n\n              <div class="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center">\n' +
+                    ('\n                <i class="fas fa-hourglass-half text-orange-400 text-sm"></i>\n\n              </div>\n\n              <div>\n\n                <div ' +
+                      'class="text-sm font-medium text-white">Wallet en Attente</div>\n\n                <div class="text-xs text-orange-400">Libération progressive M+1</div>\n\n' +
+                      '              </div>\n\n            </div>\n\n            <i class="fas fa-chevron-right text-gray-600 text-xs"></i>\n\n          </div>\n\n          <div ' +
+                      'class="text-3xl font-bold text-orange-400">'),
+                  fmt$(p),
+                  '</div>\n\n          <div class="text-xs text-gray-500 mt-1">\n\n            ',
+                  u
+                    ? 'Prochain versement : <span class="text-orange-300">' + u + "</span>"
+                    : p > 0
+                      ? "Versements en cours"
+                      : "Aucune commission en attente",
+                  "\n\n          </div>\n\n          ",
+                  m.length > 0
+                    ? '\n\n          <div class="mt-3 space-y-1.5 border-t border-dark-600 pt-2">\n\n            ' +
+                      m
+                        .slice(0, 2)
+                        .map((e) => {
+                          const t = Math.max(0, (e.total_amount || 0) - (e.amount_per_day || 0) * (e.days_paid || 0)),
+                            n = e.days_in_month > 0 ? Math.round((e.days_paid / e.days_in_month) * 100) : 0;
+                          return (
+                            [
+                              '<div>\n\n                <div class="flex justify-between text-xs"><span class="text-gray-400 truncate">',
+                              WALLET_COMMISSION_LABELS[e.commission_type] || e.commission_type,
+                              e.source_name
+                                ? ' \xB7 <span class="text-gray-300">' +
+                                  e.source_name +
+                                  '</span> <span class="text-gray-500">' +
+                                  (e.source_unique_id || "") +
+                                  "</span>"
+                                : "",
+                              '</span><span class="text-orange-300 ml-2 flex-shrink-0">',
+                              fmt$(t),
+                              '</span></div>\n\n                <div class="text-xs mt-0.5">',
+                              e.status === "pending_release"
+                                ? '<span class="text-yellow-500/70">Lib\xE9ration le ' +
+                                  (e.eligible_date
+                                    ? new Date(e.eligible_date).toLocaleDateString("fr-FR", {
+                                        day: "2-digit",
+                                        month: "short",
+                                        year: "numeric"
+                                      })
+                                    : "") +
+                                  "</span>"
+                                : e.status === "active"
+                                  ? '<span class="text-green-500/70">' +
+                                    Math.max(0, (e.days_in_month || 0) - (e.days_paid || 0)) +
+                                    "j restants \xB7 " +
+                                    (e.amount_per_day || 0).toFixed(2) +
+                                    "$/j</span>"
+                                  : '<span class="text-gray-500">Lib\xE9r\xE9</span>',
+                              '</div>\n\n                <div class="h-1 bg-dark-600 rounded-full mt-0.5"><div class="h-1 bg-orange-500/60 rounded-full" style="width:',
+                              n
+                            ].join("") + '%"></div></div>\n\n              </div>'
+                          );
                         })
-                      : "") +
-                    "</span>"
-                  : e.status === "active"
-                    ? '<span class="text-green-500/70">' +
-                      Math.max(0, (e.days_in_month || 0) - (e.days_paid || 0)) +
-                      "j restants \xB7 " +
-                      (e.amount_per_day || 0).toFixed(2) +
-                      "$/j</span>"
-                    : '<span class="text-gray-500">Lib\xE9r\xE9</span>') +
-                '</div>\n\n                <div class="h-1 bg-dark-600 rounded-full mt-0.5"><div class="h-1 bg-orange-500/60 rounded-full" style="width:' +
-                n +
-                '%"></div></div>\n\n              </div>'
-              );
-            })
-            .join("") +
-          "\n\n            " +
-          (m.length > 2 ? '<p class="text-xs text-gray-600 text-center mt-1">+' + (m.length - 2) + " autres\u2026</p>" : "") +
-          "\n\n          </div>"
-        : "") +
-      ('\n\n        </div>\n\n\n\n        <!-- W3 — Crédit de Croissance -->\n\n        <div class="wallet-card stat-card border-pink-500/20 cursor-pointer ' +
-        'hover:border-pink-400/50 transition-all select-none"\n\n             data-wallet="cc" onclick="showPage(\'cc-wallet\')">\n\n          <div class="flex ' +
-        'items-center justify-between mb-3">\n\n            <div class="flex items-center gap-2">\n\n              <div class="w-8 h-8 rounded-lg bg-pink-500/20 ' +
-        'flex items-center justify-center">\n\n                <i class="fas fa-seedling text-pink-400 text-sm"></i>\n' +
-        ('\n              </div>\n\n              <div>\n\n                <div class="text-sm font-medium text-white">Crédit de Croissance</div>\n\n                <' +
-          'div class="text-xs text-gray-400">✗ Non retirable · Rang Leader+</div>\n\n              </div>\n\n            </div>\n\n            <i class="fas ' +
-          'fa-chevron-right text-gray-600 text-xs"></i>\n\n          </div>\n\n          <div class="text-3xl font-bold text-pink-400">')) +
-      fmt$(y) +
-      '</div>\n\n          <div class="flex gap-3 mt-1">\n\n            <span class="text-xs text-green-400">' +
-      fmt$(v.available) +
-      ' disponible</span>\n\n            <span class="text-xs text-blue-400">' +
-      fmt$(v.held) +
-      (' en attente</span>\n\n          </div>\n\n          <div class="mt-3 h-1 bg-dark-600 rounded-full">\n\n            <div class="h-1 bg-pink-500/50 ' +
-        'rounded-full" style="width:') +
-      Math.min(100, (y / 500) * 100) +
-      ('%"></div>\n\n          </div>\n\n          <div class="text-xs text-gray-600 mt-1 text-right">Remboursement dépenses business</div>\n\n          <div ' +
-        'class="text-xs text-pink-500/50 mt-2 group-hover:text-pink-400 transition-colors"><i class="fas fa-arrow-right mr-1"></i>Voir détails &amp; demander ' +
-        'remboursement</div>\n\n        </div>\n\n\n\n      </div>\n\n\n\n      <!-- Ligne 2 : Réserve Stratégique + Récapitulatif -->\n\n      <div class="grid ' +
-        'grid-cols-1 sm:grid-cols-2 gap-4">\n\n\n\n        <!-- W4 — Réserve Stratégique -->\n' +
-        ('\n        <div class="wallet-card stat-card border-cyan-500/20 cursor-pointer hover:border-cyan-400/50 transition-all select-none"\n\n             ' +
-          'data-wallet="rs" onclick="showPage(\'reserve-strategique\')">\n\n          <div class="flex items-center justify-between mb-3">\n\n            <div ' +
-          'class="flex items-center gap-2">\n\n              <div class="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center">\n\n                <i ' +
-          'class="fas fa-lock text-cyan-400 text-sm"></i>\n\n              </div>\n') +
-        ('\n              <div>\n\n                <div class="text-sm font-medium text-white">Réserve Stratégique</div>\n\n                <div class="text-xs ' +
-          'text-cyan-400/70">En épargne · 3 ans · Rang Mentor → President</div>\n\n              </div>\n\n            </div>\n\n            <i class="fas ' +
-          'fa-chevron-right text-gray-600 text-xs"></i>\n\n          </div>\n\n          <div class="text-3xl font-bold text-cyan-400">')) +
-      fmt$(a?.reserve_strategique) +
-      ('</div>\n\n          <div class="text-xs text-gray-500 mt-1">Épargne 3 ans · Abondement compagnie inclus · Libération automatique à terme</div>\n\n        <' +
-        '/div>\n\n\n\n        <!-- W5 — Wallet Luxia (Dreamiles) -->\n\n        <div class="wallet-card stat-card border-yellow-500/20 cursor-pointer ' +
-        'hover:border-yellow-400/50 transition-all select-none"\n\n             data-wallet="luxia" onclick="openWalletDetail(\'luxia\')">\n\n          <div ' +
-        'class="flex items-center justify-between mb-3">\n\n            <div class="flex items-center gap-2">\n' +
-        '\n              <div class="w-8 h-8 rounded-lg bg-yellow-500/20 flex items-center justify-center overflow-hidden">\n\n                ') +
-      DREAMILES_LOGO_SM +
-      ('\n\n              </div>\n\n              <div>\n\n                <div class="text-sm font-medium text-white">Wallet Luxia</div>\n\n                <div ' +
-        'class="text-xs text-yellow-500/70">Dreamiles · valables 24 mois</div>\n\n              </div>\n\n            </div>\n\n            <i class="fas ' +
-        'fa-chevron-right text-gray-600 text-xs"></i>\n\n          </div>\n\n          <div class="flex items-baseline gap-2">\n\n            <div class="text-3xl ' +
-        'font-bold text-yellow-400">') +
-      f.toLocaleString() +
-      "</div>\n\n            " +
-      DREAMILES_LOGO_SM +
-      '\n\n          </div>\n\n          <div class="text-xs text-gray-500 mt-1">\u2248 ' +
-      fmt$(f) +
-      " disponibles \xB7 1 DRM = 1$</div>\n\n          " +
-      (b > 0 ? '<div class="text-xs text-yellow-400/70 mt-1"><i class="fas fa-plus-circle mr-1"></i>+' + b.toLocaleString() + " ce mois</div>" : "") +
-      ('\n\n        </div>\n\n\n\n        <!-- W6 — Vue Globale (non cliquable) -->\n\n        <div class="stat-card border-dark-500">\n\n          <div class="flex ' +
-        'items-center gap-2 mb-3">\n\n            <div class="w-8 h-8 rounded-lg bg-gray-500/20 flex items-center justify-center">\n\n              <i class="fas ' +
-        'fa-chart-pie text-gray-400 text-sm"></i>\n\n            </div>\n\n            <div>\n\n              <div class="text-sm font-medium text-white">Vue Globale<' +
-        '/div>\n\n              <div class="text-xs text-gray-500">Résumé de vos gains</div>\n' +
-        ('\n            </div>\n\n          </div>\n\n          <div class="space-y-2">\n\n            <div class="flex justify-between items-center">\n\n              <' +
-          'span class="text-xs text-gray-500">Total gagné</span>\n\n              <span class="text-sm font-bold text-green-400">')) +
-      fmt$(n?.total_earned) +
-      ('</span>\n\n            </div>\n\n            <div class="flex justify-between items-center">\n\n              <span class="text-xs text-gray-500">Total ' +
-        'retiré</span>\n\n              <span class="text-sm font-bold text-red-400">') +
-      fmt$(n?.total_withdrawn) +
-      ('</span>\n\n            </div>\n\n            <div class="h-px bg-dark-600 my-1"></div>\n\n            <div class="flex justify-between items-center">\n\n      ' +
-        '        <span class="text-xs text-gray-500">Principal</span>\n\n              <span class="text-sm font-bold text-rouge-400">') +
-      fmt$(n?.balance ?? a?.wallet_balance) +
-      ('</span>\n\n            </div>\n\n            <div class="flex justify-between items-center">\n\n              <span class="text-xs text-gray-500">En attente<' +
-        '/span>\n\n              <span class="text-sm font-bold text-orange-400">') +
-      fmt$(p) +
-      ('</span>\n\n            </div>\n\n            <div class="flex justify-between items-center">\n\n              <span class="text-xs text-gray-500">Crédit ' +
-        'Croissance</span>\n\n              <span class="text-sm font-bold text-pink-400">') +
-      fmt$(y) +
-      ('</span>\n\n            </div>\n\n            <div class="flex justify-between items-center">\n\n              <span class="text-xs text-gray-500">Réserve ' +
-        'Stratégique</span>\n\n              <span class="text-sm font-bold text-cyan-400">') +
-      fmt$(a?.reserve_strategique) +
-      ('</span>\n\n            </div>\n\n            <div class="flex justify-between items-center">\n\n              <span class="text-xs text-gray-500">Dreamiles ' +
-        'Luxia</span>\n\n              <span class="text-sm font-bold text-yellow-400">') +
-      f.toLocaleString() +
-      (' DRM</span>\n\n            </div>\n\n            <div class="h-px bg-dark-600 my-1"></div>\n\n            <div class="flex justify-between items-center">\n\n  ' +
-        '            <span class="text-xs text-gray-400 font-medium">Patrimoine total</span>\n\n              <span class="text-base font-bold text-white">') +
-      fmt$(h) +
-      "</span>\n\n            </div>\n\n          </div>\n\n        </div>\n\n      </div>\n\n\n\n      " +
-      (a?.pending_withdrawal > 0
-        ? '\n\n      <div class="bg-yellow-900/20 border border-yellow-500/30 rounded-xl px-4 py-3 flex items-center gap-3">\n\n        <i class="fas fa-clock ' +
-          'text-yellow-400"></i>\n\n        <span class="text-xs text-yellow-300">' +
-          fmt$(a.pending_withdrawal) +
-          " en cours de traitement (retrait)</span>\n\n      </div>"
-        : "") +
-      "\n\n\n\n      <!-- Alerte KYC -->\n\n      " +
-      ("verified" !== a?.kyc_status
-        ? '\n      <div class="bg-yellow-900/20 border border-yellow-500/30 rounded-xl p-4 flex items-start gap-3">\n        <i class="fas fa-triangle-exclamation ' +
-          'text-yellow-400 mt-0.5"></i>\n        <div>\n          <p class="text-yellow-300 font-medium text-sm">KYC requis pour les retraits</p>\n          <p ' +
-          'class="text-yellow-400/70 text-xs mt-1">Votre identité doit être vérifiée avant de pouvoir effectuer un retrait.\n            <button ' +
-          'onclick="showPage(\'kyc\')" class="underline">Compléter maintenant →</button></p>\n' +
-          "        </div>\n      </div>"
-        : "") +
-      "\n\n\n\n      <!-- Retraits en cours -->\n\n      " +
-      (s.length > 0
-        ? '\n\n      <div class="bg-dark-800 border border-dark-600 rounded-2xl overflow-hidden">\n\n        <div class="p-4 border-b border-dark-600 flex ' +
-          'items-center gap-2">\n\n          <i class="fas fa-clock text-yellow-400"></i>\n\n          <h3 class="font-semibold text-white">Retraits en cours de ' +
-          'traitement</h3>\n\n        </div>\n\n        <div class="divide-y divide-dark-600">\n\n          ' +
-          s
-            .map(
-              (e) =>
-                '\n\n          <div class="p-4 flex items-center justify-between">\n\n            <div>\n\n              <div class="font-medium text-white">' +
-                fmt$(e.amount) +
-                '</div>\n\n              <div class="text-xs text-gray-500 mt-0.5">\u2192 ' +
-                e.paypal_email +
-                " \xB7 " +
-                fmtDate(e.created_at) +
-                "</div>\n\n            </div>\n\n            <div>" +
-                c(e.status) +
-                "</div>\n\n          </div>"
-            )
-            .join("") +
-          "\n\n        </div>\n\n      </div>"
-        : "") +
+                        .join("") +
+                      "\n\n            " +
+                      (m.length > 2 ? '<p class="text-xs text-gray-600 text-center mt-1">+' + (m.length - 2) + " autres\u2026</p>" : "") +
+                      "\n\n          </div>"
+                    : "",
+                  '\n\n        </div>\n\n\n\n        <!-- W3 — Crédit de Croissance -->\n\n        <div class="wallet-card stat-card border-pink-500/20 cursor-pointer ' +
+                    'hover:border-pink-400/50 transition-all select-none"\n\n             data-wallet="cc" onclick="showPage(\'cc-wallet\')">\n\n          <div class="flex ' +
+                    'items-center justify-between mb-3">\n\n            <div class="flex items-center gap-2">\n\n              <div class="w-8 h-8 rounded-lg bg-pink-500/20 ' +
+                    'flex items-center justify-center">\n\n                <i class="fas fa-seedling text-pink-400 text-sm"></i>\n' +
+                    ('\n              </div>\n\n              <div>\n\n                <div class="text-sm font-medium text-white">Crédit de Croissance</div>\n\n                <' +
+                      'div class="text-xs text-gray-400">✗ Non retirable · Rang Leader+</div>\n\n              </div>\n\n            </div>\n\n            <i class="fas ' +
+                      'fa-chevron-right text-gray-600 text-xs"></i>\n\n          </div>\n\n          <div class="text-3xl font-bold text-pink-400">'),
+                  fmt$(y)
+                ].join(""),
+                '</div>\n\n          <div class="flex gap-3 mt-1">\n\n            <span class="text-xs text-green-400">',
+                fmt$(v.available),
+                ' disponible</span>\n\n            <span class="text-xs text-blue-400">',
+                fmt$(v.held),
+                ' en attente</span>\n\n          </div>\n\n          <div class="mt-3 h-1 bg-dark-600 rounded-full">\n\n            <div class="h-1 bg-pink-500/50 ' +
+                  'rounded-full" style="width:',
+                Math.min(100, (y / 500) * 100),
+                '%"></div>\n\n          </div>\n\n          <div class="text-xs text-gray-600 mt-1 text-right">Remboursement dépenses business</div>\n\n          <div ' +
+                  'class="text-xs text-pink-500/50 mt-2 group-hover:text-pink-400 transition-colors"><i class="fas fa-arrow-right mr-1"></i>Voir détails &amp; demander ' +
+                  'remboursement</div>\n\n        </div>\n\n\n\n      </div>\n\n\n\n      <!-- Ligne 2 : Réserve Stratégique + Récapitulatif -->\n\n      <div class="grid ' +
+                  'grid-cols-1 sm:grid-cols-2 gap-4">\n\n\n\n        <!-- W4 — Réserve Stratégique -->\n' +
+                  ('\n        <div class="wallet-card stat-card border-cyan-500/20 cursor-pointer hover:border-cyan-400/50 transition-all select-none"\n\n             ' +
+                    'data-wallet="rs" onclick="showPage(\'reserve-strategique\')">\n\n          <div class="flex items-center justify-between mb-3">\n\n            <div ' +
+                    'class="flex items-center gap-2">\n\n              <div class="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center">\n\n                <i ' +
+                    'class="fas fa-lock text-cyan-400 text-sm"></i>\n\n              </div>\n') +
+                  ('\n              <div>\n\n                <div class="text-sm font-medium text-white">Réserve Stratégique</div>\n\n                <div class="text-xs ' +
+                    'text-cyan-400/70">En épargne · 3 ans · Rang Mentor → President</div>\n\n              </div>\n\n            </div>\n\n            <i class="fas ' +
+                    'fa-chevron-right text-gray-600 text-xs"></i>\n\n          </div>\n\n          <div class="text-3xl font-bold text-cyan-400">'),
+                fmt$(a?.reserve_strategique)
+              ].join(""),
+              '</div>\n\n          <div class="text-xs text-gray-500 mt-1">Épargne 3 ans · Abondement compagnie inclus · Libération automatique à terme</div>\n\n        <' +
+                '/div>\n\n\n\n        <!-- W5 — Wallet Luxia (Dreamiles) -->\n\n        <div class="wallet-card stat-card border-yellow-500/20 cursor-pointer ' +
+                'hover:border-yellow-400/50 transition-all select-none"\n\n             data-wallet="luxia" onclick="openWalletDetail(\'luxia\')">\n\n          <div ' +
+                'class="flex items-center justify-between mb-3">\n\n            <div class="flex items-center gap-2">\n' +
+                '\n              <div class="w-8 h-8 rounded-lg bg-yellow-500/20 flex items-center justify-center overflow-hidden">\n\n                ',
+              DREAMILES_LOGO_SM,
+              '\n\n              </div>\n\n              <div>\n\n                <div class="text-sm font-medium text-white">Wallet Luxia</div>\n\n                <div ' +
+                'class="text-xs text-yellow-500/70">Dreamiles · valables 24 mois</div>\n\n              </div>\n\n            </div>\n\n            <i class="fas ' +
+                'fa-chevron-right text-gray-600 text-xs"></i>\n\n          </div>\n\n          <div class="flex items-baseline gap-2">\n\n            <div class="text-3xl ' +
+                'font-bold text-yellow-400">',
+              f.toLocaleString(),
+              "</div>\n\n            ",
+              DREAMILES_LOGO_SM,
+              '\n\n          </div>\n\n          <div class="text-xs text-gray-500 mt-1">\u2248 ',
+              fmt$(f)
+            ].join(""),
+            " disponibles \xB7 1 DRM = 1$</div>\n\n          ",
+            b > 0
+              ? '<div class="text-xs text-yellow-400/70 mt-1"><i class="fas fa-plus-circle mr-1"></i>+' + b.toLocaleString() + " ce mois</div>"
+              : "",
+            '\n\n        </div>\n\n\n\n        <!-- W6 — Vue Globale (non cliquable) -->\n\n        <div class="stat-card border-dark-500">\n\n          <div class="flex ' +
+              'items-center gap-2 mb-3">\n\n            <div class="w-8 h-8 rounded-lg bg-gray-500/20 flex items-center justify-center">\n\n              <i class="fas ' +
+              'fa-chart-pie text-gray-400 text-sm"></i>\n\n            </div>\n\n            <div>\n\n              <div class="text-sm font-medium text-white">Vue Globale<' +
+              '/div>\n\n              <div class="text-xs text-gray-500">Résumé de vos gains</div>\n' +
+              ('\n            </div>\n\n          </div>\n\n          <div class="space-y-2">\n\n            <div class="flex justify-between items-center">\n\n              <' +
+                'span class="text-xs text-gray-500">Total gagné</span>\n\n              <span class="text-sm font-bold text-green-400">'),
+            fmt$(n?.total_earned),
+            '</span>\n\n            </div>\n\n            <div class="flex justify-between items-center">\n\n              <span class="text-xs text-gray-500">Total ' +
+              'retiré</span>\n\n              <span class="text-sm font-bold text-red-400">',
+            fmt$(n?.total_withdrawn),
+            '</span>\n\n            </div>\n\n            <div class="h-px bg-dark-600 my-1"></div>\n\n            <div class="flex justify-between items-center">\n\n      ' +
+              '        <span class="text-xs text-gray-500">Principal</span>\n\n              <span class="text-sm font-bold text-rouge-400">',
+            fmt$(n?.balance ?? a?.wallet_balance)
+          ].join(""),
+          '</span>\n\n            </div>\n\n            <div class="flex justify-between items-center">\n\n              <span class="text-xs text-gray-500">En attente<' +
+            '/span>\n\n              <span class="text-sm font-bold text-orange-400">',
+          fmt$(p),
+          '</span>\n\n            </div>\n\n            <div class="flex justify-between items-center">\n\n              <span class="text-xs text-gray-500">Crédit ' +
+            'Croissance</span>\n\n              <span class="text-sm font-bold text-pink-400">',
+          fmt$(y),
+          '</span>\n\n            </div>\n\n            <div class="flex justify-between items-center">\n\n              <span class="text-xs text-gray-500">Réserve ' +
+            'Stratégique</span>\n\n              <span class="text-sm font-bold text-cyan-400">',
+          fmt$(a?.reserve_strategique),
+          '</span>\n\n            </div>\n\n            <div class="flex justify-between items-center">\n\n              <span class="text-xs text-gray-500">Dreamiles ' +
+            'Luxia</span>\n\n              <span class="text-sm font-bold text-yellow-400">',
+          f.toLocaleString()
+        ].join(""),
+        ' DRM</span>\n\n            </div>\n\n            <div class="h-px bg-dark-600 my-1"></div>\n\n            <div class="flex justify-between items-center">\n\n  ' +
+          '            <span class="text-xs text-gray-400 font-medium">Patrimoine total</span>\n\n              <span class="text-base font-bold text-white">',
+        fmt$(h),
+        "</span>\n\n            </div>\n\n          </div>\n\n        </div>\n\n      </div>\n\n\n\n      ",
+        a?.pending_withdrawal > 0
+          ? '\n\n      <div class="bg-yellow-900/20 border border-yellow-500/30 rounded-xl px-4 py-3 flex items-center gap-3">\n\n        <i class="fas fa-clock ' +
+            'text-yellow-400"></i>\n\n        <span class="text-xs text-yellow-300">' +
+            fmt$(a.pending_withdrawal) +
+            " en cours de traitement (retrait)</span>\n\n      </div>"
+          : "",
+        "\n\n\n\n      <!-- Alerte KYC -->\n\n      ",
+        "verified" !== a?.kyc_status
+          ? '\n      <div class="bg-yellow-900/20 border border-yellow-500/30 rounded-xl p-4 flex items-start gap-3">\n        <i class="fas fa-triangle-exclamation ' +
+            'text-yellow-400 mt-0.5"></i>\n        <div>\n          <p class="text-yellow-300 font-medium text-sm">KYC requis pour les retraits</p>\n          <p ' +
+            'class="text-yellow-400/70 text-xs mt-1">Votre identité doit être vérifiée avant de pouvoir effectuer un retrait.\n            <button ' +
+            'onclick="showPage(\'kyc\')" class="underline">Compléter maintenant →</button></p>\n' +
+            "        </div>\n      </div>"
+          : "",
+        "\n\n\n\n      <!-- Retraits en cours -->\n\n      ",
+        s.length > 0
+          ? '\n\n      <div class="bg-dark-800 border border-dark-600 rounded-2xl overflow-hidden">\n\n        <div class="p-4 border-b border-dark-600 flex ' +
+            'items-center gap-2">\n\n          <i class="fas fa-clock text-yellow-400"></i>\n\n          <h3 class="font-semibold text-white">Retraits en cours de ' +
+            'traitement</h3>\n\n        </div>\n\n        <div class="divide-y divide-dark-600">\n\n          ' +
+            s
+              .map((e) =>
+                [
+                  '\n\n          <div class="p-4 flex items-center justify-between">\n\n            <div>\n\n              <div class="font-medium text-white">',
+                  fmt$(e.amount),
+                  '</div>\n\n              <div class="text-xs text-gray-500 mt-0.5">\u2192 ',
+                  e.paypal_email,
+                  " \xB7 ",
+                  fmtDate(e.created_at),
+                  "</div>\n\n            </div>\n\n            <div>",
+                  c(e.status),
+                  "</div>\n\n          </div>"
+                ].join("")
+              )
+              .join("") +
+            "\n\n        </div>\n\n      </div>"
+          : ""
+      ].join("") +
       ('\n\n\n\n      <!-- Raccourcis -->\n\n      <div class="flex gap-3">\n\n        <button onclick="showPage(\'transactions\')" class="flex-1 bg-dark-800 border ' +
         'border-dark-600 rounded-xl p-3 text-sm text-gray-300 hover:bg-dark-700 transition text-center">\n\n          <i class="fas fa-list-ul mr-2"></i>Toutes ' +
         'les transactions\n\n        </button>\n\n        <button onclick="showPage(\'withdraw\')" class="flex-1 bg-dark-800 border border-dark-600 rounded-xl p-3 ' +
@@ -4732,146 +4915,166 @@ async function renderWithdraw(el, page, perPage) {
       })[s] || '<span class="text-xs bg-gray-500/20 text-gray-400 px-2 py-0.5 rounded-full">' + s + "</span>";
     const kycLevelLabel = ["Non vérifié", "Identité vérifiée", "Renforcée", "Premium"][wdConfig.kyc_level || 0] || "Inconnu";
     const kycMaxStr = kycMax > 0 ? fmt$(kycMax) : "Illimité";
-    el.innerHTML =
-      '\n    <div class="max-w-2xl space-y-6">\n      <div class="flex items-center justify-between">\n        <div>\n          <h2 class="text-xl font-bold ' +
-      'text-white flex items-center gap-2"><i class="fas fa-paper-plane text-rouge-400"></i> Demande de Retrait</h2>\n          <p class="text-xs ' +
-      'text-gray-500 mt-0.5">Portefeuille principal uniquement — Traitement sous 24-48h</p>\n        </div>\n        <button onclick="showPage(\'wallet\')" ' +
-      'class="text-xs text-gray-400 hover:text-white transition flex items-center gap-1"><i class="fas fa-arrow-left text-[10px]"></i>Retour</button>\n' +
-      ('      </div>\n\n      <!-- Checklist conditions -->\n      <div class="bg-dark-800 border border-dark-600 rounded-2xl p-5 space-y-3">\n        <h3 ' +
-        'class="font-semibold text-white text-sm flex items-center gap-2"><i class="fas fa-clipboard-check text-blue-400"></i> Conditions à remplir</h3>\n       ' +
-        ' <div class="space-y-2.5">\n          <div class="flex items-center gap-3">\n            <div class="w-5 h-5 rounded-full flex items-center ' +
-        "justify-center flex-shrink-0 ") +
-      (isTodayAllowed && wdEnabled ? "bg-green-500/20" : "bg-red-500/20") +
-      '">\n              <i class="fas ' +
-      (isTodayAllowed && wdEnabled ? "fa-check text-green-400" : "fa-times text-red-400") +
-      ' text-[10px]"></i>\n            </div>\n            <div class="flex-1">\n              <span class="text-sm text-gray-300">' +
-      (!wdEnabled
-        ? '<span class="text-sm text-gray-300">Retraits <strong class="text-red-400">suspendus</strong></span>'
-        : '<span class="text-sm text-gray-300">Jours : <strong class="text-white">' + allowedDaysLabels.join(", ") + "</strong></span>") +
-      "</span>\n              " +
-      (!wdEnabled
-        ? ""
-        : isTodayAllowed
-          ? '<span class="ml-2 text-xs text-green-400 font-medium">✓ Aujourd\'hui !</span>'
-          : '<span class="ml-2 text-xs text-gray-500">Prochain : ' + nextAllowedStr + "</span>") +
-      ('\n            </div>\n          </div>\n          <div class="flex items-center gap-3">\n            <div class="w-5 h-5 rounded-full flex items-center ' +
-        "justify-center flex-shrink-0 ") +
-      ("verified" === t?.kyc_status ? "bg-green-500/20" : "bg-red-500/20") +
-      '">\n              <i class="fas ' +
-      ("verified" === t?.kyc_status ? "fa-check text-green-400" : "fa-times text-red-400") +
-      (' text-[10px]"></i>\n            </div>\n            <div class="flex-1 flex items-center justify-between">\n              <span class="text-sm ' +
-        'text-gray-300">KYC vérifié — <span class="text-xs text-gray-500">Niveau ') +
-      (wdConfig.kyc_level || 0) +
-      " \xB7 " +
-      kycLevelLabel +
-      "</span></span>\n              " +
-      ("verified" !== t?.kyc_status
-        ? '<button onclick="showPage(\'kyc\')" class="text-xs text-rouge-400 hover:underline">Compl\xE9ter \u2192</button>'
-        : '<span class="text-xs text-gray-500">Plafond : <strong class="text-white">' + kycMaxStr + "</strong></span>") +
-      ('\n            </div>\n          </div>\n          <div class="flex items-center gap-3">\n            <div class="w-5 h-5 rounded-full flex items-center ' +
-        "justify-center flex-shrink-0 ") +
-      ((t?.wallet_balance || 0) >= minWd ? "bg-green-500/20" : "bg-yellow-500/20") +
-      '">\n              <i class="fas ' +
-      ((t?.wallet_balance || 0) >= minWd ? "fa-check text-green-400" : "fa-exclamation text-yellow-400") +
-      (' text-[10px]"></i>\n            </div>\n            <div class="flex-1 flex items-center justify-between">\n              <span class="text-sm ' +
-        'text-gray-300">Solde retirable : <strong class="text-rouge-400">') +
-      fmt$(t?.wallet_balance) +
-      '</strong></span>\n              <span class="text-xs text-gray-500">Minimum : <strong class="text-white">' +
-      fmt$(minWd) +
-      ('</strong></span>\n            </div>\n          </div>\n          <div class="flex items-center gap-3">\n            <div class="w-5 h-5 rounded-full flex ' +
-        "items-center justify-center flex-shrink-0 ") +
-      (hasPending ? "bg-yellow-500/20" : "bg-green-500/20") +
-      '">\n              <i class="fas ' +
-      (hasPending ? "fa-clock text-yellow-400" : "fa-check text-green-400") +
-      ' text-[10px]"></i>\n            </div>\n            <div class="flex-1">\n              <span class="text-sm text-gray-300">' +
-      (hasPending
-        ? '<strong class="text-yellow-400">Retrait en cours</strong> — attendez qu\'il soit traité'
-        : "Aucun retrait en cours — vous pouvez soumettre") +
-      '</span>\n            </div>\n          </div>\n        </div>\n      </div>\n\n      <!-- Formulaire -->\n      <div class="bg-dark-800 rounded-2xl border ' +
-      (canWithdraw ? "border-rouge-500/25" : "border-dark-600") +
-      " p-6 space-y-4 transition-all " +
-      (canWithdraw ? "" : "opacity-60") +
-      ('">\n        <div>\n          <label class="form-label">Montant à retirer ($)</label>\n          <div class="relative">\n            <span class="absolute ' +
-        'left-3 top-1/2 -translate-y-1/2 text-rouge-400 font-bold">$</span>\n            <input id="wd-amount" type="number" min="') +
-      minWd +
-      '" max="' +
-      (t?.wallet_balance || 0) +
-      '" step="0.01"\n              placeholder="Minimum ' +
-      fmt$(minWd) +
-      '" class="form-input pl-7" ' +
-      (canWithdraw ? "" : "disabled") +
-      '\n              oninput="wdUpdatePreview()">\n          </div>\n          ' +
-      ((t?.wallet_balance || 0) > 0
-        ? "\n          <div class=\"flex gap-2 mt-1.5 flex-wrap\">\n            <button onclick=\"document.getElementById('wd-amount').value='" +
-          (t?.wallet_balance || 0).toFixed(2) +
-          ('\';wdUpdatePreview()" class="text-xs text-rouge-400 hover:text-rouge-400 bg-rouge-500/10 hover:bg-rouge-500/15 px-2 py-0.5 rounded-lg transition">Tout ' +
-            "retirer (") +
-          fmt$(t?.wallet_balance) +
-          ")</button>\n            " +
-          ((t?.wallet_balance || 0) > 200
-            ? "<button onclick=\"document.getElementById('wd-amount').value='" +
-              Math.floor((t?.wallet_balance || 0) / 2) +
-              '.00\';wdUpdatePreview()" class="text-xs text-gray-400 hover:text-gray-300 bg-dark-600 hover:bg-dark-500 px-2 py-0.5 rounded-lg transition">50% (' +
-              fmt$((t?.wallet_balance || 0) / 2) +
-              ")</button>"
-            : "") +
-          "\n          </div>"
-        : "") +
-      ('\n        </div>\n        <!-- Sélecteur méthode de paiement -->\n        <div>\n          <label class="form-label">Méthode de paiement</label>\n          ' +
-        '<div class="flex gap-2 flex-wrap">\n            <button id="wd-tab-paypal" onclick="wdSwitchMethod(\'paypal\')" class="flex items-center gap-1.5 px-3 ' +
-        'py-1.5 rounded-lg border text-xs font-medium transition-all bg-dark-700 text-gray-400 border-dark-600">\n              <i class="fab fa-paypal ' +
-        'text-blue-400"></i>PayPal\n            </button>\n            <button id="wd-tab-bank_transfer" onclick="wdSwitchMethod(\'bank_transfer\')" class="flex ' +
-        'items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all bg-dark-700 text-gray-400 border-dark-600">\n' +
-        ('              <i class="fas fa-university text-green-400"></i>Virement bancaire\n            </button>\n            <button id="wd-tab-crypto" ' +
-          'onclick="wdSwitchMethod(\'crypto\')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all bg-dark-700 ' +
-          'text-gray-400 border-dark-600">\n              <i class="fas fa-coins text-yellow-400"></i>Crypto\n            </button>\n          </div>\n        </div>\n' +
-          '        <!-- Panel PayPal -->\n        <div id="wd-panel-paypal" style="display:none">\n') +
-        ('          <label class="form-label">Email PayPal de réception</label>\n          <div class="relative">\n            <i class="fab fa-paypal absolute ' +
-          'left-3 top-1/2 -translate-y-1/2 text-blue-400 text-sm"></i>\n            <input id="wd-paypal" type="email" placeholder="votre@paypal.com"\n             ' +
-          ' class="form-input pl-8" ')) +
-      (canWithdraw ? "" : "disabled") +
-      ('>\n          </div>\n          <p class="text-xs text-gray-500 mt-1"><i class="fas fa-info-circle mr-1"></i>Assurez-vous que cet email est bien associé ' +
-        'à un compte PayPal actif.</p>\n        </div>\n        <!-- Panel Virement bancaire -->\n        <div id="wd-panel-bank_transfer" style="display:none" ' +
-        'class="space-y-3">\n          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">\n            <div class="sm:col-span-2">\n              <label ' +
-        'class="form-label">Titulaire du compte <span class="text-red-400">*</span></label>\n' +
-        '              <input id="wd-bank-holder" type="text" placeholder="Nom complet du titulaire" class="form-input" ') +
-      (canWithdraw ? "" : "disabled") +
-      ('>\n            </div>\n            <div>\n              <label class="form-label">IBAN <span class="text-red-400">*</span></label>\n              <input ' +
-        'id="wd-bank-iban" type="text" placeholder="FR76..." class="form-input font-mono" ') +
-      (canWithdraw ? "" : "disabled") +
-      ('>\n            </div>\n            <div>\n              <label class="form-label">BIC / SWIFT <span class="text-red-400">*</span></label>\n              <' +
-        'input id="wd-bank-bic" type="text" placeholder="BNPAFRPP" class="form-input font-mono" ') +
-      (canWithdraw ? "" : "disabled") +
-      ('>\n            </div>\n            <div>\n              <label class="form-label">Nom de la banque</label>\n              <input id="wd-bank-name" ' +
-        'type="text" placeholder="BNP Paribas" class="form-input" ') +
-      (canWithdraw ? "" : "disabled") +
-      ('>\n            </div>\n            <div>\n              <label class="form-label">Numéro de compte</label>\n              <input id="wd-bank-account" ' +
-        'type="text" placeholder="Numéro de compte (optionnel)" class="form-input" ') +
-      (canWithdraw ? "" : "disabled") +
-      ('>\n            </div>\n            <div class="sm:col-span-2">\n              <label class="form-label">Adresse de la banque</label>\n              <input ' +
-        'id="wd-bank-address" type="text" placeholder="Adresse complète (optionnel)" class="form-input" ') +
-      (canWithdraw ? "" : "disabled") +
-      ('>\n            </div>\n          </div>\n        </div>\n        <!-- Panel Crypto -->\n        <div id="wd-panel-crypto" style="display:none" ' +
-        'class="space-y-3">\n          <div>\n            <label class="form-label">Adresse du wallet <span class="text-red-400">*</span></label>\n            <' +
-        'input id="wd-crypto-address" type="text" placeholder="Adresse wallet (ex: TXyz...)" class="form-input font-mono" ') +
-      (canWithdraw ? "" : "disabled") +
-      ('>\n          </div>\n          <div class="grid grid-cols-2 gap-3">\n            <div>\n              <label class="form-label">Réseau <span ' +
-        'class="text-red-400">*</span></label>\n              <input id="wd-crypto-network" type="text" placeholder="TRC20, ERC20..." class="form-input" ') +
-      (canWithdraw ? "" : "disabled") +
-      ('>\n            </div>\n            <div>\n              <label class="form-label">Devise <span class="text-red-400">*</span></label>\n              <input ' +
-        'id="wd-crypto-currency" type="text" placeholder="USDT, BTC..." class="form-input" ') +
-      (canWithdraw ? "" : "disabled") +
-      ('>\n            </div>\n          </div>\n        </div>\n        <div>\n          <label class="form-label">PIN de sécurité <span class="text-gray-500 ' +
-        'font-normal">(4 ou 6 chiffres)</span></label>\n          <div class="relative">\n            <i class="fas fa-lock absolute left-3 top-1/2 ' +
-        '-translate-y-1/2 text-gray-500 text-sm"></i>\n            <input id="wd-pin" type="password" maxlength="6" placeholder="••••••"\n              ' +
-        'class="form-input pl-8 tracking-widest font-mono" ') +
-      (canWithdraw ? "" : "disabled") +
-      ">\n          </div>\n          " +
-      (t?.pin_hash
+    el.innerHTML = [
+      [
+        [
+          [
+            [
+              [
+                [
+                  [
+                    [
+                      [
+                        '\n    <div class="max-w-2xl space-y-6">\n      <div class="flex items-center justify-between">\n        <div>\n          <h2 class="text-xl font-bold ',
+                        'text-white flex items-center gap-2"><i class="fas fa-paper-plane text-rouge-400"></i> Demande de Retrait</h2>\n          <p class="text-xs ',
+                        'text-gray-500 mt-0.5">Portefeuille principal uniquement — Traitement sous 24-48h</p>\n        </div>\n        <button onclick="showPage(\'wallet\')" ',
+                        'class="text-xs text-gray-400 hover:text-white transition flex items-center gap-1"><i class="fas fa-arrow-left text-[10px]"></i>Retour</button>\n',
+                        '      </div>\n\n      <!-- Checklist conditions -->\n      <div class="bg-dark-800 border border-dark-600 rounded-2xl p-5 space-y-3">\n        <h3 ' +
+                          'class="font-semibold text-white text-sm flex items-center gap-2"><i class="fas fa-clipboard-check text-blue-400"></i> Conditions à remplir</h3>\n       ' +
+                          ' <div class="space-y-2.5">\n          <div class="flex items-center gap-3">\n            <div class="w-5 h-5 rounded-full flex items-center ' +
+                          "justify-center flex-shrink-0 ",
+                        isTodayAllowed && wdEnabled ? "bg-green-500/20" : "bg-red-500/20",
+                        '">\n              <i class="fas ',
+                        isTodayAllowed && wdEnabled ? "fa-check text-green-400" : "fa-times text-red-400",
+                        ' text-[10px]"></i>\n            </div>\n            <div class="flex-1">\n              <span class="text-sm text-gray-300">'
+                      ].join(""),
+                      !wdEnabled
+                        ? '<span class="text-sm text-gray-300">Retraits <strong class="text-red-400">suspendus</strong></span>'
+                        : '<span class="text-sm text-gray-300">Jours : <strong class="text-white">' +
+                          allowedDaysLabels.join(", ") +
+                          "</strong></span>",
+                      "</span>\n              ",
+                      !wdEnabled
+                        ? ""
+                        : isTodayAllowed
+                          ? '<span class="ml-2 text-xs text-green-400 font-medium">✓ Aujourd\'hui !</span>'
+                          : '<span class="ml-2 text-xs text-gray-500">Prochain : ' + nextAllowedStr + "</span>",
+                      '\n            </div>\n          </div>\n          <div class="flex items-center gap-3">\n            <div class="w-5 h-5 rounded-full flex items-center ' +
+                        "justify-center flex-shrink-0 ",
+                      "verified" === t?.kyc_status ? "bg-green-500/20" : "bg-red-500/20",
+                      '">\n              <i class="fas ',
+                      "verified" === t?.kyc_status ? "fa-check text-green-400" : "fa-times text-red-400",
+                      ' text-[10px]"></i>\n            </div>\n            <div class="flex-1 flex items-center justify-between">\n              <span class="text-sm ' +
+                        'text-gray-300">KYC vérifié — <span class="text-xs text-gray-500">Niveau '
+                    ].join(""),
+                    wdConfig.kyc_level || 0,
+                    " \xB7 ",
+                    kycLevelLabel,
+                    "</span></span>\n              ",
+                    "verified" !== t?.kyc_status
+                      ? '<button onclick="showPage(\'kyc\')" class="text-xs text-rouge-400 hover:underline">Compl\xE9ter \u2192</button>'
+                      : '<span class="text-xs text-gray-500">Plafond : <strong class="text-white">' + kycMaxStr + "</strong></span>",
+                    '\n            </div>\n          </div>\n          <div class="flex items-center gap-3">\n            <div class="w-5 h-5 rounded-full flex items-center ' +
+                      "justify-center flex-shrink-0 ",
+                    (t?.wallet_balance || 0) >= minWd ? "bg-green-500/20" : "bg-yellow-500/20",
+                    '">\n              <i class="fas '
+                  ].join(""),
+                  (t?.wallet_balance || 0) >= minWd ? "fa-check text-green-400" : "fa-exclamation text-yellow-400",
+                  ' text-[10px]"></i>\n            </div>\n            <div class="flex-1 flex items-center justify-between">\n              <span class="text-sm ' +
+                    'text-gray-300">Solde retirable : <strong class="text-rouge-400">',
+                  fmt$(t?.wallet_balance),
+                  '</strong></span>\n              <span class="text-xs text-gray-500">Minimum : <strong class="text-white">',
+                  fmt$(minWd),
+                  '</strong></span>\n            </div>\n          </div>\n          <div class="flex items-center gap-3">\n            <div class="w-5 h-5 rounded-full flex ' +
+                    "items-center justify-center flex-shrink-0 ",
+                  hasPending ? "bg-yellow-500/20" : "bg-green-500/20",
+                  '">\n              <i class="fas '
+                ].join(""),
+                hasPending ? "fa-clock text-yellow-400" : "fa-check text-green-400",
+                ' text-[10px]"></i>\n            </div>\n            <div class="flex-1">\n              <span class="text-sm text-gray-300">',
+                hasPending
+                  ? '<strong class="text-yellow-400">Retrait en cours</strong> — attendez qu\'il soit traité'
+                  : "Aucun retrait en cours — vous pouvez soumettre",
+                '</span>\n            </div>\n          </div>\n        </div>\n      </div>\n\n      <!-- Formulaire -->\n      <div class="bg-dark-800 rounded-2xl border ',
+                canWithdraw ? "border-rouge-500/25" : "border-dark-600",
+                " p-6 space-y-4 transition-all ",
+                canWithdraw ? "" : "opacity-60",
+                '">\n        <div>\n          <label class="form-label">Montant à retirer ($)</label>\n          <div class="relative">\n            <span class="absolute ' +
+                  'left-3 top-1/2 -translate-y-1/2 text-rouge-400 font-bold">$</span>\n            <input id="wd-amount" type="number" min="'
+              ].join(""),
+              minWd,
+              '" max="',
+              t?.wallet_balance || 0,
+              '" step="0.01"\n              placeholder="Minimum ',
+              fmt$(minWd),
+              '" class="form-input pl-7" ',
+              canWithdraw ? "" : "disabled",
+              '\n              oninput="wdUpdatePreview()">\n          </div>\n          '
+            ].join(""),
+            (t?.wallet_balance || 0) > 0
+              ? "\n          <div class=\"flex gap-2 mt-1.5 flex-wrap\">\n            <button onclick=\"document.getElementById('wd-amount').value='" +
+                (t?.wallet_balance || 0).toFixed(2) +
+                ('\';wdUpdatePreview()" class="text-xs text-rouge-400 hover:text-rouge-400 bg-rouge-500/10 hover:bg-rouge-500/15 px-2 py-0.5 rounded-lg transition">Tout ' +
+                  "retirer (") +
+                fmt$(t?.wallet_balance) +
+                ")</button>\n            " +
+                ((t?.wallet_balance || 0) > 200
+                  ? "<button onclick=\"document.getElementById('wd-amount').value='" +
+                    Math.floor((t?.wallet_balance || 0) / 2) +
+                    '.00\';wdUpdatePreview()" class="text-xs text-gray-400 hover:text-gray-300 bg-dark-600 hover:bg-dark-500 px-2 py-0.5 rounded-lg transition">50% (' +
+                    fmt$((t?.wallet_balance || 0) / 2) +
+                    ")</button>"
+                  : "") +
+                "\n          </div>"
+              : "",
+            '\n        </div>\n        <!-- Sélecteur méthode de paiement -->\n        <div>\n          <label class="form-label">Méthode de paiement</label>\n          ' +
+              '<div class="flex gap-2 flex-wrap">\n            <button id="wd-tab-paypal" onclick="wdSwitchMethod(\'paypal\')" class="flex items-center gap-1.5 px-3 ' +
+              'py-1.5 rounded-lg border text-xs font-medium transition-all bg-dark-700 text-gray-400 border-dark-600">\n              <i class="fab fa-paypal ' +
+              'text-blue-400"></i>PayPal\n            </button>\n            <button id="wd-tab-bank_transfer" onclick="wdSwitchMethod(\'bank_transfer\')" class="flex ' +
+              'items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all bg-dark-700 text-gray-400 border-dark-600">\n' +
+              ('              <i class="fas fa-university text-green-400"></i>Virement bancaire\n            </button>\n            <button id="wd-tab-crypto" ' +
+                'onclick="wdSwitchMethod(\'crypto\')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all bg-dark-700 ' +
+                'text-gray-400 border-dark-600">\n              <i class="fas fa-coins text-yellow-400"></i>Crypto\n            </button>\n          </div>\n        </div>\n' +
+                '        <!-- Panel PayPal -->\n        <div id="wd-panel-paypal" style="display:none">\n') +
+              ('          <label class="form-label">Email PayPal de réception</label>\n          <div class="relative">\n            <i class="fab fa-paypal absolute ' +
+                'left-3 top-1/2 -translate-y-1/2 text-blue-400 text-sm"></i>\n            <input id="wd-paypal" type="email" placeholder="votre@paypal.com"\n             ' +
+                ' class="form-input pl-8" '),
+            canWithdraw ? "" : "disabled",
+            '>\n          </div>\n          <p class="text-xs text-gray-500 mt-1"><i class="fas fa-info-circle mr-1"></i>Assurez-vous que cet email est bien associé ' +
+              'à un compte PayPal actif.</p>\n        </div>\n        <!-- Panel Virement bancaire -->\n        <div id="wd-panel-bank_transfer" style="display:none" ' +
+              'class="space-y-3">\n          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">\n            <div class="sm:col-span-2">\n              <label ' +
+              'class="form-label">Titulaire du compte <span class="text-red-400">*</span></label>\n' +
+              '              <input id="wd-bank-holder" type="text" placeholder="Nom complet du titulaire" class="form-input" ',
+            canWithdraw ? "" : "disabled",
+            '>\n            </div>\n            <div>\n              <label class="form-label">IBAN <span class="text-red-400">*</span></label>\n              <input ' +
+              'id="wd-bank-iban" type="text" placeholder="FR76..." class="form-input font-mono" ',
+            canWithdraw ? "" : "disabled",
+            '>\n            </div>\n            <div>\n              <label class="form-label">BIC / SWIFT <span class="text-red-400">*</span></label>\n              <' +
+              'input id="wd-bank-bic" type="text" placeholder="BNPAFRPP" class="form-input font-mono" '
+          ].join(""),
+          canWithdraw ? "" : "disabled",
+          '>\n            </div>\n            <div>\n              <label class="form-label">Nom de la banque</label>\n              <input id="wd-bank-name" ' +
+            'type="text" placeholder="BNP Paribas" class="form-input" ',
+          canWithdraw ? "" : "disabled",
+          '>\n            </div>\n            <div>\n              <label class="form-label">Numéro de compte</label>\n              <input id="wd-bank-account" ' +
+            'type="text" placeholder="Numéro de compte (optionnel)" class="form-input" ',
+          canWithdraw ? "" : "disabled",
+          '>\n            </div>\n            <div class="sm:col-span-2">\n              <label class="form-label">Adresse de la banque</label>\n              <input ' +
+            'id="wd-bank-address" type="text" placeholder="Adresse complète (optionnel)" class="form-input" ',
+          canWithdraw ? "" : "disabled",
+          '>\n            </div>\n          </div>\n        </div>\n        <!-- Panel Crypto -->\n        <div id="wd-panel-crypto" style="display:none" ' +
+            'class="space-y-3">\n          <div>\n            <label class="form-label">Adresse du wallet <span class="text-red-400">*</span></label>\n            <' +
+            'input id="wd-crypto-address" type="text" placeholder="Adresse wallet (ex: TXyz...)" class="form-input font-mono" '
+        ].join(""),
+        canWithdraw ? "" : "disabled",
+        '>\n          </div>\n          <div class="grid grid-cols-2 gap-3">\n            <div>\n              <label class="form-label">Réseau <span ' +
+          'class="text-red-400">*</span></label>\n              <input id="wd-crypto-network" type="text" placeholder="TRC20, ERC20..." class="form-input" ',
+        canWithdraw ? "" : "disabled",
+        '>\n            </div>\n            <div>\n              <label class="form-label">Devise <span class="text-red-400">*</span></label>\n              <input ' +
+          'id="wd-crypto-currency" type="text" placeholder="USDT, BTC..." class="form-input" ',
+        canWithdraw ? "" : "disabled",
+        '>\n            </div>\n          </div>\n        </div>\n        <div>\n          <label class="form-label">PIN de sécurité <span class="text-gray-500 ' +
+          'font-normal">(4 ou 6 chiffres)</span></label>\n          <div class="relative">\n            <i class="fas fa-lock absolute left-3 top-1/2 ' +
+          '-translate-y-1/2 text-gray-500 text-sm"></i>\n            <input id="wd-pin" type="password" maxlength="6" placeholder="••••••"\n              ' +
+          'class="form-input pl-8 tracking-widest font-mono" ',
+        canWithdraw ? "" : "disabled",
+        ">\n          </div>\n          "
+      ].join(""),
+      t?.pin_hash
         ? ""
         : '\n          <p class="text-xs text-orange-400 mt-1"><i class="fas fa-triangle-exclamation mr-1"></i>PIN non configuré — <button ' +
-          'onclick="showPage(\'profile\')" class="underline">Configurer dans Mon Profil</button></p>') +
-      ('\n        </div>\n\n        <!-- Preview récapitulatif dynamique -->\n        <div id="wd-preview" class="hidden bg-dark-700 border border-dark-500 ' +
+          'onclick="showPage(\'profile\')" class="underline">Configurer dans Mon Profil</button></p>',
+      '\n        </div>\n\n        <!-- Preview récapitulatif dynamique -->\n        <div id="wd-preview" class="hidden bg-dark-700 border border-dark-500 ' +
         'rounded-xl p-4 space-y-2">\n          <div class="text-xs text-gray-400 uppercase tracking-wider font-medium mb-2">Récapitulatif de votre demande</div>\n' +
         '          <div class="flex justify-between text-sm"><span class="text-gray-400">Montant demandé</span><span id="prev-amount" class="text-white ' +
         'font-bold">—</span></div>\n          <div class="flex justify-between text-sm"><span class="text-gray-400">Frais de traitement</span><span ' +
@@ -4881,14 +5084,14 @@ async function renderWithdraw(el, page, perPage) {
           'mt-1"><span>Vers :</span><span id="prev-paypal" class="text-gray-300">—</span></div>\n          <div class="flex justify-between text-xs text-gray-500">' +
           '<span>Délai estimé :</span><span class="text-gray-300">24-48h après validation</span></div>\n') +
         ('        </div>\n\n        <div id="wd-error" class="hidden text-red-400 text-sm bg-red-900/20 rounded-lg p-3 flex items-start gap-2"><i class="fas ' +
-          'fa-circle-exclamation mt-0.5 flex-shrink-0"></i><span id="wd-error-msg"></span></div>\n        <button onclick="doWithdrawConfirm()" class="w-full ')) +
-      (canWithdraw ? "bg-rouge-500 text-dark-900 hover:bg-rouge-500" : "bg-dark-600 text-gray-500 cursor-not-allowed") +
-      ' font-bold py-3 rounded-xl transition text-sm flex items-center justify-center gap-2"\n          ' +
-      (canWithdraw ? "" : "disabled") +
-      ('>\n          <i class="fas fa-paper-plane"></i>Vérifier et soumettre ma demande\n        </button>\n        <p class="text-xs text-gray-600 text-center"><' +
+          'fa-circle-exclamation mt-0.5 flex-shrink-0"></i><span id="wd-error-msg"></span></div>\n        <button onclick="doWithdrawConfirm()" class="w-full '),
+      canWithdraw ? "bg-rouge-500 text-dark-900 hover:bg-rouge-500" : "bg-dark-600 text-gray-500 cursor-not-allowed",
+      ' font-bold py-3 rounded-xl transition text-sm flex items-center justify-center gap-2"\n          ',
+      canWithdraw ? "" : "disabled",
+      '>\n          <i class="fas fa-paper-plane"></i>Vérifier et soumettre ma demande\n        </button>\n        <p class="text-xs text-gray-600 text-center"><' +
         'i class="fas fa-shield-alt mr-1"></i>Votre PIN est chiffré (bcrypt) et jamais transmis en clair sur le réseau.</p>\n      </div>\n\n      <!-- Historique ' +
-        "retraits -->\n      ") +
-      (n.length > 0
+        "retraits -->\n      ",
+      n.length > 0
         ? '\n      <div class="bg-dark-800 border border-dark-600 rounded-2xl overflow-hidden">\n        <div class="px-5 py-4 border-b border-dark-600 flex ' +
           'items-center justify-between">\n          <h3 class="font-semibold text-white flex items-center gap-2"><i class="fas fa-history text-gray-400 text-sm"><' +
           '/i>Historique de mes retraits</h3>\n          <span class="text-xs text-gray-500">' +
@@ -4896,43 +5099,47 @@ async function renderWithdraw(el, page, perPage) {
           (' retrait(s) au total</span>\n        </div>\n        <div class="overflow-x-auto">\n          <table class="data-table">\n            <thead><tr><th>Date<' +
             "/th><th>Montant</th><th>Net reçu</th><th>Vers</th><th>Réf.</th><th>Statut</th></tr></thead>\n            <tbody>\n              ") +
           n
-            .map(
-              (w) =>
-                '\n              <tr>\n                <td class="text-gray-500 text-xs whitespace-nowrap">' +
-                fmtDate(w.created_at) +
-                '</td>\n                <td class="text-white font-medium">' +
-                fmt$(w.amount) +
-                '</td>\n                <td class="text-green-400 font-bold">' +
-                fmt$(w.net_amount) +
-                '</td>\n                <td class="text-gray-400 text-xs max-w-[130px] truncate">' +
-                w.paypal_email +
-                '</td>\n                <td class="text-xs text-gray-500 font-mono">' +
-                (w.payment_reference || "—") +
-                "</td>\n                <td>" +
-                wdStatusBadge(w.status) +
-                "</td>\n              </tr>\n              " +
-                ("rejected" === w.status && w.admin_note
+            .map((w) =>
+              [
+                [
+                  '\n              <tr>\n                <td class="text-gray-500 text-xs whitespace-nowrap">',
+                  fmtDate(w.created_at),
+                  '</td>\n                <td class="text-white font-medium">',
+                  fmt$(w.amount),
+                  '</td>\n                <td class="text-green-400 font-bold">',
+                  fmt$(w.net_amount),
+                  '</td>\n                <td class="text-gray-400 text-xs max-w-[130px] truncate">',
+                  w.paypal_email,
+                  '</td>\n                <td class="text-xs text-gray-500 font-mono">'
+                ].join(""),
+                w.payment_reference || "—",
+                "</td>\n                <td>",
+                wdStatusBadge(w.status),
+                "</td>\n              </tr>\n              ",
+                "rejected" === w.status && w.admin_note
                   ? '\n              <tr class="bg-red-900/10"><td colspan="6" class="text-xs text-red-400 py-1.5 px-4"><i class="fas fa-comment-alt mr-1"></i>Raison : ' +
                     w.admin_note +
                     "</td></tr>"
-                  : "") +
-                "\n              " +
-                ("completed" === w.status && w.payment_reference
+                  : "",
+                "\n              ",
+                "completed" === w.status && w.payment_reference
                   ? '\n              <tr class="bg-green-900/5"><td colspan="6" class="text-xs text-green-400/60 py-1 px-4"><i class="fas fa-check-circle mr-1"></i>Confirmé ' +
                     "le " +
                     fmtDate(w.confirmed_at || w.created_at) +
                     " \xB7 R\xE9f: " +
                     w.payment_reference +
                     "</td></tr>"
-                  : "") +
+                  : "",
                 "\n              "
+              ].join("")
             )
             .join("") +
           ('\n            </tbody>\n          </table>\n        </div>\n        <div class="px-5 py-3 border-t border-dark-600 flex justify-between items-center">\n    ' +
             '      <button onclick="showPage(\'transactions\')" class="text-xs text-rouge-400 hover:underline">Voir toutes les transactions →</button>\n        </div>\n' +
             "      </div>")
-        : "") +
-      '\n    </div><div id="wd-pagination" class="px-6 py-3 border-t border-dark-600 mt-2"></div>';
+        : "",
+      '\n    </div><div id="wd-pagination" class="px-6 py-3 border-t border-dark-600 mt-2"></div>'
+    ].join("");
     window._wdWithdrawConfig = {
       minWd,
       kycMax,
@@ -5052,19 +5259,21 @@ function doWithdrawConfirm() {
   } else return showErr("Méthode de paiement invalide.");
   window._wdCurrentPayload = payload;
   showModal(
-    '\n  <div class="p-6 space-y-5 max-w-sm mx-auto">\n    <div class="flex items-center gap-3">\n      <div class="w-10 h-10 rounded-xl bg-rouge-500/15 flex ' +
-      'items-center justify-center flex-shrink-0">\n        <i class="fas fa-paper-plane text-rouge-400"></i>\n      </div>\n      <div>\n        <h3 ' +
-      'class="font-bold text-white">Confirmer le retrait</h3>\n        <p class="text-xs text-gray-500">Vérifiez les informations avant de valider</p>\n      <' +
-      '/div>\n    </div>\n    <div class="bg-dark-700 rounded-xl border border-dark-500 divide-y divide-dark-500">\n' +
-      ('      <div class="flex justify-between items-center px-4 py-3">\n        <span class="text-sm text-gray-400">Montant</span>\n        <span ' +
-        'class="text-lg font-black text-white">') +
-      fmt$(amount) +
-      ('</span>\n      </div>\n      <div class="flex justify-between items-center px-4 py-3">\n        <span class="text-sm text-gray-400">Frais</span>\n        <' +
+    [
+      '\n  <div class="p-6 space-y-5 max-w-sm mx-auto">\n    <div class="flex items-center gap-3">\n      <div class="w-10 h-10 rounded-xl bg-rouge-500/15 flex ',
+      'items-center justify-center flex-shrink-0">\n        <i class="fas fa-paper-plane text-rouge-400"></i>\n      </div>\n      <div>\n        <h3 ',
+      'class="font-bold text-white">Confirmer le retrait</h3>\n        <p class="text-xs text-gray-500">Vérifiez les informations avant de valider</p>\n      <',
+      '/div>\n    </div>\n    <div class="bg-dark-700 rounded-xl border border-dark-500 divide-y divide-dark-500">\n',
+      '      <div class="flex justify-between items-center px-4 py-3">\n        <span class="text-sm text-gray-400">Montant</span>\n        <span ' +
+        'class="text-lg font-black text-white">',
+      fmt$(amount),
+      '</span>\n      </div>\n      <div class="flex justify-between items-center px-4 py-3">\n        <span class="text-sm text-gray-400">Frais</span>\n        <' +
         'span class="text-sm text-green-400 font-medium">$0.00 <span class="text-xs text-gray-600">(offerts)</span></span>\n      </div>\n      <div class="flex ' +
         'justify-between items-center px-4 py-3 bg-rouge-500/5">\n        <span class="text-sm font-semibold text-gray-200">Vous recevrez</span>\n        <span ' +
-        'class="text-xl font-black text-rouge-400">') +
-      fmt$(amount) +
-      '</span>\n      </div>\n      <div class="flex justify-between items-center px-4 py-3">\n        <span class="text-sm text-gray-400">' +
+        'class="text-xl font-black text-rouge-400">',
+      fmt$(amount),
+      '</span>\n      </div>\n      <div class="flex justify-between items-center px-4 py-3">\n        <span class="text-sm text-gray-400">'
+    ].join("") +
       methodLabel +
       '</span>\n        <span class="text-sm text-gray-200 font-mono text-xs break-all">' +
       destSummary +
@@ -5163,28 +5372,32 @@ async function doConvertDreamiles() {
   t <= 0
     ? showToast("Aucun Dreamile disponible à convertir", "error")
     : showModal(
-        '\n\n  <div class="p-6 space-y-5 max-w-sm mx-auto">\n\n    <div class="flex justify-between items-center">\n\n      <div class="flex items-center gap-3">\n\n   ' +
-          '     <div class="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center">\n\n          <i class="fas fa-sync text-yellow-400"></i>\n\n     ' +
-          '   </div>\n\n        <div>\n\n          <h3 class="font-bold text-white">Convertir des Dreamiles</h3>\n\n          <p class="text-xs text-gray-500">1 ' +
-          "Dreamile = 1 $ dans votre wallet principal</p>\n\n        </div>\n" +
-          ('\n      </div>\n\n      <button onclick="closeModal()" class="text-gray-400 hover:text-white"><i class="fas fa-times"></i></button>\n\n    </div>\n\n\n\n    <' +
-            'div class="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-3 text-center">\n\n      <div class="text-xs text-gray-400 mb-1">Solde disponible<' +
-            '/div>\n\n      <div class="text-2xl font-bold text-yellow-400">') +
-          t.toLocaleString() +
-          ' <span class="text-base">DRM</span></div>\n\n      <div class="text-xs text-yellow-600 mt-0.5">\u2248 ' +
-          fmt$(t) +
-          ('</div>\n\n    </div>\n\n\n\n    <div>\n\n      <label class="form-label">Nombre de Dreamiles à convertir</label>\n\n      <input id="drm-convert-amount" ' +
-            'type="number" min="1" max="') +
-          t +
-          '" step="1"\n\n        class="form-input" value="' +
-          t +
-          '" placeholder="Ex: 100">\n\n      <button onclick="document.getElementById(\'drm-convert-amount\').value=\'' +
-          t +
-          '\'"\n\n        class="text-xs text-yellow-400 hover:underline mt-1">Tout convertir (' +
-          t.toLocaleString() +
-          (' DRM)</button>\n\n    </div>\n\n\n\n    <div id="drm-convert-error" class="text-red-400 text-sm hidden"></div>\n\n\n\n    <div class="flex gap-3">\n\n      <' +
+        [
+          [
+            '\n\n  <div class="p-6 space-y-5 max-w-sm mx-auto">\n\n    <div class="flex justify-between items-center">\n\n      <div class="flex items-center gap-3">\n\n   ',
+            '     <div class="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center">\n\n          <i class="fas fa-sync text-yellow-400"></i>\n\n     ',
+            '   </div>\n\n        <div>\n\n          <h3 class="font-bold text-white">Convertir des Dreamiles</h3>\n\n          <p class="text-xs text-gray-500">1 ',
+            "Dreamile = 1 $ dans votre wallet principal</p>\n\n        </div>\n",
+            '\n      </div>\n\n      <button onclick="closeModal()" class="text-gray-400 hover:text-white"><i class="fas fa-times"></i></button>\n\n    </div>\n\n\n\n    <' +
+              'div class="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-3 text-center">\n\n      <div class="text-xs text-gray-400 mb-1">Solde disponible<' +
+              '/div>\n\n      <div class="text-2xl font-bold text-yellow-400">',
+            t.toLocaleString(),
+            ' <span class="text-base">DRM</span></div>\n\n      <div class="text-xs text-yellow-600 mt-0.5">\u2248 ',
+            fmt$(t),
+            '</div>\n\n    </div>\n\n\n\n    <div>\n\n      <label class="form-label">Nombre de Dreamiles à convertir</label>\n\n      <input id="drm-convert-amount" ' +
+              'type="number" min="1" max="'
+          ].join(""),
+          t,
+          '" step="1"\n\n        class="form-input" value="',
+          t,
+          '" placeholder="Ex: 100">\n\n      <button onclick="document.getElementById(\'drm-convert-amount\').value=\'',
+          t,
+          '\'"\n\n        class="text-xs text-yellow-400 hover:underline mt-1">Tout convertir (',
+          t.toLocaleString(),
+          ' DRM)</button>\n\n    </div>\n\n\n\n    <div id="drm-convert-error" class="text-red-400 text-sm hidden"></div>\n\n\n\n    <div class="flex gap-3">\n\n      <' +
             'button onclick="closeModal()" class="flex-1 py-3 bg-dark-700 text-gray-300 rounded-xl hover:bg-dark-600 transition text-sm">Annuler</button>\n\n      <' +
-            'button onclick="confirmConvertDreamiles(') +
+            'button onclick="confirmConvertDreamiles('
+        ].join("") +
           t +
           (')"\n\n        class="flex-1 py-3 bg-yellow-500 text-dark-900 font-bold rounded-xl hover:bg-yellow-400 transition text-sm">\n\n        <i class="fas ' +
             'fa-sync mr-2"></i>Convertir\n\n      </button>\n\n    </div>\n\n  </div>')
@@ -5463,31 +5676,35 @@ function _buildSourceSection(e) {
       "</span>\n\n        </div>");
   const d = n || "—";
   return (
-    '\n\n    <div class="bg-dark-700 rounded-xl p-4 mt-3 border border-dark-600/60">\n\n      <div class="text-xs text-gray-400 mb-3 uppercase tracking-wide ' +
-    'font-semibold flex items-center gap-2">\n\n        <i class="fas fa-user-circle text-gray-500"></i>\n\n        ' +
-    ({
-      bonus_influence: "Membre source (downline)",
-      bonus_rayonnement: "Filleul direct",
-      valorisation_recommandation: "Filleul parrainé"
-    }[t] || "Généré par") +
-    '\n\n      </div>\n\n      <div class="flex items-center gap-3">\n\n        <div class="w-10 h-10 rounded-full ' +
-    ({
-      bonus_influence: "text-purple-400 bg-purple-500/15",
-      bonus_rayonnement: "text-cyan-400 bg-cyan-500/15",
-      valorisation_recommandation: "text-blue-400 bg-blue-500/15"
-    }[t] || "text-gray-400 bg-dark-600") +
-    ' flex items-center justify-center text-sm font-bold flex-shrink-0">\n\n          ' +
-    ("—" !== d ? d.charAt(0).toUpperCase() : "?") +
-    '\n\n        </div>\n\n        <div class="flex-1 min-w-0">\n\n          <div class="font-semibold text-white text-sm truncate">' +
-    d +
-    '</div>\n\n          <div class="text-xs text-gray-400 mt-0.5 flex items-center gap-2 flex-wrap">\n\n            ' +
-    (a ? '<span class="font-mono">' + a + "</span>" : "") +
-    "\n\n            " +
-    (s ? '<span class="inline-flex items-center gap-1"><i class="fas fa-medal text-[10px] text-rouge-400"></i>' + s + "</span>" : "") +
-    '\n\n          </div>\n\n        </div>\n\n        <div class="flex flex-col items-end gap-1 flex-shrink-0">\n\n          ' +
-    r +
-    "\n\n          " +
-    i +
+    [
+      [
+        '\n\n    <div class="bg-dark-700 rounded-xl p-4 mt-3 border border-dark-600/60">\n\n      <div class="text-xs text-gray-400 mb-3 uppercase tracking-wide ',
+        'font-semibold flex items-center gap-2">\n\n        <i class="fas fa-user-circle text-gray-500"></i>\n\n        ',
+        {
+          bonus_influence: "Membre source (downline)",
+          bonus_rayonnement: "Filleul direct",
+          valorisation_recommandation: "Filleul parrainé"
+        }[t] || "Généré par",
+        '\n\n      </div>\n\n      <div class="flex items-center gap-3">\n\n        <div class="w-10 h-10 rounded-full ',
+        {
+          bonus_influence: "text-purple-400 bg-purple-500/15",
+          bonus_rayonnement: "text-cyan-400 bg-cyan-500/15",
+          valorisation_recommandation: "text-blue-400 bg-blue-500/15"
+        }[t] || "text-gray-400 bg-dark-600",
+        ' flex items-center justify-center text-sm font-bold flex-shrink-0">\n\n          ',
+        "—" !== d ? d.charAt(0).toUpperCase() : "?",
+        '\n\n        </div>\n\n        <div class="flex-1 min-w-0">\n\n          <div class="font-semibold text-white text-sm truncate">',
+        d
+      ].join(""),
+      '</div>\n\n          <div class="text-xs text-gray-400 mt-0.5 flex items-center gap-2 flex-wrap">\n\n            ',
+      a ? '<span class="font-mono">' + a + "</span>" : "",
+      "\n\n            ",
+      s ? '<span class="inline-flex items-center gap-1"><i class="fas fa-medal text-[10px] text-rouge-400"></i>' + s + "</span>" : "",
+      '\n\n          </div>\n\n        </div>\n\n        <div class="flex flex-col items-end gap-1 flex-shrink-0">\n\n          ',
+      r,
+      "\n\n          ",
+      i
+    ].join("") +
     "\n\n        </div>\n\n      </div>\n\n      " +
     l +
     "\n\n    </div>"
@@ -5512,66 +5729,76 @@ function showTxDetail(e) {
   ((l.id = "tx-detail-modal"),
     (l.className = "fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"),
     (l.innerHTML =
-      '\n\n    <!-- Overlay -->\n\n    <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeTxModal()"></div>\n\n    <!-- Panel -->\n\n    <div ' +
-      'class="relative w-full max-w-md bg-dark-800 border border-dark-600 rounded-2xl shadow-2xl overflow-hidden animate-slide-up">\n\n      <!-- Header coloré ' +
-      'selon type -->\n\n      <div class="px-5 py-4 border-b border-dark-600 flex items-center justify-between gap-3">\n\n        <div class="flex items-center ' +
-      'gap-3">\n\n          <div class="w-10 h-10 ' +
-      "rounded-full flex items-center justify-center " +
-      (s ? "bg-emerald-500/20" : "bg-red-500/20") +
-      '">\n\n            <i class="fas ' +
-      (n?.icon || "fa-circle") +
-      " " +
-      (s ? "text-emerald-400" : "text-red-400") +
-      '"></i>\n\n          </div>\n\n          <div>\n\n            <div class="font-bold text-white text-sm">' +
-      (n?.label || t.transaction_type) +
-      '</div>\n\n            <div class="text-xs text-gray-400">' +
-      (n?.group || "Transaction") +
-      ('</div>\n\n          </div>\n\n        </div>\n\n        <button onclick="closeTxModal()" class="w-8 h-8 rounded-lg bg-dark-700 hover:bg-dark-600 flex ' +
-        'items-center justify-center text-gray-400 hover:text-white transition">\n\n          <i class="fas fa-times text-sm"></i>\n\n        </button>\n\n      <' +
-        '/div>\n\n\n\n      <!-- Corps -->\n\n      <div class="p-5 space-y-1 max-h-[75vh] overflow-y-auto">\n\n        <!-- Montant principal -->\n\n        <div ' +
-        'class="text-center py-4">\n\n          <div class="text-3xl ' +
-        "font-black ") +
-      (s ? "text-emerald-400" : "text-red-400") +
-      '">\n\n            ' +
-      (s ? "+" : "−") +
-      fmt$(Math.abs(t.amount ?? 0)) +
-      '\n\n          </div>\n\n          <div class="text-xs text-gray-400 mt-1">' +
-      ({
-        principal: "Principal (disponible)",
-        pending: "En attente (M+1)",
-        dreamiles: "Luxia (Dreamiles)"
-      }[t.wallet_type] ||
-        t.wallet_type ||
-        "Wallet") +
-      ('</div>\n\n        </div>\n\n\n\n        <!-- Données de mouvement -->\n\n        <div class="bg-dark-700 rounded-xl p-4 space-y-0">\n\n          <div ' +
-        'class="flex justify-between items-center py-2 border-b border-dark-600">\n\n            <span class="text-xs text-gray-400">Date</span>\n\n            <' +
-        'span class="text-sm font-medium text-white">') +
-      fmtDate(t.created_at) +
-      "</span>\n\n          </div>\n\n          " +
-      i +
-      ('\n\n          <div class="flex justify-between items-center py-2 border-b border-dark-600">\n\n            <span class="text-xs text-gray-400">Solde avant<' +
-        '/span>\n\n            <span class="text-sm text-gray-300">') +
-      (null != t.balance_before ? fmt$(Math.abs(t.balance_before)) : "—") +
-      ('</span>\n\n          </div>\n\n          <div class="flex justify-between items-center py-2">\n\n            <span class="text-xs text-gray-400">Solde après<' +
-        '/span>\n\n            <span class="text-sm font-semibold text-white">') +
-      (null != t.balance_after ? fmt$(Math.abs(t.balance_after)) : "—") +
-      "</span>\n\n          </div>\n\n        </div>\n\n\n\n        <!-- Membre source (section enrichie) -->\n\n        " +
-      r +
-      "\n\n\n\n        <!-- Explication du type -->\n\n        " +
-      (a
-        ? '\n\n        <div class="bg-dark-700/50 border border-dark-600 rounded-xl p-4 mt-2">\n\n          <div class="flex items-center gap-2 mb-2">\n\n            <' +
-          'i class="fas ' +
-          a.icon +
-          " " +
-          a.color +
-          ' text-sm"></i>\n\n            <span class="text-xs font-semibold ' +
-          a.color +
-          '">' +
-          a.title +
-          '</span>\n\n          </div>\n\n          <p class="text-xs text-gray-400 leading-relaxed">' +
-          a.desc +
-          "</p>\n\n        </div>"
-        : "") +
+      [
+        [
+          [
+            [
+              '\n\n    <!-- Overlay -->\n\n    <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeTxModal()"></div>\n\n    <!-- Panel -->\n\n    <div ',
+              'class="relative w-full max-w-md bg-dark-800 border border-dark-600 rounded-2xl shadow-2xl overflow-hidden animate-slide-up">\n\n      <!-- Header coloré ',
+              'selon type -->\n\n      <div class="px-5 py-4 border-b border-dark-600 flex items-center justify-between gap-3">\n\n        <div class="flex items-center ',
+              'gap-3">\n\n          <div class="w-10 h-10 ',
+              "rounded-full flex items-center justify-center ",
+              s ? "bg-emerald-500/20" : "bg-red-500/20",
+              '">\n\n            <i class="fas ',
+              n?.icon || "fa-circle",
+              " "
+            ].join(""),
+            s ? "text-emerald-400" : "text-red-400",
+            '"></i>\n\n          </div>\n\n          <div>\n\n            <div class="font-bold text-white text-sm">',
+            n?.label || t.transaction_type,
+            '</div>\n\n            <div class="text-xs text-gray-400">',
+            n?.group || "Transaction",
+            '</div>\n\n          </div>\n\n        </div>\n\n        <button onclick="closeTxModal()" class="w-8 h-8 rounded-lg bg-dark-700 hover:bg-dark-600 flex ' +
+              'items-center justify-center text-gray-400 hover:text-white transition">\n\n          <i class="fas fa-times text-sm"></i>\n\n        </button>\n\n      <' +
+              '/div>\n\n\n\n      <!-- Corps -->\n\n      <div class="p-5 space-y-1 max-h-[75vh] overflow-y-auto">\n\n        <!-- Montant principal -->\n\n        <div ' +
+              'class="text-center py-4">\n\n          <div class="text-3xl ' +
+              "font-black ",
+            s ? "text-emerald-400" : "text-red-400",
+            '">\n\n            '
+          ].join(""),
+          s ? "+" : "−",
+          fmt$(Math.abs(t.amount ?? 0)),
+          '\n\n          </div>\n\n          <div class="text-xs text-gray-400 mt-1">',
+          {
+            principal: "Principal (disponible)",
+            pending: "En attente (M+1)",
+            dreamiles: "Luxia (Dreamiles)"
+          }[t.wallet_type] ||
+            t.wallet_type ||
+            "Wallet",
+          '</div>\n\n        </div>\n\n\n\n        <!-- Données de mouvement -->\n\n        <div class="bg-dark-700 rounded-xl p-4 space-y-0">\n\n          <div ' +
+            'class="flex justify-between items-center py-2 border-b border-dark-600">\n\n            <span class="text-xs text-gray-400">Date</span>\n\n            <' +
+            'span class="text-sm font-medium text-white">',
+          fmtDate(t.created_at),
+          "</span>\n\n          </div>\n\n          ",
+          i
+        ].join(""),
+        '\n\n          <div class="flex justify-between items-center py-2 border-b border-dark-600">\n\n            <span class="text-xs text-gray-400">Solde avant<' +
+          '/span>\n\n            <span class="text-sm text-gray-300">',
+        null != t.balance_before ? fmt$(Math.abs(t.balance_before)) : "—",
+        '</span>\n\n          </div>\n\n          <div class="flex justify-between items-center py-2">\n\n            <span class="text-xs text-gray-400">Solde après<' +
+          '/span>\n\n            <span class="text-sm font-semibold text-white">',
+        null != t.balance_after ? fmt$(Math.abs(t.balance_after)) : "—",
+        "</span>\n\n          </div>\n\n        </div>\n\n\n\n        <!-- Membre source (section enrichie) -->\n\n        ",
+        r,
+        "\n\n\n\n        <!-- Explication du type -->\n\n        ",
+        a
+          ? [
+              '\n\n        <div class="bg-dark-700/50 border border-dark-600 rounded-xl p-4 mt-2">\n\n          <div class="flex items-center gap-2 mb-2">\n\n            <',
+              'i class="fas ',
+              a.icon,
+              " ",
+              a.color,
+              ' text-sm"></i>\n\n            <span class="text-xs font-semibold ',
+              a.color,
+              '">',
+              a.title
+            ].join("") +
+            '</span>\n\n          </div>\n\n          <p class="text-xs text-gray-400 leading-relaxed">' +
+            a.desc +
+            "</p>\n\n        </div>"
+          : ""
+      ].join("") +
       ('\n\n      </div>\n\n\n\n      <!-- Footer -->\n\n      <div class="px-5 pb-5 pt-3 border-t border-dark-600">\n\n        <button onclick="closeTxModal()" ' +
         'class="w-full bg-dark-700 hover:bg-dark-600 text-gray-300 font-semibold py-3 rounded-xl transition text-sm">\n\n          Fermer\n\n        </button>\n\n    ' +
         "  </div>\n\n    </div>")),
@@ -5622,31 +5849,37 @@ async function renderTransactions(e, page, perPage) {
       const pkgLine = row.package_name ? '<div class="text-[10px] text-indigo-400/70 mt-0.5">' + row.package_name + "</div>" : " ";
       const encoded = encodeURIComponent(JSON.stringify(row));
       rows +=
-        '<tr class="cursor-pointer hover:bg-dark-700/60 transition-colors group" onclick="showTxDetail(decodeURIComponent(\x27' +
-        encoded +
-        '\x27))"><td class="text-gray-400 text-xs whitespace-nowrap">' +
-        fmtDate(row.created_at) +
-        '</td><td><span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ' +
-        (cfg?.badge || "bg-gray-500/15 text-gray-400") +
-        '"><i class="fas ' +
-        (cfg?.icon || "fa-circle") +
-        ' text-[10px]"></i>' +
-        (cfg?.label || txType || "—") +
-        "</span></td>" +
-        '<td class="text-gray-300 text-sm max-w-[220px]"><div class="truncate" title="' +
-        desc +
-        '">' +
-        desc +
-        "</div>" +
-        srcLine +
-        pkgLine +
-        "</td>" +
-        "<td>" +
-        statusBadgeTx(row.status) +
-        "</td>" +
-        '<td class="text-right font-bold whitespace-nowrap ' +
-        (isCredit ? "text-green-400" : "text-red-400") +
-        '">' +
+        [
+          [
+            [
+              '<tr class="cursor-pointer hover:bg-dark-700/60 transition-colors group" onclick="showTxDetail(decodeURIComponent(\x27',
+              encoded,
+              '\x27))"><td class="text-gray-400 text-xs whitespace-nowrap">',
+              fmtDate(row.created_at),
+              '</td><td><span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ',
+              cfg?.badge || "bg-gray-500/15 text-gray-400",
+              '"><i class="fas ',
+              cfg?.icon || "fa-circle",
+              ' text-[10px]"></i>'
+            ].join(""),
+            cfg?.label || txType || "—",
+            "</span></td>",
+            '<td class="text-gray-300 text-sm max-w-[220px]"><div class="truncate" title="',
+            desc,
+            '">',
+            desc,
+            "</div>",
+            srcLine
+          ].join(""),
+          pkgLine,
+          "</td>",
+          "<td>",
+          statusBadgeTx(row.status),
+          "</td>",
+          '<td class="text-right font-bold whitespace-nowrap ',
+          isCredit ? "text-green-400" : "text-red-400",
+          '">'
+        ].join("") +
         (isCredit ? "+" : "−") +
         fmt$(Math.abs(row.amount ?? 0)) +
         "</td>" +
@@ -5667,17 +5900,18 @@ async function renderTransactions(e, page, perPage) {
           'class="text-center w-8"></th></tr></thead><tbody>' +
           rows +
           "</tbody></table></div></div>";
-    e.innerHTML =
-      '<div class="space-y-5"><div class="flex items-center justify-between flex-wrap gap-2"><div><h2 class="text-xl font-bold text-white">Toutes les ' +
-      'transactions</h2><p class="text-xs text-gray-500 mt-0.5">' +
-      total +
-      " opération" +
-      (total > 1 ? "s" : "") +
-      " au total</p></div>" +
-      ('<button onclick="showPage(\'wallet\')" class="text-xs text-rouge-400 hover:underline"><i class="fas fa-wallet mr-1"></i>Voir le portefeuille</button><' +
-        "/div>") +
-      tableHtml +
-      '</div><div id="tx-pagination" class="px-4 py-3 border-t border-dark-600"></div>';
+    e.innerHTML = [
+      '<div class="space-y-5"><div class="flex items-center justify-between flex-wrap gap-2"><div><h2 class="text-xl font-bold text-white">Toutes les ',
+      'transactions</h2><p class="text-xs text-gray-500 mt-0.5">',
+      total,
+      " opération",
+      total > 1 ? "s" : "",
+      " au total</p></div>",
+      '<button onclick="showPage(\'wallet\')" class="text-xs text-rouge-400 hover:underline"><i class="fas fa-wallet mr-1"></i>Voir le portefeuille</button><' +
+        "/div>",
+      tableHtml,
+      '</div><div id="tx-pagination" class="px-4 py-3 border-t border-dark-600"></div>'
+    ].join("");
     renderPagination(
       "tx-pagination",
       total,
@@ -5792,15 +6026,16 @@ async function _showTransferModal() {
         ? "$" + transferCfg.fee_value + " fixe"
         : "Aucun frais";
   showModal(
-    '\n  <div class="p-6 space-y-5 max-w-md mx-auto">\n    <div class="flex items-center justify-between">\n      <div class="flex items-center gap-3">\n       ' +
-      ' <div class="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">\n          <i class="fas fa-exchange-alt text-blue-400"></i>\n       ' +
-      ' </div>\n        <div>\n          <h3 class="font-bold text-white">Transfert vers un membre</h3>\n          <p class="text-xs text-gray-400">Solde ' +
-      'disponible : <span class="text-green-400 ' +
-      'font-semibold">$' +
+    [
+      '\n  <div class="p-6 space-y-5 max-w-md mx-auto">\n    <div class="flex items-center justify-between">\n      <div class="flex items-center gap-3">\n       ',
+      ' <div class="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">\n          <i class="fas fa-exchange-alt text-blue-400"></i>\n       ',
+      ' </div>\n        <div>\n          <h3 class="font-bold text-white">Transfert vers un membre</h3>\n          <p class="text-xs text-gray-400">Solde ',
+      'disponible : <span class="text-green-400 ',
+      'font-semibold">$',
       Number(walletBalance).toLocaleString("en-US", {
         minimumFractionDigits: 2
-      }) +
-      ('</span></p>\n        </div>\n      </div>\n      <button onclick="closeModal()" class="text-gray-400 hover:text-white w-8 h-8 flex items-center ' +
+      }),
+      '</span></p>\n        </div>\n      </div>\n      <button onclick="closeModal()" class="text-gray-400 hover:text-white w-8 h-8 flex items-center ' +
         'justify-center rounded-lg hover:bg-dark-700 text-xl">×</button>\n    </div>\n\n    <div>\n      <label class="block text-sm text-gray-400 mb-1.5">ID ' +
         'LEADER du destinataire <span class="text-red-400">*</span></label>\n      <div class="flex gap-2">\n        <input id="tr-recipient-id" type="text" ' +
         'placeholder="Ex: LEAD123456"\n          class="flex-1 bg-dark-700 border border-dark-500 rounded-xl px-4 py-3 text-white uppercase placeholder-gray-500 ' +
@@ -5810,10 +6045,11 @@ async function _showTransferModal() {
           'class="fas fa-search"></i>\n        </button>\n      </div>\n      <div id="tr-recipient-info" class="mt-2"></div>\n    </div>\n\n    <div>\n      <label ' +
           'class="block text-sm text-gray-400 mb-1.5">Montant ($) <span class="text-red-400">*</span></label>\n') +
         ('      <div class="relative">\n        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-blue-400 font-bold">$</span>\n        <input ' +
-          'id="tr-amount" type="number" min="')) +
-      transferCfg.min_amount +
-      ('" step="1" placeholder="Ex : 50"\n          class="w-full bg-dark-700 border border-dark-500 rounded-xl pl-9 pr-4 py-3 text-white font-bold ' +
-        'focus:border-blue-400 focus:outline-none text-sm">\n      </div>\n      <p class="text-xs text-gray-500 mt-1">Minimum : $') +
+          'id="tr-amount" type="number" min="'),
+      transferCfg.min_amount,
+      '" step="1" placeholder="Ex : 50"\n          class="w-full bg-dark-700 border border-dark-500 rounded-xl pl-9 pr-4 py-3 text-white font-bold ' +
+        'focus:border-blue-400 focus:outline-none text-sm">\n      </div>\n      <p class="text-xs text-gray-500 mt-1">Minimum : $'
+    ].join("") +
       transferCfg.min_amount +
       " \xB7 Frais : " +
       fee +
@@ -6255,15 +6491,17 @@ function renderPkgCard(e, t, n) {
         (e) =>
           "\n\n    " +
           (e.label
-            ? '\n\n    <div class="mt-5 mb-2">\n\n      <div class="flex items-center gap-2">\n\n        <i class="fas ' +
-              (c[e.label] || "fa-circle-dot") +
-              " " +
-              t.accent +
-              ' text-xs"></i>\n\n        <span class="text-xs font-bold uppercase tracking-widest ' +
-              t.accent +
-              '">' +
-              e.label +
-              '</span>\n\n        <div class="flex-1 h-px bg-white/5"></div>\n\n      </div>\n\n    </div>'
+            ? [
+                '\n\n    <div class="mt-5 mb-2">\n\n      <div class="flex items-center gap-2">\n\n        <i class="fas ',
+                c[e.label] || "fa-circle-dot",
+                " ",
+                t.accent,
+                ' text-xs"></i>\n\n        <span class="text-xs font-bold uppercase tracking-widest ',
+                t.accent,
+                '">',
+                e.label,
+                '</span>\n\n        <div class="flex-1 h-px bg-white/5"></div>\n\n      </div>\n\n    </div>'
+              ].join("")
             : "") +
           "\n\n    " +
           e.items
@@ -6280,46 +6518,54 @@ function renderPkgCard(e, t, n) {
       )
       .join("");
   return (
-    '\n\n  <div class="rounded-2xl border ' +
-    t.cardBorder +
-    " bg-gradient-to-b " +
-    t.gradient +
-    (' flex flex-col overflow-hidden hover:shadow-2xl hover:-translate-y-0.5 transition-all duration-300">\n\n    <!-- En-tête prix -->\n\n    <div ' +
-      'class="bg-gradient-to-b ') +
-    t.headerBg +
-    " px-6 pt-6 pb-5 border-b " +
-    t.cardBorder +
-    ('">\n\n      <div class="flex items-start justify-between gap-2 mb-2">\n\n        <h3 class="text-xl font-extrabold text-white tracking-tight ' +
-      'leading-tight">') +
-    e.name +
-    '</h3>\n\n        <span class="shrink-0 text-xs px-2.5 py-1 rounded-full border ' +
-    t.badgeBg +
-    ' font-semibold whitespace-nowrap">\n\n          ' +
-    (s ? "Abonnement" : "Unique") +
-    "\n\n        </span>\n\n      </div>\n\n      " +
-    (e.description ? '<p class="text-xs text-gray-400 leading-relaxed mb-4 italic">' + e.description + "</p>" : "") +
-    '\n\n      <div class="flex items-baseline gap-1 mb-4">\n\n        <span class="text-4xl font-black ' +
-    t.priceColor +
-    '">' +
-    r +
-    "</span>\n\n        " +
-    i +
-    '\n\n      </div>\n\n      <div class="flex flex-wrap gap-2">\n\n        <span class="text-xs px-2.5 py-1 rounded-full ' +
-    t.accentBg +
-    " " +
-    t.accent +
-    " border " +
-    t.cardBorder +
-    ' font-medium">\n\n          <i class="fas fa-chart-bar mr-1 text-xs"></i>' +
-    e.bv_value +
-    " BV\n\n        </span>\n\n        <!-- Point 6 : direct_commission_rate masqu\xE9 c\xF4t\xE9 membre (confidentiel admin) -->\n\n        " +
-    (l > 0
-      ? '\n\n        <span class="text-xs px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">\n\n          <i ' +
-        'class="fas fa-star mr-1 text-xs"></i>' +
-        l +
-        " Dreamiles/mois\n\n        </span>"
-      : "") +
-    '\n\n      </div>\n\n    </div>\n\n    <!-- Features -->\n\n    <div class="px-6 py-4 flex-1">\n\n      ' +
+    [
+      [
+        [
+          [
+            '\n\n  <div class="rounded-2xl border ',
+            t.cardBorder,
+            " bg-gradient-to-b ",
+            t.gradient,
+            ' flex flex-col overflow-hidden hover:shadow-2xl hover:-translate-y-0.5 transition-all duration-300">\n\n    <!-- En-tête prix -->\n\n    <div ' +
+              'class="bg-gradient-to-b ',
+            t.headerBg,
+            " px-6 pt-6 pb-5 border-b ",
+            t.cardBorder,
+            '">\n\n      <div class="flex items-start justify-between gap-2 mb-2">\n\n        <h3 class="text-xl font-extrabold text-white tracking-tight ' +
+              'leading-tight">'
+          ].join(""),
+          e.name,
+          '</h3>\n\n        <span class="shrink-0 text-xs px-2.5 py-1 rounded-full border ',
+          t.badgeBg,
+          ' font-semibold whitespace-nowrap">\n\n          ',
+          s ? "Abonnement" : "Unique",
+          "\n\n        </span>\n\n      </div>\n\n      ",
+          e.description ? '<p class="text-xs text-gray-400 leading-relaxed mb-4 italic">' + e.description + "</p>" : "",
+          '\n\n      <div class="flex items-baseline gap-1 mb-4">\n\n        <span class="text-4xl font-black '
+        ].join(""),
+        t.priceColor,
+        '">',
+        r,
+        "</span>\n\n        ",
+        i,
+        '\n\n      </div>\n\n      <div class="flex flex-wrap gap-2">\n\n        <span class="text-xs px-2.5 py-1 rounded-full ',
+        t.accentBg,
+        " "
+      ].join(""),
+      t.accent,
+      " border ",
+      t.cardBorder,
+      ' font-medium">\n\n          <i class="fas fa-chart-bar mr-1 text-xs"></i>',
+      e.bv_value,
+      " BV\n\n        </span>\n\n        <!-- Point 6 : direct_commission_rate masqu\xE9 c\xF4t\xE9 membre (confidentiel admin) -->\n\n        ",
+      l > 0
+        ? '\n\n        <span class="text-xs px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">\n\n          <i ' +
+          'class="fas fa-star mr-1 text-xs"></i>' +
+          l +
+          " Dreamiles/mois\n\n        </span>"
+        : "",
+      '\n\n      </div>\n\n    </div>\n\n    <!-- Features -->\n\n    <div class="px-6 py-4 flex-1">\n\n      '
+    ].join("") +
     x +
     '\n\n    </div>\n\n    <!-- CTA -->\n\n    <div class="px-6 pb-6 pt-3">\n\n      ' +
     (() => {
@@ -6386,15 +6632,7 @@ function renderPkgCard(e, t, n) {
       }
       if (activeOrder) {
         return (
-          "<button onclick=\"wizardStart('" +
-          e.id +
-          "','" +
-          encodeURIComponent(e.name) +
-          "'," +
-          e.price_usd +
-          "," +
-          e.bv_value +
-          ",true," +
+          ["<button onclick=\"wizardStart('", e.id, "','", encodeURIComponent(e.name), "',", e.price_usd, ",", e.bv_value, ",true,"].join("") +
           (activeOrder.price_usd || 0) +
           "," +
           (activeOrder.bv_value || 0) +
@@ -6405,15 +6643,17 @@ function renderPkgCard(e, t, n) {
         );
       }
       return (
-        "<button onclick=\"wizardStart('" +
-        e.id +
-        "','" +
-        encodeURIComponent(e.name) +
-        "'," +
-        e.price_usd +
-        "," +
-        e.bv_value +
-        ',false,0,0)" class="w-full ' +
+        [
+          "<button onclick=\"wizardStart('",
+          e.id,
+          "','",
+          encodeURIComponent(e.name),
+          "',",
+          e.price_usd,
+          ",",
+          e.bv_value,
+          ',false,0,0)" class="w-full '
+        ].join("") +
         t.btnClass +
         (' text-white font-bold py-3.5 rounded-xl transition-all duration-200 text-sm shadow-lg flex items-center justify-center gap-2"><i class="fas ' +
           'fa-shopping-cart"></i>') +
@@ -6474,42 +6714,50 @@ async function renderPackages(e) {
             c = "EUR" === t[0]?.currency ? "€" : "$";
           return (
             l === d ? Number(l).toLocaleString("fr-FR") : (Number(l).toLocaleString("fr-FR"), Number(d).toLocaleString("fr-FR")),
-            "\n\n      <div onclick=\"showPackageCategory('" +
-              e +
-              '\')"\n\n        class="group cursor-pointer rounded-2xl border ' +
-              r.border +
-              " " +
-              r.catCardHover +
-              "\n\n               bg-gradient-to-br " +
-              r.catCardBg +
-              (' p-7\n\n               hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">\n\n\n\n        <!-- Icône + nom -->\n\n        <div class="flex ' +
-                'items-center gap-4 mb-4">\n\n          <div class="w-14 h-14 rounded-2xl ') +
-              r.accentBg +
-              " border " +
-              r.border +
-              ("\n\n                      flex items-center justify-center text-2xl shrink-0\n\n                      group-hover:scale-110 transition-transform " +
-                'duration-300">\n\n            ') +
-              i.icon +
-              '\n\n          </div>\n\n          <div class="min-w-0">\n\n            <h3 class="font-extrabold text-white text-base leading-tight truncate">' +
-              s.name +
-              '</h3>\n\n            <span class="text-xs px-2 py-0.5 rounded-full border ' +
-              r.badgeBg +
-              ' mt-1 inline-block">' +
-              i.tag +
-              '</span>\n\n          </div>\n\n        </div>\n\n\n\n        <!-- Description -->\n\n        <p class="text-sm text-gray-400 leading-relaxed mb-5">' +
-              i.desc +
-              ('</p>\n\n\n\n        <!-- Prix range + nb packages -->\n\n        <div class="flex items-end justify-between">\n\n          <div>\n\n            <div ' +
-                'class="text-xs text-gray-500 mb-0.5 uppercase tracking-wide">À partir de</div>\n\n            <div class="font-black text-xl ') +
-              r.priceColor +
-              ' leading-none">\n\n              ' +
-              c +
-              Number(l).toLocaleString("fr-FR") +
-              '<span class="text-sm font-normal text-gray-400">' +
-              (o ? "/mois" : "") +
-              '</span>\n\n            </div>\n\n          </div>\n\n          <div class="flex items-center gap-2">\n\n            <span class="text-xs text-gray-500">' +
-              t.length +
-              " offre" +
-              (t.length > 1 ? "s" : "") +
+            [
+              [
+                [
+                  [
+                    "\n\n      <div onclick=\"showPackageCategory('",
+                    e,
+                    '\')"\n\n        class="group cursor-pointer rounded-2xl border ',
+                    r.border,
+                    " ",
+                    r.catCardHover,
+                    "\n\n               bg-gradient-to-br ",
+                    r.catCardBg,
+                    ' p-7\n\n               hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">\n\n\n\n        <!-- Icône + nom -->\n\n        <div class="flex ' +
+                      'items-center gap-4 mb-4">\n\n          <div class="w-14 h-14 rounded-2xl '
+                  ].join(""),
+                  r.accentBg,
+                  " border ",
+                  r.border,
+                  "\n\n                      flex items-center justify-center text-2xl shrink-0\n\n                      group-hover:scale-110 transition-transform " +
+                    'duration-300">\n\n            ',
+                  i.icon,
+                  '\n\n          </div>\n\n          <div class="min-w-0">\n\n            <h3 class="font-extrabold text-white text-base leading-tight truncate">',
+                  s.name,
+                  '</h3>\n\n            <span class="text-xs px-2 py-0.5 rounded-full border '
+                ].join(""),
+                r.badgeBg,
+                ' mt-1 inline-block">',
+                i.tag,
+                '</span>\n\n          </div>\n\n        </div>\n\n\n\n        <!-- Description -->\n\n        <p class="text-sm text-gray-400 leading-relaxed mb-5">',
+                i.desc,
+                '</p>\n\n\n\n        <!-- Prix range + nb packages -->\n\n        <div class="flex items-end justify-between">\n\n          <div>\n\n            <div ' +
+                  'class="text-xs text-gray-500 mb-0.5 uppercase tracking-wide">À partir de</div>\n\n            <div class="font-black text-xl ',
+                r.priceColor,
+                ' leading-none">\n\n              '
+              ].join(""),
+              c,
+              Number(l).toLocaleString("fr-FR"),
+              '<span class="text-sm font-normal text-gray-400">',
+              o ? "/mois" : "",
+              '</span>\n\n            </div>\n\n          </div>\n\n          <div class="flex items-center gap-2">\n\n            <span class="text-xs text-gray-500">',
+              t.length,
+              " offre",
+              t.length > 1 ? "s" : ""
+            ].join("") +
               '</span>\n\n            <div class="w-8 h-8 rounded-full ' +
               r.accentBg +
               " border " +
@@ -6549,31 +6797,37 @@ function showPackageCategory(e) {
   const d = document.getElementById("pkg-view-detail");
   (d.classList.remove("hidden"),
     (d.innerHTML =
-      '\n\n  <!-- Breadcrumb / Retour -->\n\n  <div class="mb-6 flex items-center gap-3">\n\n    <button onclick="backToCategories()"\n\n      class="group flex ' +
-      'items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors">\n\n      <i class="fas fa-arrow-left group-hover:-translate-x-1 ' +
-      'transition-transform duration-200"></i>\n\n      Retour aux catégories\n\n    </button>\n\n    <span class="text-gray-600">/</span>\n\n    <span ' +
-      'class="text-sm ' +
-      r.accent +
-      ' font-semibold">' +
-      s.name +
-      '</span>\n\n  </div>\n\n\n\n  <!-- Header cat\xE9gorie -->\n\n  <div class="rounded-2xl border ' +
-      r.border +
-      " bg-gradient-to-r " +
-      r.headerBg +
-      ' px-7 py-6 mb-8 flex items-center gap-5">\n\n    <div class="w-16 h-16 rounded-2xl ' +
-      r.accentBg +
-      " border " +
-      r.border +
-      ' flex items-center justify-center text-3xl shrink-0">\n\n      ' +
-      i.icon +
-      '\n\n    </div>\n\n    <div>\n\n      <h2 class="text-2xl font-black text-white">' +
-      s.name +
-      "</h2>\n\n      " +
-      (i.desc ? '<p class="text-sm text-gray-400 mt-0.5">' + i.desc + "</p>" : "") +
-      "\n\n      " +
-      (i.tag ? '<span class="text-xs px-2.5 py-1 rounded-full border ' + r.badgeBg + ' mt-2 inline-block font-semibold">' + i.tag + "</span>" : "") +
-      '\n\n    </div>\n\n  </div>\n\n\n\n  <!-- Grille packages -->\n\n  <div class="grid grid-cols-1 md:grid-cols-2 ' +
-      l +
+      [
+        [
+          [
+            '\n\n  <!-- Breadcrumb / Retour -->\n\n  <div class="mb-6 flex items-center gap-3">\n\n    <button onclick="backToCategories()"\n\n      class="group flex ',
+            'items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors">\n\n      <i class="fas fa-arrow-left group-hover:-translate-x-1 ',
+            'transition-transform duration-200"></i>\n\n      Retour aux catégories\n\n    </button>\n\n    <span class="text-gray-600">/</span>\n\n    <span ',
+            'class="text-sm ',
+            r.accent,
+            ' font-semibold">',
+            s.name,
+            '</span>\n\n  </div>\n\n\n\n  <!-- Header cat\xE9gorie -->\n\n  <div class="rounded-2xl border ',
+            r.border
+          ].join(""),
+          " bg-gradient-to-r ",
+          r.headerBg,
+          ' px-7 py-6 mb-8 flex items-center gap-5">\n\n    <div class="w-16 h-16 rounded-2xl ',
+          r.accentBg,
+          " border ",
+          r.border,
+          ' flex items-center justify-center text-3xl shrink-0">\n\n      ',
+          i.icon
+        ].join(""),
+        '\n\n    </div>\n\n    <div>\n\n      <h2 class="text-2xl font-black text-white">',
+        s.name,
+        "</h2>\n\n      ",
+        i.desc ? '<p class="text-sm text-gray-400 mt-0.5">' + i.desc + "</p>" : "",
+        "\n\n      ",
+        i.tag ? '<span class="text-xs px-2.5 py-1 rounded-full border ' + r.badgeBg + ' mt-2 inline-block font-semibold">' + i.tag + "</span>" : "",
+        '\n\n    </div>\n\n  </div>\n\n\n\n  <!-- Grille packages -->\n\n  <div class="grid grid-cols-1 md:grid-cols-2 ',
+        l
+      ].join("") +
       ' gap-6 items-start">\n\n    ' +
       a.map((e) => renderPkgCard(e, r, (window._pkgData || {}).myOrders || [])).join("") +
       ('\n\n  </div>\n\n\n\n  <!-- Retour bas -->\n\n  <div class="mt-10 text-center">\n\n    <button onclick="backToCategories()"\n\n      class="inline-flex ' +
@@ -6654,32 +6908,35 @@ function renderMyOrders(e) {
     e
       .map(
         (e) =>
-          '\n\n      <div class="px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3">\n\n        <div class="flex-1">\n\n          <div class="font-medium ' +
-          'text-sm">' +
-          e.pkg_name +
-          '</div>\n\n          <div class="text-xs text-gray-500 mt-0.5">R\xE9f. ' +
-          e.id.substring(0, 12) +
-          "\u2026 \xB7 " +
-          fmtDate(e.created_at) +
-          '</div>\n\n        </div>\n\n        <div class="flex items-center gap-3 flex-wrap">\n\n          <span class="font-bold text-rouge-400">$' +
-          Number(e.amount_usd).toLocaleString("en-US") +
-          '</span>\n\n          <span class="text-xs px-3 py-1 rounded-full border ' +
-          (n[e.status] || "text-gray-400 bg-gray-500/10 border-gray-500/30") +
-          '">' +
-          (t[e.status] || e.status) +
-          "</span>\n\n          " +
-          ("pending" === e.status
-            ? "<button onclick=\"wizardProofOnly('" +
-              e.id +
-              ('\')" class="text-xs bg-blue-600/20 text-blue-400 border border-blue-500/30 px-3 py-1.5 rounded-lg hover:bg-blue-600/30 transition"><i class="fas ' +
-                'fa-upload mr-1"></i>Soumettre preuve</button>')
-            : "") +
-          "\n\n          " +
-          ("rejected" === e.status
-            ? '<span class="text-xs text-orange-400 bg-orange-500/10 border border-orange-500/30 px-3 py-1.5 rounded-lg flex items-center gap-1"><i class="fas ' +
-              'fa-info-circle"></i>Commandez à nouveau</span>'
-            : "") +
-          "\n\n        </div>\n\n      </div>"
+          [
+            [
+              '\n\n      <div class="px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3">\n\n        <div class="flex-1">\n\n          <div class="font-medium ',
+              'text-sm">',
+              e.pkg_name,
+              '</div>\n\n          <div class="text-xs text-gray-500 mt-0.5">R\xE9f. ',
+              e.id.substring(0, 12),
+              "\u2026 \xB7 ",
+              fmtDate(e.created_at),
+              '</div>\n\n        </div>\n\n        <div class="flex items-center gap-3 flex-wrap">\n\n          <span class="font-bold text-rouge-400">$',
+              Number(e.amount_usd).toLocaleString("en-US")
+            ].join(""),
+            '</span>\n\n          <span class="text-xs px-3 py-1 rounded-full border ',
+            n[e.status] || "text-gray-400 bg-gray-500/10 border-gray-500/30",
+            '">',
+            t[e.status] || e.status,
+            "</span>\n\n          ",
+            "pending" === e.status
+              ? "<button onclick=\"wizardProofOnly('" +
+                e.id +
+                ('\')" class="text-xs bg-blue-600/20 text-blue-400 border border-blue-500/30 px-3 py-1.5 rounded-lg hover:bg-blue-600/30 transition"><i class="fas ' +
+                  'fa-upload mr-1"></i>Soumettre preuve</button>')
+              : "",
+            "\n\n          ",
+            "rejected" === e.status
+              ? '<span class="text-xs text-orange-400 bg-orange-500/10 border border-orange-500/30 px-3 py-1.5 rounded-lg flex items-center gap-1"><i class="fas ' +
+                'fa-info-circle"></i>Commandez à nouveau</span>'
+              : ""
+          ].join("") + "\n\n        </div>\n\n      </div>"
       )
       .join("") +
     "\n\n    </div>\n\n  </div>"
@@ -6706,18 +6963,19 @@ function wizardClose() {
 function _wizardProgress(e, t) {
   const n = Math.round((e / t) * 100);
   return (
-    '\n\n  <div class="px-6 pt-5 pb-3 border-b border-dark-600">\n\n    <div class="flex items-center justify-between mb-2">\n\n      <span class="text-xs ' +
-    'font-semibold text-rouge-400 uppercase tracking-wider">Étape ' +
-    e +
-    "/" +
-    t +
-    " \u2014 " +
-    (["Package", "Licence", "Récap.", "Paiement", "Preuve", "Confirmation", "Terminé"][e - 1] || "") +
-    ('</span>\n\n      <button onclick="wizardClose()" class="text-gray-400 hover:text-white w-7 h-7 flex items-center justify-center rounded-lg ' +
-      'hover:bg-dark-700 text-lg">×</button>\n\n    </div>\n\n    <div class="w-full bg-dark-700 rounded-full h-1.5">\n\n      <div class="bg-rouge-500 h-1.5 ' +
-      'rounded-full transition-all" style="width:') +
-    n +
-    '%"></div>\n\n    </div>\n\n  </div>'
+    [
+      '\n\n  <div class="px-6 pt-5 pb-3 border-b border-dark-600">\n\n    <div class="flex items-center justify-between mb-2">\n\n      <span class="text-xs ',
+      'font-semibold text-rouge-400 uppercase tracking-wider">Étape ',
+      e,
+      "/",
+      t,
+      " \u2014 ",
+      ["Package", "Licence", "Récap.", "Paiement", "Preuve", "Confirmation", "Terminé"][e - 1] || "",
+      '</span>\n\n      <button onclick="wizardClose()" class="text-gray-400 hover:text-white w-7 h-7 flex items-center justify-center rounded-lg ' +
+        'hover:bg-dark-700 text-lg">×</button>\n\n    </div>\n\n    <div class="w-full bg-dark-700 rounded-full h-1.5">\n\n      <div class="bg-rouge-500 h-1.5 ' +
+        'rounded-full transition-all" style="width:',
+      n
+    ].join("") + '%"></div>\n\n    </div>\n\n  </div>'
   );
 }
 function wizardStart(e, t, n, a, s, r, i) {
@@ -6737,39 +6995,44 @@ function wizardStart(e, t, n, a, s, r, i) {
     d = _adminFeeInfo.active && ("multiple" === l || !_adminFeeInfo.paid),
     o = d ? Number(_adminFeeInfo.amount) : 0,
     c = _wizardData.isUpgrade
-      ? '\n\n    <div class="bg-green-900/20 border border-green-500/30 rounded-lg p-3 text-sm space-y-1">\n\n      <div class="flex justify-between text-gray-400">' +
-        '\n\n        <span><i class="fas fa-minus-circle text-gray-500 mr-1"></i>Package actuel (déjà payé)</span>\n\n        <span>$' +
-        _wizardData.currentPrice.toLocaleString("en-US") +
-        " \xB7 " +
-        _wizardData.currentBV +
-        (' BV</span>\n\n      </div>\n\n      <div class="flex justify-between text-green-300 font-semibold">\n\n        <span><i class="fas fa-arrow-up ' +
-          'text-green-400 mr-1"></i>Vous payez la différence</span>\n\n        <span>$') +
-        _wizardData.diffPrice.toLocaleString("en-US") +
-        " \xB7 +" +
-        _wizardData.diffBV +
-        " BV</span>\n\n      </div>\n\n    </div>"
+      ? [
+          '\n\n    <div class="bg-green-900/20 border border-green-500/30 rounded-lg p-3 text-sm space-y-1">\n\n      <div class="flex justify-between text-gray-400">',
+          '\n\n        <span><i class="fas fa-minus-circle text-gray-500 mr-1"></i>Package actuel (déjà payé)</span>\n\n        <span>$',
+          _wizardData.currentPrice.toLocaleString("en-US"),
+          " \xB7 ",
+          _wizardData.currentBV,
+          ' BV</span>\n\n      </div>\n\n      <div class="flex justify-between text-green-300 font-semibold">\n\n        <span><i class="fas fa-arrow-up ' +
+            'text-green-400 mr-1"></i>Vous payez la différence</span>\n\n        <span>$',
+          _wizardData.diffPrice.toLocaleString("en-US"),
+          " \xB7 +",
+          _wizardData.diffBV
+        ].join("") + " BV</span>\n\n      </div>\n\n    </div>"
       : "";
   _wizardShow(
-    "\n\n  " +
-      _wizardProgress(1, 7) +
-      '\n\n  <div class="p-6 space-y-5">\n\n    <div>\n\n      <h3 class="text-lg font-bold text-white">' +
-      (_wizardData.isUpgrade ? "Upgrade de package" : "Package sélectionné") +
-      '</h3>\n\n      <p class="text-sm text-gray-400 mt-1">' +
-      (_wizardData.isUpgrade ? "Vous ne payez que la différence avec votre package actuel." : "Vérifiez votre choix avant de continuer.") +
-      ('</p>\n\n    </div>\n\n    <div class="bg-dark-700 border border-dark-500 rounded-xl p-5 space-y-3">\n\n      <div class="flex justify-between items-center">\n' +
-        '\n        <span class="font-bold text-white text-lg">') +
-      _wizardData.pkgName +
-      '</span>\n\n        <span class="text-rouge-400 font-bold text-xl">$' +
-      _wizardData.diffPrice.toLocaleString("en-US") +
-      '</span>\n\n      </div>\n\n      <div class="flex gap-4 text-sm text-gray-400">\n\n        <span><i class="fas fa-chart-bar mr-1"></i>+' +
-      _wizardData.diffBV +
-      " BV cr\xE9dit\xE9s</span>\n\n        " +
-      (_wizardData.isUpgrade
+    [
+      [
+        "\n\n  ",
+        _wizardProgress(1, 7),
+        '\n\n  <div class="p-6 space-y-5">\n\n    <div>\n\n      <h3 class="text-lg font-bold text-white">',
+        _wizardData.isUpgrade ? "Upgrade de package" : "Package sélectionné",
+        '</h3>\n\n      <p class="text-sm text-gray-400 mt-1">',
+        _wizardData.isUpgrade ? "Vous ne payez que la différence avec votre package actuel." : "Vérifiez votre choix avant de continuer.",
+        '</p>\n\n    </div>\n\n    <div class="bg-dark-700 border border-dark-500 rounded-xl p-5 space-y-3">\n\n      <div class="flex justify-between items-center">\n' +
+          '\n        <span class="font-bold text-white text-lg">',
+        _wizardData.pkgName,
+        '</span>\n\n        <span class="text-rouge-400 font-bold text-xl">$'
+      ].join(""),
+      _wizardData.diffPrice.toLocaleString("en-US"),
+      '</span>\n\n      </div>\n\n      <div class="flex gap-4 text-sm text-gray-400">\n\n        <span><i class="fas fa-chart-bar mr-1"></i>+',
+      _wizardData.diffBV,
+      " BV cr\xE9dit\xE9s</span>\n\n        ",
+      _wizardData.isUpgrade
         ? '<span class="text-xs text-gray-500">(prix total package : $' + _wizardData.price.toLocaleString("en-US") + ")</span>"
-        : "") +
-      "\n\n      </div>\n\n      " +
-      c +
-      "\n\n      " +
+        : "",
+      "\n\n      </div>\n\n      ",
+      c,
+      "\n\n      "
+    ].join("") +
       (d
         ? '\n\n      <div class="bg-orange-900/20 border border-orange-500/30 rounded-lg p-3 text-sm text-orange-300">\n\n        <i class="fas fa-info-circle mr-2"><' +
           "/i>Frais d'administration : <strong>$" +
@@ -6787,38 +7050,42 @@ function wizardStart(e, t, n, a, s, r, i) {
 function wizardStep2() {
   if ((currentMember && currentMember.license_active) || _wizardData.isUpgrade) return ((_wizardData.addLicense = !1), void wizardStep3());
   _wizardShow(
-    "\n\n  " +
-      _wizardProgress(2, 7) +
-      ('\n\n  <div class="p-6 space-y-5">\n\n    <div>\n\n      <h3 class="text-lg font-bold text-white">Ajouter la Licence Finstrategia ?</h3>\n\n      <p ' +
-        'class="text-sm text-gray-400 mt-1">La licence annuelle est nécessaire pour être éligible aux commissions LEADER.</p>\n\n    </div>\n\n    <div ' +
-        'class="space-y-3">\n\n      <button onclick="wizardSetLicense(true)" id="btn-yes-lic"\n\n        class="w-full border-2 border-dark-500 rounded-xl p-4 ' +
-        'text-left hover:border-rouge-500 transition group">\n\n        <div class="flex items-start gap-4">\n' +
-        ('\n          <div class="w-10 h-10 rounded-xl bg-rouge-500/15 flex items-center justify-center flex-shrink-0 group-hover:bg-rouge-500/20 transition">\n\n  ' +
-          '          <i class="fas fa-key text-rouge-400"></i>\n\n          </div>\n\n          <div class="flex-1">\n\n            <div class="font-bold text-white ' +
-          'flex justify-between">\n\n              <span>Oui — Ajouter la licence</span>\n\n              <span class="text-rouge-400">+$')) +
-      fmtPrice(typeof _licPriceForWizard !== "undefined" ? _licPriceForWizard : 97) +
-      ('</span>\n\n            </div>\n\n            <div class="text-sm text-gray-400 mt-1">Accès complet Finstrategia + éligibilité aux commissions pendant 12 ' +
-        'mois.</div>\n\n            <div class="flex gap-3 mt-2 text-xs text-green-400">\n\n              <span><i class="fas fa-check mr-1"></i>Commissions ' +
-        'actives</span>\n\n              <span><i class="fas fa-check mr-1"></i>Primes de rang</span>\n\n              <span><i class="fas fa-check mr-1"></i>Bonus ' +
-        "MLM</span>\n\n            </div>\n\n          </div>\n\n        </div>\n" +
-        ('\n      </button>\n\n      <button onclick="wizardSetLicense(false)" id="btn-no-lic"\n\n        class="w-full border-2 border-dark-500 rounded-xl p-4 ' +
-          'text-left hover:border-gray-400 transition">\n\n        <div class="flex items-start gap-4">\n\n          <div class="w-10 h-10 rounded-xl bg-dark-600 ' +
-          'flex items-center justify-center flex-shrink-0">\n\n            <i class="fas fa-times text-gray-400"></i>\n\n          </div>\n\n          <div ' +
-          'class="flex-1">\n\n            <div class="font-bold text-white">Non — Package seul</div>\n') +
-        ('\n            <div class="text-sm text-gray-400 mt-1">Vous pourrez activer la licence plus tard depuis votre espace membre.</div>\n\n          </div>\n\n   ' +
-          "     </div>\n\n      </button>\n\n    </div>\n\n    <button onclick=\"wizardStart('")) +
-      _wizardData.pkgId +
-      "','" +
-      encodeURIComponent(_wizardData.pkgName) +
-      "'," +
-      _wizardData.price +
-      "," +
-      _wizardData.bv +
-      "," +
-      _wizardData.isUpgrade +
-      "," +
-      _wizardData.currentPrice +
-      "," +
+    [
+      [
+        "\n\n  ",
+        _wizardProgress(2, 7),
+        '\n\n  <div class="p-6 space-y-5">\n\n    <div>\n\n      <h3 class="text-lg font-bold text-white">Ajouter la Licence Finstrategia ?</h3>\n\n      <p ' +
+          'class="text-sm text-gray-400 mt-1">La licence annuelle est nécessaire pour être éligible aux commissions LEADER.</p>\n\n    </div>\n\n    <div ' +
+          'class="space-y-3">\n\n      <button onclick="wizardSetLicense(true)" id="btn-yes-lic"\n\n        class="w-full border-2 border-dark-500 rounded-xl p-4 ' +
+          'text-left hover:border-rouge-500 transition group">\n\n        <div class="flex items-start gap-4">\n' +
+          ('\n          <div class="w-10 h-10 rounded-xl bg-rouge-500/15 flex items-center justify-center flex-shrink-0 group-hover:bg-rouge-500/20 transition">\n\n  ' +
+            '          <i class="fas fa-key text-rouge-400"></i>\n\n          </div>\n\n          <div class="flex-1">\n\n            <div class="font-bold text-white ' +
+            'flex justify-between">\n\n              <span>Oui — Ajouter la licence</span>\n\n              <span class="text-rouge-400">+$'),
+        fmtPrice(typeof _licPriceForWizard !== "undefined" ? _licPriceForWizard : 97),
+        '</span>\n\n            </div>\n\n            <div class="text-sm text-gray-400 mt-1">Accès complet Finstrategia + éligibilité aux commissions pendant 12 ' +
+          'mois.</div>\n\n            <div class="flex gap-3 mt-2 text-xs text-green-400">\n\n              <span><i class="fas fa-check mr-1"></i>Commissions ' +
+          'actives</span>\n\n              <span><i class="fas fa-check mr-1"></i>Primes de rang</span>\n\n              <span><i class="fas fa-check mr-1"></i>Bonus ' +
+          "MLM</span>\n\n            </div>\n\n          </div>\n\n        </div>\n" +
+          ('\n      </button>\n\n      <button onclick="wizardSetLicense(false)" id="btn-no-lic"\n\n        class="w-full border-2 border-dark-500 rounded-xl p-4 ' +
+            'text-left hover:border-gray-400 transition">\n\n        <div class="flex items-start gap-4">\n\n          <div class="w-10 h-10 rounded-xl bg-dark-600 ' +
+            'flex items-center justify-center flex-shrink-0">\n\n            <i class="fas fa-times text-gray-400"></i>\n\n          </div>\n\n          <div ' +
+            'class="flex-1">\n\n            <div class="font-bold text-white">Non — Package seul</div>\n') +
+          ('\n            <div class="text-sm text-gray-400 mt-1">Vous pourrez activer la licence plus tard depuis votre espace membre.</div>\n\n          </div>\n\n   ' +
+            "     </div>\n\n      </button>\n\n    </div>\n\n    <button onclick=\"wizardStart('"),
+        _wizardData.pkgId,
+        "','",
+        encodeURIComponent(_wizardData.pkgName),
+        "',"
+      ].join(""),
+      _wizardData.price,
+      ",",
+      _wizardData.bv,
+      ",",
+      _wizardData.isUpgrade,
+      ",",
+      _wizardData.currentPrice,
+      ","
+    ].join("") +
       _wizardData.currentBV +
       ')"\n\n      class="text-sm text-gray-500 hover:text-gray-300 transition"><i class="fas fa-arrow-left mr-1"></i>Retour</button>\n\n  </div>'
   );
@@ -6834,45 +7101,48 @@ function wizardStep3() {
     s = (_wizardData.isUpgrade ? _wizardData.diffPrice : _wizardData.price) + a + n;
   _wizardData.totalAmt = s;
   const r = _wizardData.isUpgrade
-    ? '\n\n      <div class="flex justify-between text-xs text-gray-500 pb-2 border-b border-dark-600">\n\n        <span>Package actuel (déjà payé)</span>\n\n      ' +
-      "  <span>$" +
-      _wizardData.currentPrice.toLocaleString("en-US") +
-      " \xB7 " +
-      _wizardData.currentBV +
-      ' BV</span>\n\n      </div>\n\n      <div class="flex justify-between">\n\n        <span class="text-gray-400">Upgrade \u2192 ' +
-      _wizardData.pkgName +
-      ' <span class="text-xs text-green-400">(diff\xE9rentiel)</span></span>\n\n        <span class="text-white font-medium">$' +
-      _wizardData.diffPrice.toLocaleString("en-US") +
-      "</span>\n\n      </div>"
+    ? [
+        '\n\n      <div class="flex justify-between text-xs text-gray-500 pb-2 border-b border-dark-600">\n\n        <span>Package actuel (déjà payé)</span>\n\n      ',
+        "  <span>$",
+        _wizardData.currentPrice.toLocaleString("en-US"),
+        " \xB7 ",
+        _wizardData.currentBV,
+        ' BV</span>\n\n      </div>\n\n      <div class="flex justify-between">\n\n        <span class="text-gray-400">Upgrade \u2192 ',
+        _wizardData.pkgName,
+        ' <span class="text-xs text-green-400">(diff\xE9rentiel)</span></span>\n\n        <span class="text-white font-medium">$',
+        _wizardData.diffPrice.toLocaleString("en-US")
+      ].join("") + "</span>\n\n      </div>"
     : '\n\n      <div class="flex justify-between">\n\n        <span class="text-gray-400">Package ' +
       _wizardData.pkgName +
       '</span>\n\n        <span class="text-white font-medium">$' +
       _wizardData.price.toLocaleString("en-US") +
       "</span>\n\n      </div>";
   _wizardShow(
-    "\n\n  " +
-      _wizardProgress(3, 7) +
-      ('\n\n  <div class="p-6 space-y-5">\n\n    <div>\n\n      <h3 class="text-lg font-bold text-white">Récapitulatif de votre commande</h3>\n\n      <p ' +
+    [
+      "\n\n  ",
+      _wizardProgress(3, 7),
+      '\n\n  <div class="p-6 space-y-5">\n\n    <div>\n\n      <h3 class="text-lg font-bold text-white">Récapitulatif de votre commande</h3>\n\n      <p ' +
         'class="text-sm text-gray-400 mt-1">Vérifiez le détail avant de passer au paiement.</p>\n\n    </div>\n\n    <div class="bg-dark-700 border border-dark-500 ' +
-        'rounded-xl p-5 space-y-3 text-sm">\n\n      ') +
-      r +
-      "\n\n      " +
-      (_wizardData.addLicense
+        'rounded-xl p-5 space-y-3 text-sm">\n\n      ',
+      r,
+      "\n\n      ",
+      _wizardData.addLicense
         ? '\n\n      <div class="flex justify-between">\n\n        <span class="text-gray-400">Licence Finstrategia (12 mois)</span>\n\n        <span ' +
           'class="text-rouge-400 font-medium">+$' +
           fmtPrice(_wizardData.licensePrice || 97) +
           "</span>\n\n      </div>"
-        : "") +
-      "\n\n      " +
-      (t
+        : "",
+      "\n\n      ",
+      t
         ? '\n\n      <div class="flex justify-between">\n\n        <span class="text-gray-400">Frais d\'administration <span class="text-xs text-orange-400">' +
           ("once" === e ? "(uniques)" : "(par achat)") +
           '</span></span>\n\n        <span class="text-orange-300 font-medium">+$' +
           n.toFixed(2) +
           "</span>\n\n      </div>"
-        : "") +
-      ('\n\n      <div class="border-t border-dark-500 pt-3 flex justify-between font-bold">\n\n        <span class="text-white">Total à envoyer</span>\n\n        <' +
-        'span class="text-rouge-400 text-xl">$') +
+        : "",
+      '\n\n      <div class="border-t border-dark-500 pt-3 flex justify-between font-bold">\n\n        <span class="text-white">Total à envoyer</span>\n\n        <' +
+        'span class="text-rouge-400 text-xl">$'
+    ].join("") +
       s.toLocaleString("en-US", {
         minimumFractionDigits: 2
       }) +
@@ -6958,31 +7228,37 @@ async function wizardStep4() {
       const _ico = m.provider === "mollie" ? "fas fa-credit-card" : m.logo_emoji || "[CB]";
       const _col = m.provider === "mollie" ? "indigo" : "gray";
       return (
-        "\n\n  <button onclick=\"wizardSelectPaymentV2('" +
-        m.id +
-        "','" +
-        m.provider +
-        "','" +
-        (m.display_name || m.provider).replace(/'/g, "") +
-        '\')"\n    class="w-full border-2 border-' +
-        _col +
-        "-500/40 rounded-xl p-4 text-left hover:border-" +
-        _col +
-        "-400 transition flex items-center gap-4 bg-" +
-        _col +
-        '-900/10">\n    <div class="flex gap-1.5 w-8 justify-center">\n      <i class="' +
-        _ico +
-        " text-" +
-        _col +
-        '-400 text-xl"></i>\n    </div>\n    <div>\n      <div class="font-bold text-white">' +
-        (m.display_name || m.provider) +
-        '</div>\n      <div class="text-xs text-gray-400">' +
-        (m.description || "Paiement sécurisé") +
-        '</div>\n    </div>\n    <span class="ml-auto text-[9px] bg-' +
-        _col +
-        "-500/20 text-" +
-        _col +
-        "-400 border border-" +
+        [
+          [
+            [
+              "\n\n  <button onclick=\"wizardSelectPaymentV2('",
+              m.id,
+              "','",
+              m.provider,
+              "','",
+              (m.display_name || m.provider).replace(/'/g, ""),
+              '\')"\n    class="w-full border-2 border-',
+              _col,
+              "-500/40 rounded-xl p-4 text-left hover:border-"
+            ].join(""),
+            _col,
+            "-400 transition flex items-center gap-4 bg-",
+            _col,
+            '-900/10">\n    <div class="flex gap-1.5 w-8 justify-center">\n      <i class="',
+            _ico,
+            " text-",
+            _col,
+            '-400 text-xl"></i>\n    </div>\n    <div>\n      <div class="font-bold text-white">'
+          ].join(""),
+          m.display_name || m.provider,
+          '</div>\n      <div class="text-xs text-gray-400">',
+          m.description || "Paiement sécurisé",
+          '</div>\n    </div>\n    <span class="ml-auto text-[9px] bg-',
+          _col,
+          "-500/20 text-",
+          _col,
+          "-400 border border-"
+        ].join("") +
         _col +
         '-500/30 px-2 py-0.5 rounded-full font-semibold whitespace-nowrap">Automatique</span>\n  </button>'
       );
@@ -7002,16 +7278,18 @@ async function wizardStep4() {
     .map((m) => {
       const _ico = m.logo_emoji || "[M]";
       return (
-        "\n  <button onclick=\"wizardSelectPaymentV2Manual('" +
-        m.id +
-        "','" +
-        m.provider +
-        "','" +
-        (m.display_name || m.provider).replace(/'/g, "") +
-        ('\')"\n\n    class="w-full border-2 border-emerald-500/40 rounded-xl p-4 text-left hover:border-emerald-400 transition flex items-center gap-4 ' +
-          'bg-emerald-900/10">\n\n    <div class="flex gap-1.5 w-8 justify-center text-xl">') +
-        _ico +
-        '</div>\n\n    <div>\n\n      <div class="font-bold text-white">' +
+        [
+          "\n  <button onclick=\"wizardSelectPaymentV2Manual('",
+          m.id,
+          "','",
+          m.provider,
+          "','",
+          (m.display_name || m.provider).replace(/'/g, ""),
+          '\')"\n\n    class="w-full border-2 border-emerald-500/40 rounded-xl p-4 text-left hover:border-emerald-400 transition flex items-center gap-4 ' +
+            'bg-emerald-900/10">\n\n    <div class="flex gap-1.5 w-8 justify-center text-xl">',
+          _ico,
+          '</div>\n\n    <div>\n\n      <div class="font-bold text-white">'
+        ].join("") +
         (m.display_name || m.provider) +
         '</div>\n\n      <div class="text-xs text-gray-400">' +
         (m.instructions || m.description || "Envoi manuel · preuve requise") +
@@ -7152,15 +7430,17 @@ function _buildWalletBtn() {
       _wbalFmt +
       ('</span></div>\n\n    </div>\n\n    <span class="ml-auto text-[9px] bg-green-500/20 text-green-400 border border-green-500/30 px-2 py-0.5 rounded-full ' +
         'font-semibold whitespace-nowrap">Immédiat</span>\n\n  </button>')
-    : '\n\n  <div class="w-full border-2 border-dark-600 rounded-xl p-4 flex items-center gap-4 opacity-60 cursor-not-allowed">\n\n    <i class="fas fa-wallet ' +
-      'text-gray-500 text-2xl w-8 text-center"></i>\n\n    <div class="flex-1">\n\n      <div class="font-bold text-gray-400">Wallet LEADER</div>\n\n      <div ' +
-      'class="text-xs text-gray-500">Solde insuffisant : <span class="text-red-400 font-semibold">$' +
-      _wbalFmt +
-      '</span> / <span class="text-white">$' +
-      _wamtFmt +
-      '</span> requis</div>\n\n      <div class="text-xs text-orange-400 mt-0.5"><i class="fas fa-exclamation-triangle mr-1"></i>Il vous manque <strong>$' +
-      _wdiffFmt +
-      "</strong> \u2014 rechargez votre wallet</div>\n\n    </div>\n\n  </div>";
+    : [
+        '\n\n  <div class="w-full border-2 border-dark-600 rounded-xl p-4 flex items-center gap-4 opacity-60 cursor-not-allowed">\n\n    <i class="fas fa-wallet ',
+        'text-gray-500 text-2xl w-8 text-center"></i>\n\n    <div class="flex-1">\n\n      <div class="font-bold text-gray-400">Wallet LEADER</div>\n\n      <div ',
+        'class="text-xs text-gray-500">Solde insuffisant : <span class="text-red-400 font-semibold">$',
+        _wbalFmt,
+        '</span> / <span class="text-white">$',
+        _wamtFmt,
+        '</span> requis</div>\n\n      <div class="text-xs text-orange-400 mt-0.5"><i class="fas fa-exclamation-triangle mr-1"></i>Il vous manque <strong>$',
+        _wdiffFmt,
+        "</strong> \u2014 rechargez votre wallet</div>\n\n    </div>\n\n  </div>"
+      ].join("");
   if (_wbal > 0) {
     w = _canW
       ? '\n\n  <button onclick="wizardSelectPayment(\'wallet\')"\n\n    class="w-full border-2 border-green-500/40 rounded-xl p-4 text-left hover:border-green-400 ' +
@@ -7203,30 +7483,34 @@ function _wizardRenderFinal() {
     _v2Btns = _d._v2Btns,
     _v2ManualBtns = _d._v2ManualBtns;
   _wizardShow(
-    "\n\n  " +
-      _wizardProgress(4, 7) +
-      ('\n\n  <div class="p-6 space-y-5">\n\n    <div>\n\n      <h3 class="text-lg font-bold text-white">Moyen de paiement</h3>\n\n      <p class="text-sm ' +
-        'text-gray-400 mt-1">Total à envoyer : <span class="text-rouge-400 font-bold">$') +
-      e.toLocaleString("en-US", {
-        minimumFractionDigits: 2
-      }) +
-      '</span></p>\n\n    </div>\n\n    <div class="space-y-3">\n\n      ' +
-      (l
-        ? '<div class="bg-yellow-900/20 border border-yellow-500/30 rounded-xl p-4 text-yellow-300 text-sm"><i class="fas fa-exclamation-triangle mr-2"></i>' +
-          "Aucune passerelle configurée. Contactez votre administrateur.</div>"
-        : "") +
-      "\n\n      " +
-      w +
-      d +
-      cp +
-      o +
-      c +
-      x +
-      p +
-      _v2Btns +
-      _v2ManualBtns +
-      ('\n\n    </div>\n\n    <button onclick="_wizardData.licenseOnly?wizardClose():wizardStep3()" class="text-sm text-gray-500 hover:text-gray-300 transition"><' +
-        'i class="fas fa-arrow-left mr-1"></i>Retour</button>\n\n  </div>')
+    [
+      [
+        "\n\n  ",
+        _wizardProgress(4, 7),
+        '\n\n  <div class="p-6 space-y-5">\n\n    <div>\n\n      <h3 class="text-lg font-bold text-white">Moyen de paiement</h3>\n\n      <p class="text-sm ' +
+          'text-gray-400 mt-1">Total à envoyer : <span class="text-rouge-400 font-bold">$',
+        e.toLocaleString("en-US", {
+          minimumFractionDigits: 2
+        }),
+        '</span></p>\n\n    </div>\n\n    <div class="space-y-3">\n\n      ',
+        l
+          ? '<div class="bg-yellow-900/20 border border-yellow-500/30 rounded-xl p-4 text-yellow-300 text-sm"><i class="fas fa-exclamation-triangle mr-2"></i>' +
+            "Aucune passerelle configurée. Contactez votre administrateur.</div>"
+          : "",
+        "\n\n      ",
+        w,
+        d
+      ].join(""),
+      cp,
+      o,
+      c,
+      x,
+      p,
+      _v2Btns,
+      _v2ManualBtns,
+      '\n\n    </div>\n\n    <button onclick="_wizardData.licenseOnly?wizardClose():wizardStep3()" class="text-sm text-gray-500 hover:text-gray-300 transition"><' +
+        'i class="fas fa-arrow-left mr-1"></i>Retour</button>\n\n  </div>'
+    ].join("")
   );
 }
 function wizardSelectPayment(e) {
@@ -7343,42 +7627,46 @@ async function wizardStep5V2Manual() {
   const accName = cfg.account_name || cfg.beneficiary || "";
   const emoji = methodDetails.logo_emoji || "\ud83d\udcf1";
   _wizardShow(
-    "\n  " +
-      _wizardProgress(5, 7) +
-      '\n  <div class="p-6 space-y-5">\n    <div>\n      <h3 class="text-lg font-bold text-white">' +
-      emoji +
-      " " +
-      displayName +
-      ('</h3>\n      <p class="text-sm text-gray-400 mt-1">Effectuez votre paiement puis uploadez votre preuve ci-dessous.</p>\n    </div>\n    <div ' +
-        'class="bg-dark-700 border border-emerald-500/30 rounded-xl p-4 space-y-2 text-sm">\n      <div class="flex items-center gap-2 text-emerald-400 ' +
-        'font-semibold mb-2"><i class="fas fa-info-circle"></i>Instructions de paiement</div>\n      ') +
-      (phoneNum
-        ? '<div class="flex justify-between"><span class="text-gray-400">Num\xE9ro</span><span class="font-mono font-bold text-white">' +
-          phoneNum +
-          "</span></div>"
-        : "") +
-      "\n      " +
-      (accName
+    [
+      [
+        "\n  ",
+        _wizardProgress(5, 7),
+        '\n  <div class="p-6 space-y-5">\n    <div>\n      <h3 class="text-lg font-bold text-white">',
+        emoji,
+        " ",
+        displayName,
+        '</h3>\n      <p class="text-sm text-gray-400 mt-1">Effectuez votre paiement puis uploadez votre preuve ci-dessous.</p>\n    </div>\n    <div ' +
+          'class="bg-dark-700 border border-emerald-500/30 rounded-xl p-4 space-y-2 text-sm">\n      <div class="flex items-center gap-2 text-emerald-400 ' +
+          'font-semibold mb-2"><i class="fas fa-info-circle"></i>Instructions de paiement</div>\n      ',
+        phoneNum
+          ? '<div class="flex justify-between"><span class="text-gray-400">Num\xE9ro</span><span class="font-mono font-bold text-white">' +
+            phoneNum +
+            "</span></div>"
+          : "",
+        "\n      "
+      ].join(""),
+      accName
         ? '<div class="flex justify-between"><span class="text-gray-400">B\xE9n\xE9ficiaire</span><span class="font-medium text-white">' +
           accName +
           "</span></div>"
-        : "") +
-      '\n      <div class="flex justify-between"><span class="text-gray-400">Montant \xE0 envoyer</span><span class="font-bold text-rouge-400">$' +
+        : "",
+      '\n      <div class="flex justify-between"><span class="text-gray-400">Montant \xE0 envoyer</span><span class="font-bold text-rouge-400">$',
       totalAmt.toLocaleString("en-US", {
         minimumFractionDigits: 2
-      }) +
-      "</span></div>\n      " +
-      (instrText ? '<p class="text-xs text-gray-400 mt-2 pt-2 border-t border-dark-600">' + instrText + "</p>" : "") +
-      ('\n      <p class="text-xs text-gray-500 pt-2 border-t border-dark-600">Référence : votre identifiant unique LEADER</p>\n    </div>\n    <div ' +
+      }),
+      "</span></div>\n      ",
+      instrText ? '<p class="text-xs text-gray-400 mt-2 pt-2 border-t border-dark-600">' + instrText + "</p>" : "",
+      '\n      <p class="text-xs text-gray-500 pt-2 border-t border-dark-600">Référence : votre identifiant unique LEADER</p>\n    </div>\n    <div ' +
         'id="v2manual-upload-zone"></div>\n    <div>\n      <label class="text-xs text-gray-400 block mb-1">Référence / N° de transaction (optionnel)</label>\n    ' +
         '  <input id="v2manual-ref-input" type="text" placeholder="Ex: TXN123456789" class="w-full bg-dark-700 border border-dark-500 rounded-xl px-4 py-2 ' +
         'text-white text-sm focus:outline-none focus:border-emerald-400">\n    </div>\n' +
         ('    <div id="v2manual-error" class="hidden bg-red-900/20 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm"></div>\n    <div class="flex ' +
           'gap-3">\n      <button onclick="wizardStep4()" class="flex-1 py-3 bg-dark-700 text-gray-300 rounded-xl hover:bg-dark-600 transition text-sm"><i ' +
-          'class="fas fa-arrow-left mr-2"></i>Retour</button>\n      <button id="v2manual-submit-btn" onclick="_submitV2ManualProof(\'')) +
-      (orderId || "") +
-      ('\')" class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition text-sm"><i class="fas fa-paper-plane mr-2"></i>' +
-        "Soumettre la preuve</button>\n    </div>\n  </div>")
+          'class="fas fa-arrow-left mr-2"></i>Retour</button>\n      <button id="v2manual-submit-btn" onclick="_submitV2ManualProof(\''),
+      orderId || "",
+      '\')" class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition text-sm"><i class="fas fa-paper-plane mr-2"></i>' +
+        "Soumettre la preuve</button>\n    </div>\n  </div>"
+    ].join("")
   );
   setTimeout(() => {
     window._v2manualProofUrl = "";
@@ -7726,62 +8014,66 @@ async function wizardStep5() {
           ('        <div class="loader"></div>\n      </div>\n      <p class="text-xs text-gray-500 text-center"><i class="fas fa-lock mr-1"></i>Paiement 100% ' +
             "sécurisé — SSL chiffré · Aucune donnée bancaire stockée</p>\n    </div>")
         : "bank" === t
-          ? '\n\n    <div class="bg-green-900/20 border border-green-500/30 rounded-xl p-4 space-y-2 text-sm">\n\n      <div class="flex items-center gap-3 mb-3">\n\n    ' +
-            '    <i class="fas fa-university text-green-400 text-xl"></i>\n\n        <div><div class="font-semibold">Virement bancaire</div><div class="text-xs ' +
-            'text-gray-400">2–3 jours ouvrables</div></div>\n\n      </div>\n\n      ' +
-            (e.bank_beneficiary
-              ? '<div class="flex justify-between"><span class="text-gray-400">B\xE9n\xE9ficiaire</span><span class="font-medium">' +
-                e.bank_beneficiary +
-                "</span></div>"
-              : "") +
-            "\n\n      " +
-            (e.bank_iban
-              ? '<div class="flex justify-between"><span class="text-gray-400">IBAN</span><span class="font-mono text-xs">' +
-                e.bank_iban +
-                "</span></div>"
-              : "") +
-            "\n\n      " +
-            (e.bank_swift
-              ? '<div class="flex justify-between"><span class="text-gray-400">BIC/SWIFT</span><span class="font-mono">' +
-                e.bank_swift +
-                "</span></div>"
-              : "") +
-            "\n\n      " +
+          ? [
+              '\n\n    <div class="bg-green-900/20 border border-green-500/30 rounded-xl p-4 space-y-2 text-sm">\n\n      <div class="flex items-center gap-3 mb-3">\n\n    ',
+              '    <i class="fas fa-university text-green-400 text-xl"></i>\n\n        <div><div class="font-semibold">Virement bancaire</div><div class="text-xs ',
+              'text-gray-400">2–3 jours ouvrables</div></div>\n\n      </div>\n\n      ',
+              e.bank_beneficiary
+                ? '<div class="flex justify-between"><span class="text-gray-400">B\xE9n\xE9ficiaire</span><span class="font-medium">' +
+                  e.bank_beneficiary +
+                  "</span></div>"
+                : "",
+              "\n\n      ",
+              e.bank_iban
+                ? '<div class="flex justify-between"><span class="text-gray-400">IBAN</span><span class="font-mono text-xs">' +
+                  e.bank_iban +
+                  "</span></div>"
+                : "",
+              "\n\n      ",
+              e.bank_swift
+                ? '<div class="flex justify-between"><span class="text-gray-400">BIC/SWIFT</span><span class="font-mono">' +
+                  e.bank_swift +
+                  "</span></div>"
+                : "",
+              "\n\n      "
+            ].join("") +
             (e.bank_instructions ? '<p class="text-xs text-gray-400 mt-2">' + e.bank_instructions + "</p>" : "") +
             '\n\n      <p class="text-xs text-gray-500 mt-2 pt-2 border-t border-dark-500">R\xE9f\xE9rence : votre identifiant unique LEADER</p>\n\n    </div>'
           : "coinpayments" === t
-            ? '\n\n    <div class="bg-orange-900/20 border border-orange-500/30 rounded-xl p-4 space-y-4">\n\n      <div class="flex items-center gap-3 mb-2">\n\n        <' +
-              'i class="fas fa-coins text-orange-400 text-2xl"></i>\n\n        <div>\n\n          <div class="font-semibold text-white">Paiement Crypto via CoinPayments<' +
-              '/div>\n\n          <div class="text-xs text-gray-400">Choisissez votre cryptomonnaie et payez en quelques clics</div>\n\n        </div>\n\n      </div>\n\n    ' +
-              '  <div>\n\n        <label class="block text-xs text-gray-400 mb-2">Cryptomonnaie</label>\n' +
-              ('\n        <select id="cp-coin-select" class="w-full bg-dark-700 border border-dark-500 rounded-xl px-4 py-3 text-white text-sm focus:border-orange-400 ' +
-                'focus:outline-none" onchange="_cpCoinChanged(this)">\n\n          ') +
-              (() => {
-                const coins = (_cpCoins || "USDT.TRC20,LTC,ETH,BTC").split(",").map((c) => c.trim());
-                const sorted = [...coins.filter((c) => c === "USDT.TRC20"), ...coins.filter((c) => c !== "USDT.TRC20")];
-                const labels = {
-                  "USDT.TRC20": "USDT (TRC-20) ✓ Recommandé",
-                  "USDT.ERC20": "USDT (ERC-20) - Deconseille",
-                  BTC: "Bitcoin (BTC)",
-                  ETH: "Ethereum (ETH)",
-                  LTC: "Litecoin (LTC)"
-                };
-                return sorted.map((c) => '<option value="' + c + '">' + (labels[c] || c) + "</option>").join("");
-              })() +
-              ('\n\n        </select>\n\n      </div>\n\n      <div id="cp-erc20-warning" class="hidden bg-orange-900/40 border border-orange-500/60 rounded-xl p-3 text-sm ' +
-                'text-orange-200">\n\n        <i class="fas fa-exclamation-triangle text-orange-400 mr-2"></i>\n\n        <strong class="text-orange-300">Attention :<' +
-                '/strong> Coinbase Wallet et certains wallets bloquent les adresses ERC-20 de services tiers. Utilisez <strong class="text-green-300">USDT TRC-20<' +
-                "/strong> (réseau Tron) — compatible partout et frais très faibles.\n" +
-                ('\n      </div>\n\n      <div id="cp-info" class="bg-dark-700 rounded-xl p-4 text-sm text-gray-300 space-y-2">\n\n        <p class="text-xs text-gray-400"><' +
-                  'i class="fas fa-info-circle mr-1 text-orange-400"></i>\n\n          Vous serez redirigé vers le site sécurisé CoinPayments pour finaliser votre paiement ' +
-                  'crypto.\n\n        </p>\n\n        <p class="text-xs text-gray-500">Après paiement, votre commande sera activée automatiquement dès confirmation du ' +
-                  'réseau.</p>\n\n      </div>\n\n      <div id="cp-error" class="hidden bg-red-900/20 border border-red-500/30 rounded-xl p-3 text-red-300 text-sm"></div>\n') +
-                ('\n      <button id="cp-pay-btn" onclick="_cpStartPayment()"\n\n        class="w-full py-3 bg-orange-500 hover:bg-orange-400 text-dark-900 font-bold ' +
-                  'rounded-xl transition flex items-center justify-center gap-2">\n\n        <i class="fas fa-coins text-sm"></i> Payer $')) +
-              n.toLocaleString("en-US", {
-                minimumFractionDigits: 2
-              }) +
-              " en Crypto\n\n      </button>\n\n    </div>"
+            ? [
+                '\n\n    <div class="bg-orange-900/20 border border-orange-500/30 rounded-xl p-4 space-y-4">\n\n      <div class="flex items-center gap-3 mb-2">\n\n        <',
+                'i class="fas fa-coins text-orange-400 text-2xl"></i>\n\n        <div>\n\n          <div class="font-semibold text-white">Paiement Crypto via CoinPayments<',
+                '/div>\n\n          <div class="text-xs text-gray-400">Choisissez votre cryptomonnaie et payez en quelques clics</div>\n\n        </div>\n\n      </div>\n\n    ',
+                '  <div>\n\n        <label class="block text-xs text-gray-400 mb-2">Cryptomonnaie</label>\n',
+                '\n        <select id="cp-coin-select" class="w-full bg-dark-700 border border-dark-500 rounded-xl px-4 py-3 text-white text-sm focus:border-orange-400 ' +
+                  'focus:outline-none" onchange="_cpCoinChanged(this)">\n\n          ',
+                (() => {
+                  const coins = (_cpCoins || "USDT.TRC20,LTC,ETH,BTC").split(",").map((c) => c.trim());
+                  const sorted = [...coins.filter((c) => c === "USDT.TRC20"), ...coins.filter((c) => c !== "USDT.TRC20")];
+                  const labels = {
+                    "USDT.TRC20": "USDT (TRC-20) ✓ Recommandé",
+                    "USDT.ERC20": "USDT (ERC-20) - Deconseille",
+                    BTC: "Bitcoin (BTC)",
+                    ETH: "Ethereum (ETH)",
+                    LTC: "Litecoin (LTC)"
+                  };
+                  return sorted.map((c) => '<option value="' + c + '">' + (labels[c] || c) + "</option>").join("");
+                })(),
+                '\n\n        </select>\n\n      </div>\n\n      <div id="cp-erc20-warning" class="hidden bg-orange-900/40 border border-orange-500/60 rounded-xl p-3 text-sm ' +
+                  'text-orange-200">\n\n        <i class="fas fa-exclamation-triangle text-orange-400 mr-2"></i>\n\n        <strong class="text-orange-300">Attention :<' +
+                  '/strong> Coinbase Wallet et certains wallets bloquent les adresses ERC-20 de services tiers. Utilisez <strong class="text-green-300">USDT TRC-20<' +
+                  "/strong> (réseau Tron) — compatible partout et frais très faibles.\n" +
+                  ('\n      </div>\n\n      <div id="cp-info" class="bg-dark-700 rounded-xl p-4 text-sm text-gray-300 space-y-2">\n\n        <p class="text-xs text-gray-400"><' +
+                    'i class="fas fa-info-circle mr-1 text-orange-400"></i>\n\n          Vous serez redirigé vers le site sécurisé CoinPayments pour finaliser votre paiement ' +
+                    'crypto.\n\n        </p>\n\n        <p class="text-xs text-gray-500">Après paiement, votre commande sera activée automatiquement dès confirmation du ' +
+                    'réseau.</p>\n\n      </div>\n\n      <div id="cp-error" class="hidden bg-red-900/20 border border-red-500/30 rounded-xl p-3 text-red-300 text-sm"></div>\n') +
+                  ('\n      <button id="cp-pay-btn" onclick="_cpStartPayment()"\n\n        class="w-full py-3 bg-orange-500 hover:bg-orange-400 text-dark-900 font-bold ' +
+                    'rounded-xl transition flex items-center justify-center gap-2">\n\n        <i class="fas fa-coins text-sm"></i> Payer $'),
+                n.toLocaleString("en-US", {
+                  minimumFractionDigits: 2
+                }),
+                " en Crypto\n\n      </button>\n\n    </div>"
+              ].join("")
             : "crypto" === t
               ? '\n\n    <div class="bg-orange-900/20 border border-orange-500/30 rounded-xl p-4 space-y-3">\n\n      <div class="flex items-center gap-3">\n\n        <i ' +
                 'class="fab fa-bitcoin text-orange-400 text-xl"></i>\n\n        <div><div class="font-semibold">Crypto — ' +
@@ -7792,19 +8084,21 @@ async function wizardStep5() {
                 (e.crypto_instructions ? '<p class="text-xs text-gray-400">' + e.crypto_instructions + "</p>" : "") +
                 "\n\n    </div>"
               : "wallet" === t
-                ? '\n\n    <div class="bg-green-900/10 border border-green-500/30 rounded-xl p-4 space-y-4">\n\n      <div class="flex items-center gap-3">\n\n        <i ' +
-                  'class="fas fa-wallet text-green-400 text-2xl"></i>\n\n        <div>\n\n          <div class="font-semibold text-white">Paiement via Wallet LEADER</div>\n\n  ' +
-                  '        <div class="text-xs text-gray-400">Débit immédiat · Activation instantanée</div>\n\n        </div>\n\n      </div>\n\n      <div class="bg-dark-700 ' +
-                  'rounded-xl p-4 space-y-2 text-sm">\n\n        <div ' +
-                  'class="flex justify-between"><span class="text-gray-400">Montant débité</span><span class="text-white font-bold">$' +
-                  n.toLocaleString("en-US", {
-                    minimumFractionDigits: 2
-                  }) +
-                  '</span></div>\n\n        <div class="flex justify-between"><span class="text-gray-400">Solde wallet</span><span class="text-green-400">$' +
-                  (Number(window._memberWalletBalance) || 0).toLocaleString("en-US", {
-                    minimumFractionDigits: 2
-                  }) +
-                  '</span></div>\n\n        <div class="flex justify-between font-semibold"><span class="text-gray-400">Solde apr\xE8s paiement</span><span class="text-' +
+                ? [
+                    '\n\n    <div class="bg-green-900/10 border border-green-500/30 rounded-xl p-4 space-y-4">\n\n      <div class="flex items-center gap-3">\n\n        <i ',
+                    'class="fas fa-wallet text-green-400 text-2xl"></i>\n\n        <div>\n\n          <div class="font-semibold text-white">Paiement via Wallet LEADER</div>\n\n  ',
+                    '        <div class="text-xs text-gray-400">Débit immédiat · Activation instantanée</div>\n\n        </div>\n\n      </div>\n\n      <div class="bg-dark-700 ',
+                    'rounded-xl p-4 space-y-2 text-sm">\n\n        <div ',
+                    'class="flex justify-between"><span class="text-gray-400">Montant débité</span><span class="text-white font-bold">$',
+                    n.toLocaleString("en-US", {
+                      minimumFractionDigits: 2
+                    }),
+                    '</span></div>\n\n        <div class="flex justify-between"><span class="text-gray-400">Solde wallet</span><span class="text-green-400">$',
+                    (Number(window._memberWalletBalance) || 0).toLocaleString("en-US", {
+                      minimumFractionDigits: 2
+                    }),
+                    '</span></div>\n\n        <div class="flex justify-between font-semibold"><span class="text-gray-400">Solde apr\xE8s paiement</span><span class="text-'
+                  ].join("") +
                   ((Number(window._memberWalletBalance) || 0) - n >= 0 ? "green" : "red") +
                   '-400">$' +
                   ((Number(window._memberWalletBalance) || 0) - n).toLocaleString("en-US", {
@@ -7814,15 +8108,17 @@ async function wizardStep5() {
                     'text-white font-bold rounded-xl transition flex items-center justify-center gap-2">\n\n        <i class="fas fa-wallet text-sm"></i> Confirmer le ' +
                     'paiement\n\n      </button>\n\n      <p class="text-xs text-gray-500 text-center"><i class="fas fa-bolt mr-1 text-green-400"></i>Activation immédiate — ' +
                     "aucune preuve de paiement requise</p>\n\n    </div>")
-                : '\n\n    <div class="bg-dark-700 border border-dark-500 rounded-xl p-4 space-y-2">\n\n      <div class="flex items-center gap-2 mb-1"><i class="fas ' +
-                  'fa-info-circle text-rouge-400"></i><span class="font-semibold text-sm">Instructions</span></div>\n\n      <p class="text-sm text-gray-300 ' +
-                  'whitespace-pre-line">' +
-                  e.instructions +
-                  "</p>\n\n      " +
-                  (e.contact_email ? '<p class="text-xs text-gray-400"><i class="fas fa-envelope mr-1"></i>' + e.contact_email + "</p>" : "") +
-                  "\n\n      " +
-                  (e.contact_phone ? '<p class="text-xs text-gray-400"><i class="fas fa-phone mr-1"></i>' + e.contact_phone + "</p>" : "") +
-                  "\n\n    </div>";
+                : [
+                    '\n\n    <div class="bg-dark-700 border border-dark-500 rounded-xl p-4 space-y-2">\n\n      <div class="flex items-center gap-2 mb-1"><i class="fas ',
+                    'fa-info-circle text-rouge-400"></i><span class="font-semibold text-sm">Instructions</span></div>\n\n      <p class="text-sm text-gray-300 ',
+                    'whitespace-pre-line">',
+                    e.instructions,
+                    "</p>\n\n      ",
+                    e.contact_email ? '<p class="text-xs text-gray-400"><i class="fas fa-envelope mr-1"></i>' + e.contact_email + "</p>" : "",
+                    "\n\n      ",
+                    e.contact_phone ? '<p class="text-xs text-gray-400"><i class="fas fa-phone mr-1"></i>' + e.contact_phone + "</p>" : "",
+                    "\n\n    </div>"
+                  ].join("");
   const s = "paypal" === t,
     r = "stripe" === t,
     i =
@@ -7841,19 +8137,21 @@ async function wizardStep5() {
           'font-bold rounded-xl hover:bg-rouge-500 transition text-sm">\n          <i class="fas fa-check mr-2"></i>J\'ai payé\n        </button>\n       </div>';
   if (
     (_wizardShow(
-      "\n\n  " +
-        _wizardProgress(5, 7) +
-        ('\n\n  <div class="p-6 space-y-5">\n\n    <div>\n\n      <h3 class="text-lg font-bold text-white">Effectuez votre paiement</h3>\n\n      <p class="text-sm ' +
-          'text-gray-400 mt-1">Commande créée · Réf. <span class="font-mono text-rouge-400">') +
-        (_wizardData.orderId || "").substring(0, 12) +
-        ('…</span></p>\n\n    </div>\n\n    <div class="bg-dark-700 border border-dark-500 rounded-xl p-4 flex justify-between items-center">\n\n      <span ' +
-          'class="text-gray-400 text-sm">Montant total</span>\n\n      <span class="text-rouge-400 font-bold text-2xl">$') +
+      [
+        "\n\n  ",
+        _wizardProgress(5, 7),
+        '\n\n  <div class="p-6 space-y-5">\n\n    <div>\n\n      <h3 class="text-lg font-bold text-white">Effectuez votre paiement</h3>\n\n      <p class="text-sm ' +
+          'text-gray-400 mt-1">Commande créée · Réf. <span class="font-mono text-rouge-400">',
+        (_wizardData.orderId || "").substring(0, 12),
+        '…</span></p>\n\n    </div>\n\n    <div class="bg-dark-700 border border-dark-500 rounded-xl p-4 flex justify-between items-center">\n\n      <span ' +
+          'class="text-gray-400 text-sm">Montant total</span>\n\n      <span class="text-rouge-400 font-bold text-2xl">$',
         n.toLocaleString("en-US", {
           minimumFractionDigits: 2
-        }) +
-        "</span>\n\n    </div>\n\n    " +
-        a +
-        "\n\n    " +
+        }),
+        "</span>\n\n    </div>\n\n    ",
+        a,
+        "\n\n    "
+      ].join("") +
         i +
         "\n\n    " +
         l +
@@ -7879,23 +8177,25 @@ async function wizardStep5() {
       },
       (e) => {
         (_wizardShow(
-          '\n\n        <div class="p-8 text-center space-y-5">\n\n          <div class="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center ' +
-            'mx-auto">\n\n            <i class="fas fa-check text-green-400 text-4xl"></i>\n\n          </div>\n\n          <div>\n\n            <p class="text-white ' +
-            'font-bold text-xl">Paiement confirmé !</p>\n\n            <p class="text-green-400 text-sm mt-1">' +
-            (e.message || "Votre commande est activée.") +
-            '</p>\n\n          </div>\n\n          <div class="bg-dark-700 rounded-xl p-4 text-left space-y-2 text-sm">\n\n            ' +
-            (e.amount
+          [
+            '\n\n        <div class="p-8 text-center space-y-5">\n\n          <div class="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center ',
+            'mx-auto">\n\n            <i class="fas fa-check text-green-400 text-4xl"></i>\n\n          </div>\n\n          <div>\n\n            <p class="text-white ',
+            'font-bold text-xl">Paiement confirmé !</p>\n\n            <p class="text-green-400 text-sm mt-1">',
+            e.message || "Votre commande est activée.",
+            '</p>\n\n          </div>\n\n          <div class="bg-dark-700 rounded-xl p-4 text-left space-y-2 text-sm">\n\n            ',
+            e.amount
               ? '<div class="flex justify-between"><span class="text-gray-400">Montant pay\xE9</span><span class="text-green-400 font-bold">$' +
                 Number(e.amount).toFixed(2) +
                 "</span></div>"
-              : "") +
-            "\n\n            " +
-            (e.paypal_capture_id
+              : "",
+            "\n\n            ",
+            e.paypal_capture_id
               ? '<div class="flex justify-between"><span class="text-gray-400">R\xE9f\xE9rence PayPal</span><span class="font-mono text-xs text-gray-300">' +
                 e.paypal_capture_id +
                 "</span></div>"
-              : "") +
-            "\n\n            " +
+              : "",
+            "\n\n            "
+          ].join("") +
             (e.order_id
               ? '<div class="flex justify-between"><span class="text-gray-400">R\xE9f. commande</span><span class="font-mono text-xs text-gray-300">' +
                 (e.order_id || "").substring(0, 16) +
@@ -8159,40 +8459,44 @@ async function wizardSubmitProof() {
 }
 function wizardStep7() {
   (_wizardShow(
-    "\n\n  " +
-      _wizardProgress(7, 7) +
-      ('\n\n  <div class="p-6 space-y-6 text-center">\n\n    <div class="w-20 h-20 rounded-full bg-green-500/20 border-2 border-green-500/40 flex items-center ' +
-        'justify-center mx-auto">\n\n      <i class="fas fa-check text-green-400 text-4xl"></i>\n\n    </div>\n\n    <div>\n\n      <h3 class="text-2xl font-bold ' +
-        'text-white">') +
-      (_wizardData.isTopup ? "Recharge soumise !" : "Commande confirmée !") +
-      '</h3>\n\n      <p class="text-gray-400 mt-2">' +
-      (_wizardData.isTopup ? "Votre recharge sera validée sous 24-48h." : "Votre preuve de paiement a été soumise avec succès.") +
-      ('</p>\n\n    </div>\n\n    <div class="bg-dark-700 border border-dark-500 rounded-xl p-4 text-sm space-y-2">\n\n      <div class="flex justify-between">\n\n    ' +
-        '    <span class="text-gray-400">') +
-      (_wizardData.isTopup ? "Montant" : "Package") +
-      '</span>\n\n        <span class="font-medium text-white">' +
-      (_wizardData.isTopup
+    [
+      [
+        "\n\n  ",
+        _wizardProgress(7, 7),
+        '\n\n  <div class="p-6 space-y-6 text-center">\n\n    <div class="w-20 h-20 rounded-full bg-green-500/20 border-2 border-green-500/40 flex items-center ' +
+          'justify-center mx-auto">\n\n      <i class="fas fa-check text-green-400 text-4xl"></i>\n\n    </div>\n\n    <div>\n\n      <h3 class="text-2xl font-bold ' +
+          'text-white">',
+        _wizardData.isTopup ? "Recharge soumise !" : "Commande confirmée !",
+        '</h3>\n\n      <p class="text-gray-400 mt-2">',
+        _wizardData.isTopup ? "Votre recharge sera validée sous 24-48h." : "Votre preuve de paiement a été soumise avec succès.",
+        '</p>\n\n    </div>\n\n    <div class="bg-dark-700 border border-dark-500 rounded-xl p-4 text-sm space-y-2">\n\n      <div class="flex justify-between">\n\n    ' +
+          '    <span class="text-gray-400">',
+        _wizardData.isTopup ? "Montant" : "Package",
+        '</span>\n\n        <span class="font-medium text-white">'
+      ].join(""),
+      _wizardData.isTopup
         ? "$" +
           (_wizardData.totalAmt || 0).toLocaleString("en-US", {
             minimumFractionDigits: 2
           })
-        : _wizardData.pkgName) +
-      "</span>\n\n      </div>\n\n      " +
-      (_wizardData.addLicense
+        : _wizardData.pkgName,
+      "</span>\n\n      </div>\n\n      ",
+      _wizardData.addLicense
         ? '<div class="flex justify-between"><span class="text-gray-400">Licence</span><span class="text-rouge-400">Incluse</span></div>'
-        : "") +
-      '\n\n      <div class="flex justify-between">\n\n        <span class="text-gray-400">Montant</span>\n\n        <span class="font-bold text-rouge-400">$' +
+        : "",
+      '\n\n      <div class="flex justify-between">\n\n        <span class="text-gray-400">Montant</span>\n\n        <span class="font-bold text-rouge-400">$',
       _wizardData.totalAmt?.toLocaleString("en-US", {
         minimumFractionDigits: 2
-      }) +
-      ('</span>\n\n      </div>\n\n      <div class="flex justify-between">\n\n        <span class="text-gray-400">Réf. commande</span>\n\n        <span ' +
-        'class="font-mono text-xs text-gray-300">') +
-      _wizardData.orderId?.substring(0, 16) +
-      ('…</span>\n\n      </div>\n\n    </div>\n\n    <div class="bg-blue-900/10 border border-blue-500/20 rounded-xl p-4 text-sm text-gray-400">\n\n      <i ' +
+      }),
+      '</span>\n\n      </div>\n\n      <div class="flex justify-between">\n\n        <span class="text-gray-400">Réf. commande</span>\n\n        <span ' +
+        'class="font-mono text-xs text-gray-300">',
+      _wizardData.orderId?.substring(0, 16),
+      '…</span>\n\n      </div>\n\n    </div>\n\n    <div class="bg-blue-900/10 border border-blue-500/20 rounded-xl p-4 text-sm text-gray-400">\n\n      <i ' +
         'class="fas fa-clock text-blue-400 mr-2"></i>\n\n      Votre commande sera validée par un administrateur sous <strong>24–48h</strong>.\n\n      Vous ' +
         "recevrez une notification une fois activée.\n\n    </div>\n\n    <button onclick=\"wizardClose(); renderPackages(document.getElementById('page-content'))\"\n\n" +
         '      class="w-full py-3 bg-rouge-500 text-dark-900 font-bold rounded-xl hover:bg-rouge-500 transition">\n' +
-        '\n      <i class="fas fa-home mr-2"></i>Retour à mes packages\n\n    </button>\n\n  </div>')
+        '\n      <i class="fas fa-home mr-2"></i>Retour à mes packages\n\n    </button>\n\n  </div>'
+    ].join("")
   ),
     _wizardReset());
 }
@@ -8224,88 +8528,98 @@ async function renderLicense(e) {
       d =
         n?.license_active || null !== s
           ? n?.license_active && !l
-            ? '\n      <div class="bg-green-900/10 border border-green-500/30 rounded-xl p-5">\n        <div class="flex items-center justify-between mb-4">\n          <' +
-              'div class="flex items-center gap-3">\n            <div class="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center">\n              <i ' +
-              'class="fas fa-check-circle text-green-400 text-lg"></i>\n            </div>\n            <div>\n              <div class="font-bold text-green-300">' +
-              'Licence active</div>\n              <div class="text-xs text-green-400/70">Finstrategia — accès complet</div>\n' +
-              ('            </div>\n          </div>\n          <span class="bg-green-500/20 text-green-400 text-xs px-3 py-1 rounded-full font-medium">Active</span>\n   ' +
-                '     </div>\n        <div class="grid grid-cols-2 gap-3 mb-4">\n          <div class="bg-dark-700 rounded-xl p-3 text-center">\n            <div ' +
-                'class="text-lg font-bold text-white">') +
-              r +
-              (' j</div>\n            <div class="text-xs text-gray-400">Jours restants</div>\n          </div>\n          <div class="bg-dark-700 rounded-xl p-3 ' +
-                'text-center">\n            <div class="text-sm font-bold text-white">') +
-              (s ? s.toLocaleDateString("fr-FR") : "—") +
-              '</div>\n            <div class="text-xs text-gray-400">Date d\'expiration</div>\n          </div>\n        </div>\n        ' +
-              (_canRenew
-                ? '<p class="text-xs text-orange-400 mb-3"><i class="fas fa-info-circle mr-1"></i>Renouvellement anticip\xE9 disponible \u2014 il reste ' +
-                  r +
-                  " jours. Le renouvellement s'ajoutera \xE0 la date d'expiration actuelle.</p>"
-                : '<p class="text-xs text-gray-500 mb-3">Le bouton de renouvellement sera actif ' +
-                  _renewEarly +
-                  " jours avant l'expiration (dans " +
-                  (r - _renewEarly) +
-                  " jours).</p>") +
-              '\n        <button onclick="' +
-              (_canRenew ? "orderLicense()" : "void(0)") +
-              '" id="btn-order-license" class="w-full font-bold py-3 rounded-xl transition border ' +
-              (_canRenew
-                ? "bg-dark-700 text-white hover:bg-dark-600 border-dark-500"
-                : "bg-dark-800 text-gray-600 cursor-not-allowed border-dark-700") +
-              '" ' +
-              (_canRenew ? "" : "disabled") +
-              '>\n          <i class="fas fa-rotate-right mr-2"></i>' +
+            ? [
+                [
+                  '\n      <div class="bg-green-900/10 border border-green-500/30 rounded-xl p-5">\n        <div class="flex items-center justify-between mb-4">\n          <',
+                  'div class="flex items-center gap-3">\n            <div class="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center">\n              <i ',
+                  'class="fas fa-check-circle text-green-400 text-lg"></i>\n            </div>\n            <div>\n              <div class="font-bold text-green-300">',
+                  'Licence active</div>\n              <div class="text-xs text-green-400/70">Finstrategia — accès complet</div>\n',
+                  '            </div>\n          </div>\n          <span class="bg-green-500/20 text-green-400 text-xs px-3 py-1 rounded-full font-medium">Active</span>\n   ' +
+                    '     </div>\n        <div class="grid grid-cols-2 gap-3 mb-4">\n          <div class="bg-dark-700 rounded-xl p-3 text-center">\n            <div ' +
+                    'class="text-lg font-bold text-white">',
+                  r,
+                  ' j</div>\n            <div class="text-xs text-gray-400">Jours restants</div>\n          </div>\n          <div class="bg-dark-700 rounded-xl p-3 ' +
+                    'text-center">\n            <div class="text-sm font-bold text-white">',
+                  s ? s.toLocaleDateString("fr-FR") : "—",
+                  '</div>\n            <div class="text-xs text-gray-400">Date d\'expiration</div>\n          </div>\n        </div>\n        '
+                ].join(""),
+                _canRenew
+                  ? '<p class="text-xs text-orange-400 mb-3"><i class="fas fa-info-circle mr-1"></i>Renouvellement anticip\xE9 disponible \u2014 il reste ' +
+                    r +
+                    " jours. Le renouvellement s'ajoutera \xE0 la date d'expiration actuelle.</p>"
+                  : '<p class="text-xs text-gray-500 mb-3">Le bouton de renouvellement sera actif ' +
+                    _renewEarly +
+                    " jours avant l'expiration (dans " +
+                    (r - _renewEarly) +
+                    " jours).</p>",
+                '\n        <button onclick="',
+                _canRenew ? "orderLicense()" : "void(0)",
+                '" id="btn-order-license" class="w-full font-bold py-3 rounded-xl transition border ',
+                _canRenew
+                  ? "bg-dark-700 text-white hover:bg-dark-600 border-dark-500"
+                  : "bg-dark-800 text-gray-600 cursor-not-allowed border-dark-700",
+                '" ',
+                _canRenew ? "" : "disabled",
+                '>\n          <i class="fas fa-rotate-right mr-2"></i>'
+              ].join("") +
               (_canRenew ? "Renouveler ma licence" : "Renouvellement disponible dans " + (r - _renewEarly) + " j") +
               " \u2014 $" +
               fmtPrice(_price) +
               "/an\n        </button>\n      </div>"
             : l
-              ? '\n      <div class="bg-orange-900/20 border border-orange-500/40 rounded-xl p-5">\n        <div class="flex items-center justify-between mb-4">\n         ' +
-                ' <div class="flex items-center gap-3">\n            <div class="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center">\n              <' +
-                'i class="fas fa-triangle-exclamation text-orange-400 text-lg"></i>\n            </div>\n            <div>\n              <div class="font-bold ' +
-                'text-orange-300">Licence bientôt expirée</div>\n            ' +
-                '  <div class="text-xs text-orange-400/70">' +
-                r +
-                (' jour(s) restant(s)</div>\n            </div>\n          </div>\n          <span class="bg-orange-500/20 text-orange-400 text-xs px-3 py-1 rounded-full ' +
-                  'font-medium">Alerte</span>\n        </div>\n        <div class="bg-orange-900/30 border border-orange-500/20 rounded-xl p-3 mb-4">\n          <p ' +
-                  'class="text-sm text-orange-300"><i class="fas fa-info-circle mr-2"></i>Expire le <strong>') +
-                s.toLocaleDateString("fr-FR") +
-                ('</strong>. Sans renouvellement, vos commissions seront stoppées et votre rang annulé.</p>\n        </div>\n        <button onclick="orderLicense()" ' +
-                  'id="btn-order-license" class="w-full bg-orange-500 text-white font-bold py-3 rounded-xl hover:bg-orange-400 transition">\n          <i class="fas ' +
-                  'fa-rotate-right mr-2"></i>Renouveler maintenant — $') +
+              ? [
+                  '\n      <div class="bg-orange-900/20 border border-orange-500/40 rounded-xl p-5">\n        <div class="flex items-center justify-between mb-4">\n         ',
+                  ' <div class="flex items-center gap-3">\n            <div class="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center">\n              <',
+                  'i class="fas fa-triangle-exclamation text-orange-400 text-lg"></i>\n            </div>\n            <div>\n              <div class="font-bold ',
+                  'text-orange-300">Licence bientôt expirée</div>\n            ',
+                  '  <div class="text-xs text-orange-400/70">',
+                  r,
+                  ' jour(s) restant(s)</div>\n            </div>\n          </div>\n          <span class="bg-orange-500/20 text-orange-400 text-xs px-3 py-1 rounded-full ' +
+                    'font-medium">Alerte</span>\n        </div>\n        <div class="bg-orange-900/30 border border-orange-500/20 rounded-xl p-3 mb-4">\n          <p ' +
+                    'class="text-sm text-orange-300"><i class="fas fa-info-circle mr-2"></i>Expire le <strong>',
+                  s.toLocaleDateString("fr-FR"),
+                  '</strong>. Sans renouvellement, vos commissions seront stoppées et votre rang annulé.</p>\n        </div>\n        <button onclick="orderLicense()" ' +
+                    'id="btn-order-license" class="w-full bg-orange-500 text-white font-bold py-3 rounded-xl hover:bg-orange-400 transition">\n          <i class="fas ' +
+                    'fa-rotate-right mr-2"></i>Renouveler maintenant — $'
+                ].join("") +
                 fmtPrice(_price) +
                 "/an\n        </button>\n      </div>"
-              : '\n      <div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">\n        <div class="flex items-center justify-between mb-4">\n          <div ' +
-                'class="flex items-center gap-3">\n            <div class="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center">\n              <i ' +
-                'class="fas fa-ban text-red-400 text-lg"></i>\n            </div>\n            <div>\n              <div class="font-bold text-red-300">Licence expirée / ' +
-                'suspendue</div>\n              <div class="text-xs ' +
-                'text-red-400/70">' +
-                (s ? "Expirée le " + s.toLocaleDateString("fr-FR") : "Statut inactif") +
-                ('</div>\n            </div>\n          </div>\n          <span class="bg-red-500/20 text-red-400 text-xs px-3 py-1 rounded-full font-medium">Inactive<' +
-                  '/span>\n        </div>\n        <div class="bg-red-900/30 border border-red-500/20 rounded-xl p-3 mb-4">\n          <p class="text-sm text-red-300"><i ' +
-                  'class="fas fa-exclamation-triangle mr-2"></i>Votre licence est expirée. Les commissions sont stoppées. Renouvelez pour réactiver vos droits LEADER.</p>' +
-                  '\n        </div>\n        <button onclick="orderLicense()" id="btn-order-license" class="w-full bg-red-600 text-white font-bold py-3 rounded-xl ' +
-                  'hover:bg-red-500 transition">\n' +
-                  '          <i class="fas fa-rotate-right mr-2"></i>Renouveler ma licence — $') +
-                fmtPrice(_price) +
-                "/an\n        </button>\n      </div>"
-          : '\n      <div class="bg-dark-700 border border-dark-500 rounded-xl p-5">\n        <div class="flex items-center gap-4 mb-4">\n          <div class="w-12 ' +
-            'h-12 rounded-xl bg-gray-500/20 flex items-center justify-center flex-shrink-0">\n            <i class="fas fa-id-card text-gray-400 text-xl"></i>\n      ' +
-            '    </div>\n          <div>\n            <div class="font-bold text-white">Aucune licence active</div>\n            <div class="text-gray-400 text-sm">' +
-            "Vous n'avez pas encore de licence Finstrategia.</div>\n" +
-            ('          </div>\n        </div>\n        <div class="bg-rouge-500/10 border border-rouge-500/20 rounded-xl p-4 mb-4">\n          <div class="text-3xl ' +
-              'font-bold text-rouge-400 mb-1">$') +
-            fmtPrice(_price) +
-            (' <span class="text-sm text-gray-400 font-normal">/an</span></div>\n          <p class="text-sm text-gray-400">Accès complet à la plateforme ' +
-              'Finstrategia + éligibilité aux commissions LEADER pendant 12 mois.</p>\n        </div>\n        <div class="space-y-2 text-sm text-gray-400 mb-4">\n      ' +
-              '    <div class="flex items-center gap-2"><i class="fas fa-check text-green-400 w-4"></i>Accès plateforme Finstrategia (12 mois)</div>\n          <div ' +
-              'class="flex items-center gap-2"><i class="fas fa-check text-green-400 w-4"></i>Éligibilité aux commissions MLM</div>\n' +
-              ('          <div class="flex items-center gap-2"><i class="fas fa-check text-green-400 w-4"></i>Prime de Leadership mensuelle</div>\n          <div ' +
-                'class="flex items-center gap-2"><i class="fas fa-check text-green-400 w-4"></i>Bonus d\'Influence et de Rayonnement</div>\n        </div>\n        <' +
-                'button onclick="orderLicense()" id="btn-order-license" class="w-full bg-rouge-500 text-dark-900 font-bold py-3 rounded-xl hover:bg-rouge-500 ' +
-                'transition">\n          <i class="fas fa-key mr-2"></i>Activer ma ') +
-              "licence Finstrategia — $") +
-            fmtPrice(_price) +
-            "/an\n        </button>\n      </div>";
+              : [
+                  '\n      <div class="bg-red-900/20 border border-red-500/30 rounded-xl p-5">\n        <div class="flex items-center justify-between mb-4">\n          <div ',
+                  'class="flex items-center gap-3">\n            <div class="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center">\n              <i ',
+                  'class="fas fa-ban text-red-400 text-lg"></i>\n            </div>\n            <div>\n              <div class="font-bold text-red-300">Licence expirée / ',
+                  'suspendue</div>\n              <div class="text-xs ',
+                  'text-red-400/70">',
+                  s ? "Expirée le " + s.toLocaleDateString("fr-FR") : "Statut inactif",
+                  '</div>\n            </div>\n          </div>\n          <span class="bg-red-500/20 text-red-400 text-xs px-3 py-1 rounded-full font-medium">Inactive<' +
+                    '/span>\n        </div>\n        <div class="bg-red-900/30 border border-red-500/20 rounded-xl p-3 mb-4">\n          <p class="text-sm text-red-300"><i ' +
+                    'class="fas fa-exclamation-triangle mr-2"></i>Votre licence est expirée. Les commissions sont stoppées. Renouvelez pour réactiver vos droits LEADER.</p>' +
+                    '\n        </div>\n        <button onclick="orderLicense()" id="btn-order-license" class="w-full bg-red-600 text-white font-bold py-3 rounded-xl ' +
+                    'hover:bg-red-500 transition">\n' +
+                    '          <i class="fas fa-rotate-right mr-2"></i>Renouveler ma licence — $',
+                  fmtPrice(_price),
+                  "/an\n        </button>\n      </div>"
+                ].join("")
+          : [
+              '\n      <div class="bg-dark-700 border border-dark-500 rounded-xl p-5">\n        <div class="flex items-center gap-4 mb-4">\n          <div class="w-12 ',
+              'h-12 rounded-xl bg-gray-500/20 flex items-center justify-center flex-shrink-0">\n            <i class="fas fa-id-card text-gray-400 text-xl"></i>\n      ',
+              '    </div>\n          <div>\n            <div class="font-bold text-white">Aucune licence active</div>\n            <div class="text-gray-400 text-sm">',
+              "Vous n'avez pas encore de licence Finstrategia.</div>\n",
+              '          </div>\n        </div>\n        <div class="bg-rouge-500/10 border border-rouge-500/20 rounded-xl p-4 mb-4">\n          <div class="text-3xl ' +
+                'font-bold text-rouge-400 mb-1">$',
+              fmtPrice(_price),
+              ' <span class="text-sm text-gray-400 font-normal">/an</span></div>\n          <p class="text-sm text-gray-400">Accès complet à la plateforme ' +
+                'Finstrategia + éligibilité aux commissions LEADER pendant 12 mois.</p>\n        </div>\n        <div class="space-y-2 text-sm text-gray-400 mb-4">\n      ' +
+                '    <div class="flex items-center gap-2"><i class="fas fa-check text-green-400 w-4"></i>Accès plateforme Finstrategia (12 mois)</div>\n          <div ' +
+                'class="flex items-center gap-2"><i class="fas fa-check text-green-400 w-4"></i>Éligibilité aux commissions MLM</div>\n' +
+                ('          <div class="flex items-center gap-2"><i class="fas fa-check text-green-400 w-4"></i>Prime de Leadership mensuelle</div>\n          <div ' +
+                  'class="flex items-center gap-2"><i class="fas fa-check text-green-400 w-4"></i>Bonus d\'Influence et de Rayonnement</div>\n        </div>\n        <' +
+                  'button onclick="orderLicense()" id="btn-order-license" class="w-full bg-rouge-500 text-dark-900 font-bold py-3 rounded-xl hover:bg-rouge-500 ' +
+                  'transition">\n          <i class="fas fa-key mr-2"></i>Activer ma ') +
+                "licence Finstrategia — $",
+              fmtPrice(_price),
+              "/an\n        </button>\n      </div>"
+            ].join("");
     e.innerHTML =
       '\n    <div class="max-w-lg space-y-6">\n      <div>\n        <h2 class="text-xl font-bold">Ma Licence Finstrategia</h2>\n        <p class="text-gray-400 ' +
       'text-sm mt-1">Licence annuelle ($' +
@@ -8361,133 +8675,147 @@ async function renderProfile(e) {
       admin: "Créé par admin"
     }[t?.registration_method] || "—";
   e.innerHTML =
-    '\n  <div class="max-w-2xl space-y-5">\n\n    <!-- En-tête -->\n    <div class="flex items-center justify-between flex-wrap gap-3">\n      <h2 ' +
-    'class="text-xl font-bold text-white flex items-center gap-2">\n        <i class="fas fa-user-circle text-rouge-400"></i> Mon Profil\n      </h2>\n      <' +
-    'div class="flex items-center gap-2">\n        <span class="text-xs text-gray-500">' +
-    (t?.unique_id || "") +
-    "</span>\n        " +
-    (t?.member_status
-      ? '<span class="text-xs px-2 py-0.5 rounded-full font-medium ' +
-        ({
-          AMI: "bg-rouge-500/15 text-rouge-400",
-          Partenaire: "bg-green-500/20 text-green-400",
-          Client: "bg-blue-500/20 text-blue-400",
-          Membre: "bg-gray-500/20 text-gray-400"
-        }[t.member_status] || "") +
-        '">' +
-        t.member_status +
-        "</span>"
-      : "") +
-    ("\n      </div>\n    </div>\n\n    <!-- ═══ BARRE D'ONGLETS ═══ -->\n    <div class=\"flex gap-1 bg-dark-800 border border-dark-600 " +
-      'rounded-2xl p-1.5">\n      ' +
-      '<button onclick="switchProfileTab(\'identity\')" id="ptab-identity"\n        class="profile-tab flex-1 py-2.5 rounded-xl text-sm font-semibold transition ' +
-      'flex items-center justify-center gap-2">\n        <i class="fas fa-id-card text-xs"></i>\n        <span class="hidden sm:inline">Identité</span>\n        ' +
-      '<span class="sm:hidden">ID</span>\n      </button>\n' +
-      ('      <button onclick="switchProfileTab(\'coords\')" id="ptab-coords"\n        class="profile-tab flex-1 py-2.5 rounded-xl text-sm font-semibold ' +
-        'transition flex items-center justify-center gap-2">\n        <i class="fas fa-map-marker-alt text-xs"></i>\n        <span class="hidden sm:inline">' +
-        'Coordonnées</span>\n        <span class="sm:hidden">Adresse</span>\n      </button>\n      <button onclick="switchProfileTab(\'payment\')" ' +
-        'id="ptab-payment"\n        class="profile-tab flex-1 py-2.5 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2">\n') +
-      ('        <i class="fas fa-wallet text-xs"></i>\n        <span class="hidden sm:inline">Paiement</span>\n        <span class="sm:hidden">Paie.</span>\n     ' +
-        ' </button>\n      <button onclick="switchProfileTab(\'security\')" id="ptab-security"\n        class="profile-tab flex-1 py-2.5 rounded-xl text-sm ' +
-        'font-semibold transition flex items-center justify-center gap-2">\n        <i class="fas fa-lock text-xs"></i>\n        <span class="hidden sm:inline">' +
-        'Sécurité</span>\n        <span class="sm:hidden">Sécu.</span>\n') +
-      ('      </button>\n    </div>\n\n    <!-- ═══ ONGLET 1 : IDENTITÉ ═══ -->\n    <div id="ptab-panel-identity" class="space-y-5">\n      <div ' +
-        'class="bg-dark-800 rounded-2xl border border-dark-600 p-6 space-y-4">\n        <h3 class="font-semibold text-white flex items-center gap-2 pb-2 ' +
-        'border-b border-dark-600">\n          <i class="fas fa-id-card text-rouge-400 text-sm"></i> Informations personnelles\n        </h3>\n        <div ' +
-        'class="grid grid-cols-2 gap-4">\n          <div>\n            <label class="form-label">Prénom <span class="text-red-400">*</span></label>\n') +
-      '            <input id="p-firstname" class="form-input" value="') +
-    (t?.first_name || "") +
-    ('" placeholder="Prénom">\n          </div>\n          <div>\n            <label class="form-label">Nom <span class="text-red-400">*</span></label>\n        ' +
-      '    <input id="p-lastname" class="form-input" value="') +
-    (t?.last_name || "") +
-    ('" placeholder="Nom de famille">\n          </div>\n        </div>\n        <div>\n          <label class="form-label">Email <span class="text-xs ' +
-      'text-gray-500">(non modifiable)</span></label>\n          <input class="form-input opacity-60 cursor-not-allowed" value="') +
-    (t?.email || "") +
-    ("\" disabled>\n        </div>\n        <!-- Pays de résidence (ici pour pré-remplir l'indicatif avant de saisir le téléphone) -->\n        <div>\n          <" +
-      'label class="form-label">Pays de résidence <span class="text-red-400">*</span></label>\n          <div class="relative">\n            <input ' +
-      'id="p-country-search" type="text" autocomplete="off"\n              class="form-input w-full pr-10"\n              placeholder="Rechercher un pays…"\n    ' +
-      '          value="') +
-    (t?.country || "") +
-    ('"\n              oninput="profFilterCountries(this.value)"\n              onfocus="profShowCountryList()"\n              onblur="setTimeout(()=>' +
-      'profHideCountryList(),200)">\n            <div class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">\n              <i ' +
-      'class="fas fa-chevron-down text-xs"></i>\n            </div>\n            <input id="p-country" type="hidden" value="') +
-    (t?.country || "") +
-    ('">\n            <div id="p-country-list"\n              class="hidden absolute z-50 w-full mt-1 bg-dark-800 border border-dark-600 rounded-xl shadow-xl ' +
-      'overflow-y-auto" style="max-height:220px">\n            </div>\n          </div>\n        </div>\n        <div class="grid grid-cols-2 gap-4">\n          <' +
-      'div>\n            <label class="form-label">Téléphone</label>\n            <div class="flex gap-2">\n              <input id="p-phone-dial" type="text" ' +
-      'placeholder="+xx"\n                class="w-20 bg-dark-600 border border-dark-600 rounded-xl px-3 py-2 text-rouge-400 text-sm font-mono flex-shrink-0"\n' +
-      '                value="') +
-    (() => {
-      if (!t?.phone) return "";
-      const wc = typeof WORLD_COUNTRIES !== "undefined" ? WORLD_COUNTRIES : [];
-      const co = wc.find((x) => t.country && x.n === t.country);
-      return co ? co.d : "";
-    })() +
-    '">\n              <input id="p-phone" class="form-input flex-1" value="' +
-    (t?.phone || "") +
-    ('" placeholder="6 00 00 00 00">\n            </div>\n          </div>\n          <div>\n            <label class="form-label">Date de naissance</label>\n    ' +
-      '        <input id="p-birthdate" type="date" class="form-input" value="') +
-    (t?.birth_date || "") +
-    ('">\n          </div>\n        </div>\n        <div>\n          <label class="form-label">Nationalité</label>\n          <input id="p-nationality" ' +
-      'class="form-input" value="') +
-    (t?.nationality || "") +
-    ('" placeholder="Française, Belge…">\n        </div>\n        <button onclick="saveProfile()" class="bg-rouge-500 text-dark-900 font-bold px-6 py-2.5 ' +
-      'rounded-xl hover:bg-rouge-500 transition flex items-center gap-2">\n          <i class="fas fa-save"></i> Sauvegarder\n        </button>\n      </div>\n\n  ' +
-      '    <!-- Résumé du compte -->\n      <div class="bg-dark-800 rounded-2xl border border-dark-600 p-5">\n        <h3 class="font-semibold text-white flex ' +
-      'items-center gap-2 pb-3 border-b border-dark-600 mb-4">\n' +
-      ('          <i class="fas fa-circle-info text-rouge-400 text-sm"></i> Résumé du compte\n        </h3>\n        <div class="grid grid-cols-2 gap-4">\n       ' +
-        '   <div class="bg-dark-700/50 rounded-xl p-3">\n            <div class="text-xs text-gray-400 mb-1 uppercase tracking-wider">Identifiant unique</div>\n  ' +
-        '          <div class="text-rouge-400 font-mono font-bold text-lg">')) +
-    (t?.unique_id || "—") +
-    ('</div>\n          </div>\n          <div class="bg-dark-700/50 rounded-xl p-3">\n            <div class="text-xs text-gray-400 mb-1 uppercase ' +
-      'tracking-wider">Rang actuel</div>\n            <div class="text-white font-medium">') +
-    (t?.current_rank && t.current_rank !== "none" ? t.current_rank : "—") +
-    ('</div>\n          </div>\n          <div class="bg-dark-700/50 rounded-xl p-3">\n            <div class="text-xs text-gray-400 mb-1 uppercase ' +
-      'tracking-wider">Méthode d\'inscription</div>\n            <div class="text-gray-300 text-sm">') +
-    regMethodLabel +
-    ('</div>\n          </div>\n          <div class="bg-dark-700/50 rounded-xl p-3">\n            <div class="text-xs text-gray-400 mb-1 uppercase ' +
-      'tracking-wider">Membre depuis</div>\n            <div class="text-gray-300 text-sm">') +
-    fmtDate(t?.created_at) +
-    ('</div>\n          </div>\n          <div class="bg-dark-700/50 rounded-xl p-3">\n            <div class="text-xs text-gray-400 mb-1 uppercase ' +
-      'tracking-wider">Licence</div>\n            <div class="') +
-    (t?.license_active ? "text-green-400" : "text-red-400") +
-    ' text-sm font-medium">\n              ' +
-    (t?.license_active ? '<i class="fas fa-check-circle mr-1"></i>Active' : '<i class="fas fa-times-circle mr-1"></i>Inactive') +
-    "\n              " +
-    (t?.license_expires_at ? '<span class="text-gray-500 text-xs ml-1">(expire ' + fmtDate(t.license_expires_at) + ")</span>" : "") +
-    ('\n            </div>\n          </div>\n          <div class="bg-dark-700/50 rounded-xl p-3">\n            <div class="text-xs text-gray-400 mb-1 ' +
-      'uppercase tracking-wider">KYC</div>\n            <div class="') +
-    {
-      verified: "text-green-400",
-      pending: "text-yellow-400",
-      rejected: "text-red-400",
-      not_submitted: "text-gray-400"
-    }[t?.kyc_status || "not_submitted"] +
-    ' text-sm">\n              ' +
-    {
-      verified: "<i class='fas fa-check-circle mr-1'></i>Vérifié",
-      pending: "<i class='fas fa-clock mr-1'></i>En vérification",
-      rejected: "<i class='fas fa-times-circle mr-1'></i>Rejeté",
-      not_submitted: "<i class='fas fa-circle-minus mr-1'></i>Non soumis"
-    }[t?.kyc_status || "not_submitted"] +
-    ("\n            </div>\n          </div>\n        </div>\n      </div>\n    </div>\n\n    <!-- ═══ ONGLET 2 : COORDONNÉES ═══ -->\n    <div " +
-      'id="ptab-panel-coords" class="hidden space-y-5">\n      <div class="bg-dark-800 rounded-2xl border border-dark-600 p-6 space-y-4">\n        <h3 ' +
-      'class="font-semibold text-white flex items-center gap-2 pb-2 border-b border-dark-600">\n          <i class="fas fa-map-marker-alt text-rouge-400 ' +
-      "text-sm\"></i> Pays et adresse postale\n        </h3>\n\n        <!-- Le champ pays est dans l'onglet Infos perso (avant le téléphone) -->\n" +
-      ('\n        <div>\n          <label class="form-label">Adresse (numéro et rue) <span class="text-red-400">*</span></label>\n          <input id="p-address" ' +
-        'class="form-input" value="')) +
-    (t?.address || "") +
-    ('" placeholder="12 rue de la Paix">\n        </div>\n        <div class="grid grid-cols-2 gap-4">\n          <div>\n            <label class="form-label">' +
-      'Code postal <span class="text-red-400">*</span></label>\n            <input id="p-postalcode" class="form-input" value="') +
-    (t?.postal_code || "") +
-    ('" placeholder="75001">\n          </div>\n          <div>\n            <label class="form-label">Ville <span class="text-red-400">*</span></label>\n       ' +
-      '     <input id="p-city" class="form-input" value="') +
-    (t?.city || "") +
-    ('" placeholder="Paris">\n          </div>\n        </div>\n        <button onclick="saveProfile()" class="bg-rouge-500 text-dark-900 font-bold px-6 py-2.5 ' +
-      'rounded-xl hover:bg-rouge-500 transition flex items-center gap-2">\n          <i class="fas fa-save"></i> Sauvegarder\n        </button>\n      </div>\n\n  ' +
-      '    <!-- Lien de parrainage -->\n      <div class="bg-dark-800 rounded-2xl border border-rouge-500/20 p-6">\n        <h3 class="font-semibold text-white ' +
-      'mb-3 flex items-center gap-2">\n          <i class="fas fa-share-nodes text-rouge-400"></i> Mon lien de parrainage\n' +
-      "        </h3>\n        ") +
+    [
+      [
+        [
+          [
+            [
+              [
+                '\n  <div class="max-w-2xl space-y-5">\n\n    <!-- En-tête -->\n    <div class="flex items-center justify-between flex-wrap gap-3">\n      <h2 ',
+                'class="text-xl font-bold text-white flex items-center gap-2">\n        <i class="fas fa-user-circle text-rouge-400"></i> Mon Profil\n      </h2>\n      <',
+                'div class="flex items-center gap-2">\n        <span class="text-xs text-gray-500">',
+                t?.unique_id || "",
+                "</span>\n        ",
+                t?.member_status
+                  ? '<span class="text-xs px-2 py-0.5 rounded-full font-medium ' +
+                    ({
+                      AMI: "bg-rouge-500/15 text-rouge-400",
+                      Partenaire: "bg-green-500/20 text-green-400",
+                      Client: "bg-blue-500/20 text-blue-400",
+                      Membre: "bg-gray-500/20 text-gray-400"
+                    }[t.member_status] || "") +
+                    '">' +
+                    t.member_status +
+                    "</span>"
+                  : "",
+                [
+                  "\n      </div>\n    </div>\n\n    <!-- ═══ BARRE D'ONGLETS ═══ -->\n    <div class=\"flex gap-1 bg-dark-800 border border-dark-600 ",
+                  'rounded-2xl p-1.5">\n      ',
+                  '<button onclick="switchProfileTab(\'identity\')" id="ptab-identity"\n        class="profile-tab flex-1 py-2.5 rounded-xl text-sm font-semibold transition ',
+                  'flex items-center justify-center gap-2">\n        <i class="fas fa-id-card text-xs"></i>\n        <span class="hidden sm:inline">Identité</span>\n        ',
+                  '<span class="sm:hidden">ID</span>\n      </button>\n',
+                  '      <button onclick="switchProfileTab(\'coords\')" id="ptab-coords"\n        class="profile-tab flex-1 py-2.5 rounded-xl text-sm font-semibold ' +
+                    'transition flex items-center justify-center gap-2">\n        <i class="fas fa-map-marker-alt text-xs"></i>\n        <span class="hidden sm:inline">' +
+                    'Coordonnées</span>\n        <span class="sm:hidden">Adresse</span>\n      </button>\n      <button onclick="switchProfileTab(\'payment\')" ' +
+                    'id="ptab-payment"\n        class="profile-tab flex-1 py-2.5 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2">\n',
+                  '        <i class="fas fa-wallet text-xs"></i>\n        <span class="hidden sm:inline">Paiement</span>\n        <span class="sm:hidden">Paie.</span>\n     ' +
+                    ' </button>\n      <button onclick="switchProfileTab(\'security\')" id="ptab-security"\n        class="profile-tab flex-1 py-2.5 rounded-xl text-sm ' +
+                    'font-semibold transition flex items-center justify-center gap-2">\n        <i class="fas fa-lock text-xs"></i>\n        <span class="hidden sm:inline">' +
+                    'Sécurité</span>\n        <span class="sm:hidden">Sécu.</span>\n',
+                  '      </button>\n    </div>\n\n    <!-- ═══ ONGLET 1 : IDENTITÉ ═══ -->\n    <div id="ptab-panel-identity" class="space-y-5">\n      <div ' +
+                    'class="bg-dark-800 rounded-2xl border border-dark-600 p-6 space-y-4">\n        <h3 class="font-semibold text-white flex items-center gap-2 pb-2 ' +
+                    'border-b border-dark-600">\n          <i class="fas fa-id-card text-rouge-400 text-sm"></i> Informations personnelles\n        </h3>\n        <div ' +
+                    'class="grid grid-cols-2 gap-4">\n          <div>\n            <label class="form-label">Prénom <span class="text-red-400">*</span></label>\n',
+                  '            <input id="p-firstname" class="form-input" value="'
+                ].join(""),
+                t?.first_name || "",
+                '" placeholder="Prénom">\n          </div>\n          <div>\n            <label class="form-label">Nom <span class="text-red-400">*</span></label>\n        ' +
+                  '    <input id="p-lastname" class="form-input" value="'
+              ].join(""),
+              t?.last_name || "",
+              '" placeholder="Nom de famille">\n          </div>\n        </div>\n        <div>\n          <label class="form-label">Email <span class="text-xs ' +
+                'text-gray-500">(non modifiable)</span></label>\n          <input class="form-input opacity-60 cursor-not-allowed" value="',
+              t?.email || "",
+              "\" disabled>\n        </div>\n        <!-- Pays de résidence (ici pour pré-remplir l'indicatif avant de saisir le téléphone) -->\n        <div>\n          <" +
+                'label class="form-label">Pays de résidence <span class="text-red-400">*</span></label>\n          <div class="relative">\n            <input ' +
+                'id="p-country-search" type="text" autocomplete="off"\n              class="form-input w-full pr-10"\n              placeholder="Rechercher un pays…"\n    ' +
+                '          value="',
+              t?.country || "",
+              '"\n              oninput="profFilterCountries(this.value)"\n              onfocus="profShowCountryList()"\n              onblur="setTimeout(()=>' +
+                'profHideCountryList(),200)">\n            <div class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">\n              <i ' +
+                'class="fas fa-chevron-down text-xs"></i>\n            </div>\n            <input id="p-country" type="hidden" value="',
+              t?.country || "",
+              '">\n            <div id="p-country-list"\n              class="hidden absolute z-50 w-full mt-1 bg-dark-800 border border-dark-600 rounded-xl shadow-xl ' +
+                'overflow-y-auto" style="max-height:220px">\n            </div>\n          </div>\n        </div>\n        <div class="grid grid-cols-2 gap-4">\n          <' +
+                'div>\n            <label class="form-label">Téléphone</label>\n            <div class="flex gap-2">\n              <input id="p-phone-dial" type="text" ' +
+                'placeholder="+xx"\n                class="w-20 bg-dark-600 border border-dark-600 rounded-xl px-3 py-2 text-rouge-400 text-sm font-mono flex-shrink-0"\n' +
+                '                value="'
+            ].join(""),
+            (() => {
+              if (!t?.phone) return "";
+              const wc = typeof WORLD_COUNTRIES !== "undefined" ? WORLD_COUNTRIES : [];
+              const co = wc.find((x) => t.country && x.n === t.country);
+              return co ? co.d : "";
+            })(),
+            '">\n              <input id="p-phone" class="form-input flex-1" value="',
+            t?.phone || "",
+            '" placeholder="6 00 00 00 00">\n            </div>\n          </div>\n          <div>\n            <label class="form-label">Date de naissance</label>\n    ' +
+              '        <input id="p-birthdate" type="date" class="form-input" value="',
+            t?.birth_date || "",
+            '">\n          </div>\n        </div>\n        <div>\n          <label class="form-label">Nationalité</label>\n          <input id="p-nationality" ' +
+              'class="form-input" value="',
+            t?.nationality || "",
+            '" placeholder="Française, Belge…">\n        </div>\n        <button onclick="saveProfile()" class="bg-rouge-500 text-dark-900 font-bold px-6 py-2.5 ' +
+              'rounded-xl hover:bg-rouge-500 transition flex items-center gap-2">\n          <i class="fas fa-save"></i> Sauvegarder\n        </button>\n      </div>\n\n  ' +
+              '    <!-- Résumé du compte -->\n      <div class="bg-dark-800 rounded-2xl border border-dark-600 p-5">\n        <h3 class="font-semibold text-white flex ' +
+              'items-center gap-2 pb-3 border-b border-dark-600 mb-4">\n' +
+              ('          <i class="fas fa-circle-info text-rouge-400 text-sm"></i> Résumé du compte\n        </h3>\n        <div class="grid grid-cols-2 gap-4">\n       ' +
+                '   <div class="bg-dark-700/50 rounded-xl p-3">\n            <div class="text-xs text-gray-400 mb-1 uppercase tracking-wider">Identifiant unique</div>\n  ' +
+                '          <div class="text-rouge-400 font-mono font-bold text-lg">')
+          ].join(""),
+          t?.unique_id || "—",
+          '</div>\n          </div>\n          <div class="bg-dark-700/50 rounded-xl p-3">\n            <div class="text-xs text-gray-400 mb-1 uppercase ' +
+            'tracking-wider">Rang actuel</div>\n            <div class="text-white font-medium">',
+          t?.current_rank && t.current_rank !== "none" ? t.current_rank : "—",
+          '</div>\n          </div>\n          <div class="bg-dark-700/50 rounded-xl p-3">\n            <div class="text-xs text-gray-400 mb-1 uppercase ' +
+            'tracking-wider">Méthode d\'inscription</div>\n            <div class="text-gray-300 text-sm">',
+          regMethodLabel,
+          '</div>\n          </div>\n          <div class="bg-dark-700/50 rounded-xl p-3">\n            <div class="text-xs text-gray-400 mb-1 uppercase ' +
+            'tracking-wider">Membre depuis</div>\n            <div class="text-gray-300 text-sm">',
+          fmtDate(t?.created_at),
+          '</div>\n          </div>\n          <div class="bg-dark-700/50 rounded-xl p-3">\n            <div class="text-xs text-gray-400 mb-1 uppercase ' +
+            'tracking-wider">Licence</div>\n            <div class="'
+        ].join(""),
+        t?.license_active ? "text-green-400" : "text-red-400",
+        ' text-sm font-medium">\n              ',
+        t?.license_active ? '<i class="fas fa-check-circle mr-1"></i>Active' : '<i class="fas fa-times-circle mr-1"></i>Inactive',
+        "\n              ",
+        t?.license_expires_at ? '<span class="text-gray-500 text-xs ml-1">(expire ' + fmtDate(t.license_expires_at) + ")</span>" : "",
+        '\n            </div>\n          </div>\n          <div class="bg-dark-700/50 rounded-xl p-3">\n            <div class="text-xs text-gray-400 mb-1 ' +
+          'uppercase tracking-wider">KYC</div>\n            <div class="',
+        {
+          verified: "text-green-400",
+          pending: "text-yellow-400",
+          rejected: "text-red-400",
+          not_submitted: "text-gray-400"
+        }[t?.kyc_status || "not_submitted"],
+        ' text-sm">\n              '
+      ].join(""),
+      {
+        verified: "<i class='fas fa-check-circle mr-1'></i>Vérifié",
+        pending: "<i class='fas fa-clock mr-1'></i>En vérification",
+        rejected: "<i class='fas fa-times-circle mr-1'></i>Rejeté",
+        not_submitted: "<i class='fas fa-circle-minus mr-1'></i>Non soumis"
+      }[t?.kyc_status || "not_submitted"],
+      "\n            </div>\n          </div>\n        </div>\n      </div>\n    </div>\n\n    <!-- ═══ ONGLET 2 : COORDONNÉES ═══ -->\n    <div " +
+        'id="ptab-panel-coords" class="hidden space-y-5">\n      <div class="bg-dark-800 rounded-2xl border border-dark-600 p-6 space-y-4">\n        <h3 ' +
+        'class="font-semibold text-white flex items-center gap-2 pb-2 border-b border-dark-600">\n          <i class="fas fa-map-marker-alt text-rouge-400 ' +
+        "text-sm\"></i> Pays et adresse postale\n        </h3>\n\n        <!-- Le champ pays est dans l'onglet Infos perso (avant le téléphone) -->\n" +
+        ('\n        <div>\n          <label class="form-label">Adresse (numéro et rue) <span class="text-red-400">*</span></label>\n          <input id="p-address" ' +
+          'class="form-input" value="'),
+      t?.address || "",
+      '" placeholder="12 rue de la Paix">\n        </div>\n        <div class="grid grid-cols-2 gap-4">\n          <div>\n            <label class="form-label">' +
+        'Code postal <span class="text-red-400">*</span></label>\n            <input id="p-postalcode" class="form-input" value="',
+      t?.postal_code || "",
+      '" placeholder="75001">\n          </div>\n          <div>\n            <label class="form-label">Ville <span class="text-red-400">*</span></label>\n       ' +
+        '     <input id="p-city" class="form-input" value="',
+      t?.city || "",
+      '" placeholder="Paris">\n          </div>\n        </div>\n        <button onclick="saveProfile()" class="bg-rouge-500 text-dark-900 font-bold px-6 py-2.5 ' +
+        'rounded-xl hover:bg-rouge-500 transition flex items-center gap-2">\n          <i class="fas fa-save"></i> Sauvegarder\n        </button>\n      </div>\n\n  ' +
+        '    <!-- Lien de parrainage -->\n      <div class="bg-dark-800 rounded-2xl border border-rouge-500/20 p-6">\n        <h3 class="font-semibold text-white ' +
+        'mb-3 flex items-center gap-2">\n          <i class="fas fa-share-nodes text-rouge-400"></i> Mon lien de parrainage\n' +
+        "        </h3>\n        "
+    ].join("") +
     (referralUrl
       ? '\n        <div class="flex gap-2">\n          <input id="profile-referral-input" type="text" value="' +
         referralUrl +
@@ -8501,64 +8829,68 @@ async function renderProfile(e) {
         '/p>\n            <p class="text-orange-400/70 text-xs mt-1">Activez votre licence Finstrategia pour obtenir votre lien de parrainage.</p>\n            <' +
         'button onclick="showPage(\'license\')" class="mt-2 text-xs bg-rouge-500 text-dark-900 font-bold px-3 py-1.5 rounded-lg hover:bg-rouge-500 transition">\n' +
         '              <i class="fas fa-key mr-1"></i>Activer ma licence\n            </button>\n          </div>\n        </div>') +
-    ('\n      </div>\n    </div>\n\n    <!-- ═══ ONGLET 3 : PAIEMENT ═══ -->\n    <div id="ptab-panel-payment" class="hidden">\n      <div class="bg-dark-800 ' +
-      'rounded-2xl border border-dark-600 p-6 space-y-4" id="payout-section">\n        <h3 class="font-semibold text-white mb-2 flex items-center gap-2">\n     ' +
-      '     <i class="fas fa-wallet text-rouge-400"></i> Coordonnées de paiement\n          <span class="text-xs text-gray-500 font-normal ml-2">Sauvegardées ' +
-      "une fois, utilisées à chaque retrait</span>\n        </h3>\n" +
-      ('\n        <!-- Onglets méthode -->\n        <div class="flex gap-2 flex-wrap" id="payout-tab-btns">\n          <button ' +
-        'onclick="switchPayoutTab(\'paypal\')" id="payout-tab-paypal"\n            class="px-4 py-2 rounded-xl text-sm font-medium border transition">\n            ' +
-        '<i class="fab fa-paypal mr-1.5"></i>PayPal\n          </button>\n          <button onclick="switchPayoutTab(\'bank_transfer\')" ' +
-        'id="payout-tab-bank_transfer"\n            class="px-4 py-2 rounded-xl text-sm font-medium border transition">\n') +
-      ('            <i class="fas fa-university mr-1.5"></i>Virement bancaire\n          </button>\n          <button onclick="switchPayoutTab(\'crypto\')" ' +
-        'id="payout-tab-crypto"\n            class="px-4 py-2 rounded-xl text-sm font-medium border transition">\n            <i class="fas fa-coins mr-1.5"></i>' +
-        'Cryptomonnaie\n          </button>\n        </div>\n\n        <!-- PayPal -->\n        <div id="payout-panel-paypal" class="space-y-3 hidden">\n          <' +
-        'div>\n            <label class="form-label">Adresse email PayPal <span class="text-red-400">*</span></label>\n') +
-      ('            <input id="pi-paypal-email" type="email" placeholder="votre@paypal.com"\n              class="form-input w-full">\n          </div>\n         ' +
-        ' <p class="text-xs text-gray-500"><i class="fas fa-info-circle mr-1"></i>\n            L\'email doit correspondre exactement à votre compte PayPal ' +
-        'vérifié.</p>\n        </div>\n\n        <!-- Virement bancaire -->\n        <div id="payout-panel-bank_transfer" class="space-y-3 hidden">\n          <div ' +
-        'class="grid grid-cols-1 md:grid-cols-2 gap-3">\n            <div class="md:col-span-2">\n') +
-      ('              <label class="form-label">Titulaire du compte <span class="text-red-400">*</span></label>\n              <input id="pi-bank-holder" ' +
-        'type="text" placeholder="Prénom NOM (exactement comme sur le RIB)"\n                class="form-input w-full">\n            </div>\n            <div>\n    ' +
-        '          <label class="form-label">IBAN <span class="text-red-400">*</span></label>\n              <input id="pi-bank-iban" type="text" ' +
-        'placeholder="FR76 XXXX XXXX XXXX XXXX XXXX XXX"\n                class="form-input w-full" style="letter-spacing:0.05em">\n') +
-      ('            </div>\n            <div>\n              <label class="form-label">BIC / SWIFT <span class="text-red-400">*</span></label>\n              <' +
-        'input id="pi-bank-bic" type="text" placeholder="BNPAFRPP" class="form-input w-full">\n            </div>\n            <div>\n              <label ' +
-        'class="form-label">Nom de la banque</label>\n              <input id="pi-bank-name" type="text" placeholder="BNP Paribas" class="form-input w-full">\n   ' +
-        '         </div>\n            <div>\n              <label class="form-label">Numéro de compte</label>\n') +
-      ('              <input id="pi-bank-account" type="text" placeholder="Numéro de compte (optionnel)" class="form-input w-full">\n            </div>\n        ' +
+    ([
+      [
+        '\n      </div>\n    </div>\n\n    <!-- ═══ ONGLET 3 : PAIEMENT ═══ -->\n    <div id="ptab-panel-payment" class="hidden">\n      <div class="bg-dark-800 ',
+        'rounded-2xl border border-dark-600 p-6 space-y-4" id="payout-section">\n        <h3 class="font-semibold text-white mb-2 flex items-center gap-2">\n     ',
+        '     <i class="fas fa-wallet text-rouge-400"></i> Coordonnées de paiement\n          <span class="text-xs text-gray-500 font-normal ml-2">Sauvegardées ',
+        "une fois, utilisées à chaque retrait</span>\n        </h3>\n",
+        '\n        <!-- Onglets méthode -->\n        <div class="flex gap-2 flex-wrap" id="payout-tab-btns">\n          <button ' +
+          'onclick="switchPayoutTab(\'paypal\')" id="payout-tab-paypal"\n            class="px-4 py-2 rounded-xl text-sm font-medium border transition">\n            ' +
+          '<i class="fab fa-paypal mr-1.5"></i>PayPal\n          </button>\n          <button onclick="switchPayoutTab(\'bank_transfer\')" ' +
+          'id="payout-tab-bank_transfer"\n            class="px-4 py-2 rounded-xl text-sm font-medium border transition">\n',
+        '            <i class="fas fa-university mr-1.5"></i>Virement bancaire\n          </button>\n          <button onclick="switchPayoutTab(\'crypto\')" ' +
+          'id="payout-tab-crypto"\n            class="px-4 py-2 rounded-xl text-sm font-medium border transition">\n            <i class="fas fa-coins mr-1.5"></i>' +
+          'Cryptomonnaie\n          </button>\n        </div>\n\n        <!-- PayPal -->\n        <div id="payout-panel-paypal" class="space-y-3 hidden">\n          <' +
+          'div>\n            <label class="form-label">Adresse email PayPal <span class="text-red-400">*</span></label>\n',
+        '            <input id="pi-paypal-email" type="email" placeholder="votre@paypal.com"\n              class="form-input w-full">\n          </div>\n         ' +
+          ' <p class="text-xs text-gray-500"><i class="fas fa-info-circle mr-1"></i>\n            L\'email doit correspondre exactement à votre compte PayPal ' +
+          'vérifié.</p>\n        </div>\n\n        <!-- Virement bancaire -->\n        <div id="payout-panel-bank_transfer" class="space-y-3 hidden">\n          <div ' +
+          'class="grid grid-cols-1 md:grid-cols-2 gap-3">\n            <div class="md:col-span-2">\n',
+        '              <label class="form-label">Titulaire du compte <span class="text-red-400">*</span></label>\n              <input id="pi-bank-holder" ' +
+          'type="text" placeholder="Prénom NOM (exactement comme sur le RIB)"\n                class="form-input w-full">\n            </div>\n            <div>\n    ' +
+          '          <label class="form-label">IBAN <span class="text-red-400">*</span></label>\n              <input id="pi-bank-iban" type="text" ' +
+          'placeholder="FR76 XXXX XXXX XXXX XXXX XXXX XXX"\n                class="form-input w-full" style="letter-spacing:0.05em">\n',
+        '            </div>\n            <div>\n              <label class="form-label">BIC / SWIFT <span class="text-red-400">*</span></label>\n              <' +
+          'input id="pi-bank-bic" type="text" placeholder="BNPAFRPP" class="form-input w-full">\n            </div>\n            <div>\n              <label ' +
+          'class="form-label">Nom de la banque</label>\n              <input id="pi-bank-name" type="text" placeholder="BNP Paribas" class="form-input w-full">\n   ' +
+          '         </div>\n            <div>\n              <label class="form-label">Numéro de compte</label>\n'
+      ].join(""),
+      '              <input id="pi-bank-account" type="text" placeholder="Numéro de compte (optionnel)" class="form-input w-full">\n            </div>\n        ' +
         '    <div class="md:col-span-2">\n              <label class="form-label">Adresse de la banque</label>\n              <input id="pi-bank-address" ' +
         'type="text" placeholder="Adresse complète de la banque (optionnel)" class="form-input w-full">\n            </div>\n          </div>\n        </div>\n\n    ' +
-        '    <!-- Crypto -->\n        <div id="payout-panel-crypto" class="space-y-3 hidden">\n') +
-      ('          <div>\n            <label class="form-label">Réseau blockchain <span class="text-red-400">*</span></label>\n            <select ' +
+        '    <!-- Crypto -->\n        <div id="payout-panel-crypto" class="space-y-3 hidden">\n',
+      '          <div>\n            <label class="form-label">Réseau blockchain <span class="text-red-400">*</span></label>\n            <select ' +
         'id="pi-crypto-network" class="form-input w-full">\n              <option value="">Sélectionner un réseau…</option>\n              <option value="BTC">' +
         'Bitcoin (BTC)</option>\n              <option value="ETH">Ethereum (ETH - ERC20)</option>\n              <option value="USDT_TRC20">USDT - TRC20 (Tron)<' +
-        '/option>\n              <option value="USDT_ERC20">USDT - ERC20 (Ethereum)</option>\n') +
-      ('              <option value="BNB">BNB Smart Chain (BEP20)</option>\n              <option value="SOL">Solana (SOL)</option>\n              <option ' +
+        '/option>\n              <option value="USDT_ERC20">USDT - ERC20 (Ethereum)</option>\n',
+      '              <option value="BNB">BNB Smart Chain (BEP20)</option>\n              <option value="SOL">Solana (SOL)</option>\n              <option ' +
         'value="OTHER">Autre</option>\n            </select>\n          </div>\n          <div>\n            <label class="form-label">Adresse du portefeuille <' +
         'span class="text-red-400">*</span></label>\n            <input id="pi-crypto-address" type="text" placeholder="0x... ou bc1..."\n              ' +
-        'class="form-input w-full font-mono text-xs" style="letter-spacing:0.03em">\n') +
-      ('          </div>\n          <div class="bg-yellow-900/20 border border-yellow-500/20 rounded-xl p-3">\n            <p class="text-xs text-yellow-400">\n  ' +
+        'class="form-input w-full font-mono text-xs" style="letter-spacing:0.03em">\n',
+      '          </div>\n          <div class="bg-yellow-900/20 border border-yellow-500/20 rounded-xl p-3">\n            <p class="text-xs text-yellow-400">\n  ' +
         '            <i class="fas fa-triangle-exclamation mr-1"></i>\n              Vérifiez soigneusement l\'adresse et le réseau. Toute erreur peut entraîner ' +
         'une perte définitive des fonds.\n            </p>\n          </div>\n        </div>\n\n        <button onclick="savePayoutInfo(this)" id="payout-save-btn"\n ' +
-        '         class="bg-dark-700 hover:bg-dark-600 text-white border border-dark-500 font-bold px-6 py-2.5 rounded-xl transition text-sm">\n') +
-      ('          <i class="fas fa-save mr-2"></i>Sauvegarder mes coordonnées\n        </button>\n      </div>\n    </div>\n\n    <!-- ═══ ' +
+        '         class="bg-dark-700 hover:bg-dark-600 text-white border border-dark-500 font-bold px-6 py-2.5 rounded-xl transition text-sm">\n',
+      '          <i class="fas fa-save mr-2"></i>Sauvegarder mes coordonnées\n        </button>\n      </div>\n    </div>\n\n    <!-- ═══ ' +
         "ONGLET 4 : SÉCURITÉ ═══ " +
         '-->\n    <div id="ptab-panel-security" class="hidden space-y-5">\n      <!-- PIN de retrait -->\n      <div class="bg-dark-800 rounded-2xl border ' +
         'border-dark-600 p-6 space-y-4">\n        <h3 class="font-semibold text-white flex items-center gap-2 pb-2 border-b border-dark-600">\n          <i ' +
-        'class="fas fa-key text-rouge-400 text-sm"></i> PIN de retrait\n        </h3>\n') +
-      ('        <p class="text-sm text-gray-400">Le PIN (4 chiffres) est requis pour valider chaque retrait.</p>\n        <div>\n          <label ' +
+        'class="fas fa-key text-rouge-400 text-sm"></i> PIN de retrait\n        </h3>\n',
+      '        <p class="text-sm text-gray-400">Le PIN (4 chiffres) est requis pour valider chaque retrait.</p>\n        <div>\n          <label ' +
         'class="form-label">Mot de passe actuel</label>\n          <input id="pin-pwd" type="password" class="form-input" placeholder="Votre mot de passe">\n     ' +
         '   </div>\n        <div>\n          <label class="form-label">Nouveau PIN (4 chiffres)</label>\n          <input id="pin-new" type="password" ' +
-        'maxlength="4" placeholder="••••" class="form-input" style="letter-spacing:0.3em;font-size:1.2rem;">\n') +
-      ('        </div>\n        <button onclick="savePin()" class="bg-dark-700 text-white font-bold px-6 py-2.5 rounded-xl hover:bg-dark-600 transition flex ' +
+        'maxlength="4" placeholder="••••" class="form-input" style="letter-spacing:0.3em;font-size:1.2rem;">\n',
+      '        </div>\n        <button onclick="savePin()" class="bg-dark-700 text-white font-bold px-6 py-2.5 rounded-xl hover:bg-dark-600 transition flex ' +
         'items-center gap-2">\n          <i class="fas fa-key"></i> Modifier le PIN\n        </button>\n      </div>\n\n      <!-- Info sécurité -->\n      <div ' +
         'class="bg-dark-800/50 border border-dark-600/50 rounded-2xl p-5">\n        <div class="flex items-start gap-3">\n          <div class="w-9 h-9 ' +
-        'rounded-xl bg-blue-500/10 flex items-center justify-center flex-shrink-0">\n') +
-      ('            <i class="fas fa-shield-alt text-blue-400 text-sm"></i>\n          </div>\n          <div>\n            <p class="text-sm font-medium ' +
+        'rounded-xl bg-blue-500/10 flex items-center justify-center flex-shrink-0">\n',
+      '            <i class="fas fa-shield-alt text-blue-400 text-sm"></i>\n          </div>\n          <div>\n            <p class="text-sm font-medium ' +
         'text-white mb-1">Conseils de sécurité</p>\n            <ul class="text-xs text-gray-400 space-y-1">\n              <li><i class="fas fa-check ' +
         'text-green-400 mr-1.5"></i>N\'utilisez jamais le même PIN qu\'ailleurs</li>\n              <li><i class="fas fa-check text-green-400 mr-1.5"></i>Ne ' +
         'partagez jamais votre PIN ou mot de passe</li>\n              <li><i class="fas fa-check text-green-400 mr-1.5"></i>En cas de doute, changez votre PIN ' +
-        "immédiatement</li>\n") +
+        "immédiatement</li>\n"
+    ].join("") +
       "            </ul>\n          </div>\n        </div>\n      </div>\n    </div>\n\n  </div>");
   loadPayoutInfo();
   setTimeout(() => switchProfileTab("identity"), 10);
@@ -9110,31 +9442,33 @@ async function _cpStartPayment() {
         ETH: "Ethereum (ETH)"
       }[coin] || coin;
     _wizardShow(
-      "\n      " +
-        _wizardProgress(5, 7) +
-        ('\n      <div class="p-6 space-y-5">\n        <div class="text-center">\n          <div class="inline-flex items-center justify-center w-16 h-16 ' +
+      [
+        "\n      ",
+        _wizardProgress(5, 7),
+        '\n      <div class="p-6 space-y-5">\n        <div class="text-center">\n          <div class="inline-flex items-center justify-center w-16 h-16 ' +
           'rounded-2xl bg-orange-500/20 mb-4">\n            <i class="fas fa-coins text-orange-400 text-3xl"></i>\n          </div>\n          <h3 class="text-xl ' +
           'font-bold text-white mb-1">Paiement Crypto en attente</h3>\n          <p class="text-sm text-gray-400">Scannez le QR code ou copiez l\'adresse pour ' +
           "finaliser votre paiement.</p>\n        </div>\n\n        <!-- Détails de la transaction -->\n" +
           ('        <div class="bg-dark-700 rounded-xl p-4 text-sm space-y-2">\n          <div class="flex justify-between items-center">\n            <span ' +
-            'class="text-gray-400">Montant USD</span>\n            <span class="text-rouge-400 font-bold">$')) +
+            'class="text-gray-400">Montant USD</span>\n            <span class="text-rouge-400 font-bold">$'),
         n.toLocaleString("en-US", {
           minimumFractionDigits: 2
-        }) +
-        ('</span>\n          </div>\n          <div class="flex justify-between items-center">\n            <span class="text-gray-400">Devise</span>\n            <' +
-          'span class="text-orange-400 font-semibold">') +
-        coinLabel +
-        "</span>\n          </div>\n          " +
-        (res.amount
+        }),
+        '</span>\n          </div>\n          <div class="flex justify-between items-center">\n            <span class="text-gray-400">Devise</span>\n            <' +
+          'span class="text-orange-400 font-semibold">',
+        coinLabel,
+        "</span>\n          </div>\n          ",
+        res.amount
           ? '<div class="flex justify-between items-center">\n            <span class="text-gray-400">Montant crypto</span>\n            <span class="text-white ' +
             'font-mono text-xs">' +
             coinAmt +
             " " +
             coin.split(".")[0] +
             "</span>\n          </div>"
-          : "") +
-        ('\n          <div class="flex justify-between items-center">\n            <span class="text-gray-400">Transaction ID</span>\n            <span ' +
-          'class="text-xs text-gray-500 font-mono truncate max-w-[180px]">') +
+          : "",
+        '\n          <div class="flex justify-between items-center">\n            <span class="text-gray-400">Transaction ID</span>\n            <span ' +
+          'class="text-xs text-gray-500 font-mono truncate max-w-[180px]">'
+      ].join("") +
         res.txn_id +
         "</span>\n          </div>\n          " +
         (res.confirms_needed
@@ -9145,22 +9479,24 @@ async function _cpStartPayment() {
           : "") +
         "\n        </div>\n\n        <!-- QR code + adresse directe -->\n        " +
         (qrTarget
-          ? '\n        <div class="bg-dark-700 rounded-xl p-4">\n          <div class="text-xs text-gray-400 mb-3 font-medium uppercase tracking-wider">\n            <' +
-            'i class="fas fa-qrcode mr-1"></i> Adresse de paiement ' +
-            coinLabel +
-            '\n          </div>\n          <div class="flex flex-col sm:flex-row items-center gap-4">\n            ' +
-            (qrUrl
-              ? '<div class="flex-shrink-0">\n              <div class="w-[160px] h-[160px] bg-white rounded-xl p-2 flex items-center justify-center">\n                <' +
-                'img src="' +
-                qrUrl +
-                ('" alt="QR Code paiement" class="w-full h-full object-contain rounded"\n                  onerror="this.parentElement.innerHTML=\'<div ' +
-                  "class='text-gray-500 text-xs text-center'>QR non disponible</div>'\">\n              </div>\n            </div>")
-              : "") +
-            ('\n            <div class="flex-1 min-w-0 space-y-2">\n              <div class="bg-dark-800 rounded-lg p-2 font-mono text-xs text-gray-300 break-all ' +
-              'select-all border border-dark-500">\n                ') +
-            qrTarget +
-            "\n              </div>\n              <button onclick=\"navigator.clipboard.writeText('" +
-            qrTarget.replace(/'/g, "\\'") +
+          ? [
+              '\n        <div class="bg-dark-700 rounded-xl p-4">\n          <div class="text-xs text-gray-400 mb-3 font-medium uppercase tracking-wider">\n            <',
+              'i class="fas fa-qrcode mr-1"></i> Adresse de paiement ',
+              coinLabel,
+              '\n          </div>\n          <div class="flex flex-col sm:flex-row items-center gap-4">\n            ',
+              qrUrl
+                ? '<div class="flex-shrink-0">\n              <div class="w-[160px] h-[160px] bg-white rounded-xl p-2 flex items-center justify-center">\n                <' +
+                  'img src="' +
+                  qrUrl +
+                  ('" alt="QR Code paiement" class="w-full h-full object-contain rounded"\n                  onerror="this.parentElement.innerHTML=\'<div ' +
+                    "class='text-gray-500 text-xs text-center'>QR non disponible</div>'\">\n              </div>\n            </div>")
+                : "",
+              '\n            <div class="flex-1 min-w-0 space-y-2">\n              <div class="bg-dark-800 rounded-lg p-2 font-mono text-xs text-gray-300 break-all ' +
+                'select-all border border-dark-500">\n                ',
+              qrTarget,
+              "\n              </div>\n              <button onclick=\"navigator.clipboard.writeText('",
+              qrTarget.replace(/'/g, "\\'")
+            ].join("") +
             ("').then(()=>showToast('Adresse copiée !'))\"\n                class=\"w-full py-2 bg-dark-600 hover:bg-dark-500 text-gray-300 text-xs rounded-lg " +
               'transition flex items-center justify-center gap-2">\n                <i class="fas fa-copy"></i> Copier l\'adresse\n              </button>\n              ') +
             (res.dest_tag
@@ -9458,41 +9794,46 @@ async function supportLoadTickets() {
     listEl.innerHTML =
       '\n      <div class="bg-dark-800 rounded-2xl border border-dark-600 overflow-hidden">\n        <div class="divide-y divide-dark-600">\n          ' +
       tickets
-        .map(
-          (t) =>
-            '\n            <div class="px-5 py-4 hover:bg-dark-700/40 cursor-pointer transition group" onclick="supportOpenTicket(\'' +
-            t.id +
-            '\')">\n              <div class="flex items-start gap-4">\n                <div class="w-9 h-9 rounded-xl ' +
-            (t.unread_member > 0 ? "bg-blue-500/20" : "bg-dark-700") +
-            ' flex items-center justify-center flex-shrink-0 mt-0.5">\n                  <i class="fas fa-ticket ' +
-            (t.unread_member > 0 ? "text-blue-400" : "text-gray-500") +
-            (' text-sm"></i>\n                </div>\n                <div class="flex-1 min-w-0">\n                  <div class="flex items-center gap-2 flex-wrap">\n  ' +
-              '                  <span class="text-xs text-gray-500 font-mono">#') +
-            t.ticket_number +
-            "</span>\n                    " +
-            supportStatusBadge(t.status) +
-            "\n                    " +
-            (t.unread_member > 0
-              ? '<span class="text-xs bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full font-medium"><i class="fas fa-circle text-[8px] mr-1 animate-pulse"></i>' +
-                t.unread_member +
-                " nouveau" +
-                (t.unread_member > 1 ? "x" : "") +
-                "</span>"
-              : "") +
-            '\n                  </div>\n                  <p class="text-sm font-medium text-white mt-1 truncate">' +
-            t.subject +
-            '</p>\n                  <div class="flex items-center gap-3 mt-1 text-xs text-gray-500">\n                    <span><i class="fas fa-tag mr-1"></i>' +
-            supportCategoryFr(t.category) +
-            "</span>\n                    <span>" +
-            supportPriorityBadge(t.priority) +
-            "</span>\n                    <span>" +
-            (t.message_count || 0) +
-            " message" +
-            ((t.message_count || 0) > 1 ? "s" : "") +
-            '</span>\n                    <span class="ml-auto">' +
-            fmtDatetime(t.last_reply_at || t.created_at) +
-            ('</span>\n                  </div>\n                </div>\n                <i class="fas fa-chevron-right text-gray-600 group-hover:text-gray-400 ' +
-              'transition text-xs mt-1 flex-shrink-0"></i>\n              </div>\n            </div>\n          ')
+        .map((t) =>
+          [
+            [
+              [
+                '\n            <div class="px-5 py-4 hover:bg-dark-700/40 cursor-pointer transition group" onclick="supportOpenTicket(\'',
+                t.id,
+                '\')">\n              <div class="flex items-start gap-4">\n                <div class="w-9 h-9 rounded-xl ',
+                t.unread_member > 0 ? "bg-blue-500/20" : "bg-dark-700",
+                ' flex items-center justify-center flex-shrink-0 mt-0.5">\n                  <i class="fas fa-ticket ',
+                t.unread_member > 0 ? "text-blue-400" : "text-gray-500",
+                ' text-sm"></i>\n                </div>\n                <div class="flex-1 min-w-0">\n                  <div class="flex items-center gap-2 flex-wrap">\n  ' +
+                  '                  <span class="text-xs text-gray-500 font-mono">#',
+                t.ticket_number,
+                "</span>\n                    "
+              ].join(""),
+              supportStatusBadge(t.status),
+              "\n                    ",
+              t.unread_member > 0
+                ? '<span class="text-xs bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full font-medium"><i class="fas fa-circle text-[8px] mr-1 animate-pulse"></i>' +
+                  t.unread_member +
+                  " nouveau" +
+                  (t.unread_member > 1 ? "x" : "") +
+                  "</span>"
+                : "",
+              '\n                  </div>\n                  <p class="text-sm font-medium text-white mt-1 truncate">',
+              t.subject,
+              '</p>\n                  <div class="flex items-center gap-3 mt-1 text-xs text-gray-500">\n                    <span><i class="fas fa-tag mr-1"></i>',
+              supportCategoryFr(t.category),
+              "</span>\n                    <span>"
+            ].join(""),
+            supportPriorityBadge(t.priority),
+            "</span>\n                    <span>",
+            t.message_count || 0,
+            " message",
+            (t.message_count || 0) > 1 ? "s" : "",
+            '</span>\n                    <span class="ml-auto">',
+            fmtDatetime(t.last_reply_at || t.created_at),
+            '</span>\n                  </div>\n                </div>\n                <i class="fas fa-chevron-right text-gray-600 group-hover:text-gray-400 ' +
+              'transition text-xs mt-1 flex-shrink-0"></i>\n              </div>\n            </div>\n          '
+          ].join("")
         )
         .join("") +
       "\n        </div>\n      </div>";
@@ -9510,27 +9851,29 @@ async function supportLoadTickets() {
 }
 function supportShowCreate() {
   showModal(
-    '\n    <div class="p-6 space-y-5">\n      <div class="flex items-center justify-between">\n        <h3 class="text-lg font-bold text-white"><i class="fas ' +
-      'fa-plus-circle text-rouge-400 mr-2"></i>Nouveau ticket</h3>\n        <button onclick="closeModal()" class="text-gray-500 hover:text-white text-xl ' +
-      'leading-none">&times;</button>\n      </div>\n\n      <div>\n        <label class="block text-xs text-gray-400 mb-1.5">Catégorie <span ' +
-      'class="text-red-400">*</span></label>\n        <select id="stk-category" class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 ' +
-      'text-white focus:ring-0 focus:outline-none">\n' +
-      ('          <option value="">-- Choisissez une catégorie --</option>\n          <option value="wallet">Portefeuille / Retraits</option>\n          <option ' +
+    [
+      '\n    <div class="p-6 space-y-5">\n      <div class="flex items-center justify-between">\n        <h3 class="text-lg font-bold text-white"><i class="fas ',
+      'fa-plus-circle text-rouge-400 mr-2"></i>Nouveau ticket</h3>\n        <button onclick="closeModal()" class="text-gray-500 hover:text-white text-xl ',
+      'leading-none">&times;</button>\n      </div>\n\n      <div>\n        <label class="block text-xs text-gray-400 mb-1.5">Catégorie <span ',
+      'class="text-red-400">*</span></label>\n        <select id="stk-category" class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 ',
+      'text-white focus:ring-0 focus:outline-none">\n',
+      '          <option value="">-- Choisissez une catégorie --</option>\n          <option value="wallet">Portefeuille / Retraits</option>\n          <option ' +
         'value="commission">Commissions</option>\n          <option value="package">Package / Activation</option>\n          <option value="account">Mon compte<' +
         '/option>\n          <option value="tree">Arbre binaire</option>\n          <option value="license">Licence Finstrategia</option>\n          <option ' +
-        'value="other">Autre</option>\n        </select>\n      </div>\n') +
-      ('\n      <div>\n        <label class="block text-xs text-gray-400 mb-1.5">Sujet <span class="text-red-400">*</span></label>\n        <input ' +
+        'value="other">Autre</option>\n        </select>\n      </div>\n',
+      '\n      <div>\n        <label class="block text-xs text-gray-400 mb-1.5">Sujet <span class="text-red-400">*</span></label>\n        <input ' +
         'id="stk-subject" type="text" placeholder="Décrivez votre problème en quelques mots"\n          class="w-full bg-dark-700 border border-dark-600 ' +
         'rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:ring-0 focus:outline-none">\n      </div>\n\n      <div>\n        <label class="block text-xs ' +
-        'text-gray-400 mb-1.5">Message <span class="text-red-400">*</span></label>\n') +
-      ('        <textarea id="stk-message" rows="5" placeholder="Décrivez votre problème en détail..."\n          class="w-full bg-dark-700 border ' +
+        'text-gray-400 mb-1.5">Message <span class="text-red-400">*</span></label>\n',
+      '        <textarea id="stk-message" rows="5" placeholder="Décrivez votre problème en détail..."\n          class="w-full bg-dark-700 border ' +
         'border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:ring-0 focus:outline-none resize-none"></textarea>\n      </div>\n\n      <div ' +
         'id="stk-error" class="hidden text-red-400 text-sm bg-red-900/20 rounded-xl p-3"></div>\n\n      <div class="flex gap-3 pt-2">\n        <button ' +
-        'onclick="closeModal()" class="flex-1 py-3 bg-dark-700 text-gray-300 rounded-xl text-sm hover:bg-dark-600 transition">Annuler</button>\n') +
-      ('        <button onclick="supportCreateTicket()" id="stk-btn" class="flex-1 py-3 bg-rouge-500 hover:bg-rouge-500 text-dark-900 font-bold rounded-xl ' +
+        'onclick="closeModal()" class="flex-1 py-3 bg-dark-700 text-gray-300 rounded-xl text-sm hover:bg-dark-600 transition">Annuler</button>\n',
+      '        <button onclick="supportCreateTicket()" id="stk-btn" class="flex-1 py-3 bg-rouge-500 hover:bg-rouge-500 text-dark-900 font-bold rounded-xl ' +
         'text-sm transition">\n          <i class="fas fa-paper-plane mr-2"></i>Envoyer\n        </button>\n      </div>\n\n      <p class="text-xs text-gray-500 ' +
         'text-center">\n        <i class="fas fa-info-circle mr-1"></i>\n        Le contexte de votre compte (solde, rang) est automatiquement joint au ticket ' +
-        "pour accélérer le traitement.\n      </p>\n    </div>\n  ")
+        "pour accélérer le traitement.\n      </p>\n    </div>\n  "
+    ].join("")
   );
 }
 async function supportCreateTicket() {
@@ -9591,73 +9934,81 @@ async function supportOpenTicket(ticketId) {
     const lastAdminMsg = [...messages].reverse().find((m) => m.sender_type === "admin" && !m.is_internal);
     const showResolutionBlock = lastAdminMsg && !isResolved;
     pc.innerHTML =
-      '\n    <div class="space-y-5 max-w-4xl">\n      <!-- En-tête -->\n      <div class="flex items-center gap-3 flex-wrap">\n        <button ' +
-      'onclick="_supportStopPolling();showPage(\'support\')" class="text-gray-400 hover:text-white transition">\n          <i class="fas fa-arrow-left"></i>\n    ' +
-      '    </button>\n        <div class="flex-1">\n          <div class="flex items-center gap-2 flex-wrap">\n            <span class="text-xs text-gray-500 ' +
-      'font-mono">#' +
-      ticket.ticket_number +
-      "</span>\n            " +
-      supportStatusBadge(ticket.status) +
-      "\n            " +
-      supportPriorityBadge(ticket.priority) +
-      '\n            <span class="text-xs text-gray-500">' +
-      supportCategoryFr(ticket.category) +
-      '</span>\n          </div>\n          <h2 class="text-xl font-bold text-white mt-1">' +
-      ticket.subject +
-      '</h2>\n          <p class="text-xs text-gray-500 mt-0.5">Ouvert le ' +
-      fmtDatetime(ticket.created_at) +
-      "</p>\n        </div>\n        " +
-      (isResolved
-        ? "\n          <button onclick=\"supportShowRate('" +
-          ticket.id +
-          "', " +
-          (ticket.rating || 0) +
-          (')" \n            class="flex items-center gap-2 px-4 py-2 bg-rouge-500/10 border border-rouge-500/25 text-rouge-400 rounded-xl text-sm ' +
-            'hover:bg-rouge-500/15 transition">\n            <i class="fas fa-star"></i> ') +
-          (ticket.rating ? "Votre note : " + renderStars(ticket.rating) : "Évaluer") +
-          "\n          </button>"
-        : "") +
-      '\n      </div>\n\n      <!-- Thread messages -->\n      <div class="space-y-4" id="support-thread">\n        ' +
-      messages.map((m) => supportRenderMessage(m)).join("") +
-      ("\n      </div>\n\n      <!-- BLOC RÉSOLUTION PREMIUM — visible après réponse admin, avant que le client réponde -->\n      <div " +
-        'id="support-resolution-block" class="') +
-      (showResolutionBlock ? "" : "hidden") +
-      ('">\n        <div class="bg-gradient-to-br from-dark-800 to-dark-700 border border-emerald-500/25 rounded-2xl p-5 space-y-3">\n          <div class="flex ' +
-        'items-center gap-2.5">\n            <div class="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center">\n              <i class="fas ' +
-        'fa-headset text-emerald-400 text-sm"></i>\n            </div>\n            <div>\n              <div class="text-sm font-bold text-white">Le Support ' +
-        'LEADER vous a répondu</div>\n              <div class="text-xs text-gray-400">Votre problème a-t-il été résolu ?</div>\n' +
-        '            </div>\n          </div>\n          <div class="grid grid-cols-2 gap-3">\n            <button onclick="supportResolveTicket(\'') +
-      ticket.id +
-      ('\')"\n              class="flex items-center justify-center gap-2 py-3 bg-emerald-600/80 hover:bg-emerald-600 text-white font-bold rounded-xl text-sm ' +
-        'transition border border-emerald-500/40">\n              <i class="fas fa-check-circle"></i> Oui, c\'est résolu !\n            </button>\n            <' +
-        "button onclick=\"document.getElementById('support-reply-text')?.focus();document.getElementById('support-resolution-block')?.classList.add('hidden')\"\n  " +
-        '            class="flex items-center justify-center gap-2 py-3 bg-dark-600 hover:bg-dark-500 text-gray-300 hover:text-white font-semibold rounded-xl ' +
-        'text-sm transition border border-dark-500">\n' +
-        ('              <i class="fas fa-comment-dots"></i> J\'ai une autre question\n            </button>\n          </div>\n          <p class="text-xs ' +
-          'text-gray-500 text-center">Votre retour nous aide à améliorer la qualité de notre support</p>\n        </div>\n      </div>\n\n      <!-- Zone de réponse ' +
-          "-->\n      ")) +
-      (canReply
-        ? '\n      <div class="bg-dark-800 border border-dark-600 rounded-2xl p-5 space-y-4">\n        <h4 class="text-sm font-semibold text-white"><i class="fas ' +
-          'fa-reply text-rouge-400 mr-2"></i>Votre réponse</h4>\n        <textarea id="support-reply-text" rows="4" placeholder="Tapez votre message…"\n          ' +
-          'class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:ring-0 focus:outline-none resize-none ' +
-          'text-sm"></textarea>\n        <div id="support-reply-error" class="hidden text-red-400 text-sm"></div>\n' +
-          '        <div class="flex gap-3">\n          <button onclick="supportSendReply(\'' +
-          ticket.id +
-          ('\')" id="support-reply-btn"\n            class="flex items-center gap-2 px-5 py-2.5 bg-rouge-500 hover:bg-rouge-500 text-dark-900 font-bold rounded-xl ' +
-            'text-sm transition">\n            <i class="fas fa-paper-plane"></i> Envoyer\n          </button>\n          ') +
-          (ticket.status !== "open"
-            ? "\n          <button onclick=\"supportReopenTicket('" +
+      [
+        [
+          [
+            '\n    <div class="space-y-5 max-w-4xl">\n      <!-- En-tête -->\n      <div class="flex items-center gap-3 flex-wrap">\n        <button ',
+            'onclick="_supportStopPolling();showPage(\'support\')" class="text-gray-400 hover:text-white transition">\n          <i class="fas fa-arrow-left"></i>\n    ',
+            '    </button>\n        <div class="flex-1">\n          <div class="flex items-center gap-2 flex-wrap">\n            <span class="text-xs text-gray-500 ',
+            'font-mono">#',
+            ticket.ticket_number,
+            "</span>\n            ",
+            supportStatusBadge(ticket.status),
+            "\n            ",
+            supportPriorityBadge(ticket.priority)
+          ].join(""),
+          '\n            <span class="text-xs text-gray-500">',
+          supportCategoryFr(ticket.category),
+          '</span>\n          </div>\n          <h2 class="text-xl font-bold text-white mt-1">',
+          ticket.subject,
+          '</h2>\n          <p class="text-xs text-gray-500 mt-0.5">Ouvert le ',
+          fmtDatetime(ticket.created_at),
+          "</p>\n        </div>\n        ",
+          isResolved
+            ? "\n          <button onclick=\"supportShowRate('" +
               ticket.id +
-              ('\')"\n            class="px-4 py-2.5 bg-dark-700 text-gray-300 hover:text-white rounded-xl text-sm transition border border-dark-500">\n            <i ' +
-                'class="fas fa-rotate-left mr-1"></i>Réouvrir\n          </button>')
-            : "") +
-          "\n        </div>\n      </div>"
-        : '\n      <div class="bg-dark-700/40 border border-dark-600 rounded-2xl p-5 text-center text-gray-500 text-sm">\n        <i class="fas fa-lock mr-2"></i>\n ' +
-          "       Ce ticket est " +
-          (ticket.status === "resolved" ? "résolu" : "fermé") +
-          " \u2014 r\xE9pondez pour le r\xE9ouvrir si n\xE9cessaire.\n        <button onclick=\"supportReopenTicket('" +
-          ticket.id +
-          '\')" class="ml-2 text-rouge-400 hover:underline">R\xE9ouvrir \u2192</button>\n      </div>') +
+              "', " +
+              (ticket.rating || 0) +
+              (')" \n            class="flex items-center gap-2 px-4 py-2 bg-rouge-500/10 border border-rouge-500/25 text-rouge-400 rounded-xl text-sm ' +
+                'hover:bg-rouge-500/15 transition">\n            <i class="fas fa-star"></i> ') +
+              (ticket.rating ? "Votre note : " + renderStars(ticket.rating) : "Évaluer") +
+              "\n          </button>"
+            : ""
+        ].join(""),
+        '\n      </div>\n\n      <!-- Thread messages -->\n      <div class="space-y-4" id="support-thread">\n        ',
+        messages.map((m) => supportRenderMessage(m)).join(""),
+        "\n      </div>\n\n      <!-- BLOC RÉSOLUTION PREMIUM — visible après réponse admin, avant que le client réponde -->\n      <div " +
+          'id="support-resolution-block" class="',
+        showResolutionBlock ? "" : "hidden",
+        '">\n        <div class="bg-gradient-to-br from-dark-800 to-dark-700 border border-emerald-500/25 rounded-2xl p-5 space-y-3">\n          <div class="flex ' +
+          'items-center gap-2.5">\n            <div class="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center">\n              <i class="fas ' +
+          'fa-headset text-emerald-400 text-sm"></i>\n            </div>\n            <div>\n              <div class="text-sm font-bold text-white">Le Support ' +
+          'LEADER vous a répondu</div>\n              <div class="text-xs text-gray-400">Votre problème a-t-il été résolu ?</div>\n' +
+          '            </div>\n          </div>\n          <div class="grid grid-cols-2 gap-3">\n            <button onclick="supportResolveTicket(\'',
+        ticket.id,
+        '\')"\n              class="flex items-center justify-center gap-2 py-3 bg-emerald-600/80 hover:bg-emerald-600 text-white font-bold rounded-xl text-sm ' +
+          'transition border border-emerald-500/40">\n              <i class="fas fa-check-circle"></i> Oui, c\'est résolu !\n            </button>\n            <' +
+          "button onclick=\"document.getElementById('support-reply-text')?.focus();document.getElementById('support-resolution-block')?.classList.add('hidden')\"\n  " +
+          '            class="flex items-center justify-center gap-2 py-3 bg-dark-600 hover:bg-dark-500 text-gray-300 hover:text-white font-semibold rounded-xl ' +
+          'text-sm transition border border-dark-500">\n' +
+          ('              <i class="fas fa-comment-dots"></i> J\'ai une autre question\n            </button>\n          </div>\n          <p class="text-xs ' +
+            'text-gray-500 text-center">Votre retour nous aide à améliorer la qualité de notre support</p>\n        </div>\n      </div>\n\n      <!-- Zone de réponse ' +
+            "-->\n      "),
+        canReply
+          ? [
+              '\n      <div class="bg-dark-800 border border-dark-600 rounded-2xl p-5 space-y-4">\n        <h4 class="text-sm font-semibold text-white"><i class="fas ',
+              'fa-reply text-rouge-400 mr-2"></i>Votre réponse</h4>\n        <textarea id="support-reply-text" rows="4" placeholder="Tapez votre message…"\n          ',
+              'class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:ring-0 focus:outline-none resize-none ',
+              'text-sm"></textarea>\n        <div id="support-reply-error" class="hidden text-red-400 text-sm"></div>\n',
+              '        <div class="flex gap-3">\n          <button onclick="supportSendReply(\'',
+              ticket.id,
+              '\')" id="support-reply-btn"\n            class="flex items-center gap-2 px-5 py-2.5 bg-rouge-500 hover:bg-rouge-500 text-dark-900 font-bold rounded-xl ' +
+                'text-sm transition">\n            <i class="fas fa-paper-plane"></i> Envoyer\n          </button>\n          ',
+              ticket.status !== "open"
+                ? "\n          <button onclick=\"supportReopenTicket('" +
+                  ticket.id +
+                  ('\')"\n            class="px-4 py-2.5 bg-dark-700 text-gray-300 hover:text-white rounded-xl text-sm transition border border-dark-500">\n            <i ' +
+                    'class="fas fa-rotate-left mr-1"></i>Réouvrir\n          </button>')
+                : "",
+              "\n        </div>\n      </div>"
+            ].join("")
+          : '\n      <div class="bg-dark-700/40 border border-dark-600 rounded-2xl p-5 text-center text-gray-500 text-sm">\n        <i class="fas fa-lock mr-2"></i>\n ' +
+            "       Ce ticket est " +
+            (ticket.status === "resolved" ? "résolu" : "fermé") +
+            " \u2014 r\xE9pondez pour le r\xE9ouvrir si n\xE9cessaire.\n        <button onclick=\"supportReopenTicket('" +
+            ticket.id +
+            '\')" class="ml-2 text-rouge-400 hover:underline">R\xE9ouvrir \u2192</button>\n      </div>'
+      ].join("") +
       "\n\n      <!-- Indicateur de polling (discret) -->\n      " +
       (["waiting_member", "in_progress"].includes(ticket.status)
         ? '\n      <div class="text-center">\n        <span class="text-xs text-gray-600 inline-flex items-center gap-1.5">\n          <span class="w-1.5 h-1.5 ' +
@@ -9701,15 +10052,17 @@ function supportRenderMessage(m) {
   const name = isAdmin ? m.sender_name || "Support LEADER" : "Vous";
   const time = fmtDatetime(m.created_at);
   return (
-    '\n    <div class="flex ' +
-    (isAdmin ? "flex-row" : "flex-row-reverse") +
-    ' gap-3">\n      ' +
-    avatar +
-    '\n      <div class="' +
-    bubbleClass +
-    ' rounded-2xl p-4 flex-1">\n        <div class="flex items-center justify-between gap-2 mb-2">\n          <span class="text-xs font-semibold ' +
-    (isAdmin ? "text-red-300" : "text-rouge-400") +
-    '">' +
+    [
+      '\n    <div class="flex ',
+      isAdmin ? "flex-row" : "flex-row-reverse",
+      ' gap-3">\n      ',
+      avatar,
+      '\n      <div class="',
+      bubbleClass,
+      ' rounded-2xl p-4 flex-1">\n        <div class="flex items-center justify-between gap-2 mb-2">\n          <span class="text-xs font-semibold ',
+      isAdmin ? "text-red-300" : "text-rouge-400",
+      '">'
+    ].join("") +
     name +
     '</span>\n          <span class="text-xs text-gray-500">' +
     time +
@@ -9756,30 +10109,33 @@ async function supportReopenTicket(ticketId) {
 function supportShowRate(ticketId, currentRating) {
   let selected = currentRating || 0;
   showModal(
-    '\n    <div class="p-6 space-y-5">\n      <div class="flex items-center justify-between">\n        <h3 class="text-lg font-bold text-white"><i class="fas ' +
-      'fa-star text-rouge-400 mr-2"></i>Évaluer votre expérience</h3>\n        <button onclick="closeModal()" class="text-gray-500 hover:text-white text-xl ' +
-      'leading-none">&times;</button>\n      </div>\n\n      <!-- Intro premium -->\n      <div class="bg-dark-700/60 border border-dark-500 rounded-xl p-3 ' +
-      'text-xs text-gray-400 leading-relaxed">\n        <i class="fas fa-shield-halved text-rouge-400 mr-1.5"></i>\n' +
-      ("        Chez LEADER, l'excellence du support est une priorité absolue.\n        Votre retour est transmis à notre équipe qualité et nous permet de nous " +
+    [
+      '\n    <div class="p-6 space-y-5">\n      <div class="flex items-center justify-between">\n        <h3 class="text-lg font-bold text-white"><i class="fas ',
+      'fa-star text-rouge-400 mr-2"></i>Évaluer votre expérience</h3>\n        <button onclick="closeModal()" class="text-gray-500 hover:text-white text-xl ',
+      'leading-none">&times;</button>\n      </div>\n\n      <!-- Intro premium -->\n      <div class="bg-dark-700/60 border border-dark-500 rounded-xl p-3 ',
+      'text-xs text-gray-400 leading-relaxed">\n        <i class="fas fa-shield-halved text-rouge-400 mr-1.5"></i>\n',
+      "        Chez LEADER, l'excellence du support est une priorité absolue.\n        Votre retour est transmis à notre équipe qualité et nous permet de nous " +
         'améliorer en permanence.\n      </div>\n\n      <!-- Étoiles -->\n      <div>\n        <div class="text-sm text-gray-300 text-center mb-3 font-medium">' +
-        'Comment évaluez-vous notre réponse ?</div>\n        <div class="flex items-center justify-center gap-2 py-2" id="rate-stars">\n          ') +
+        'Comment évaluez-vous notre réponse ?</div>\n        <div class="flex items-center justify-center gap-2 py-2" id="rate-stars">\n          ',
       [1, 2, 3, 4, 5]
-        .map(
-          (i) =>
-            '\n            <button onclick="supportSelectStar(' +
-            i +
-            ')" id="rstar-' +
-            i +
-            '"\n              class="text-5xl transition-all hover:scale-125 ' +
-            (i <= selected ? "text-rouge-400" : "text-gray-600") +
-            '">\n              <i class="' +
-            (i <= selected ? "fas" : "far") +
+        .map((i) =>
+          [
+            '\n            <button onclick="supportSelectStar(',
+            i,
+            ')" id="rstar-',
+            i,
+            '"\n              class="text-5xl transition-all hover:scale-125 ',
+            i <= selected ? "text-rouge-400" : "text-gray-600",
+            '">\n              <i class="',
+            i <= selected ? "fas" : "far",
             ' fa-star"></i>\n            </button>'
+          ].join("")
         )
-        .join("") +
-      '\n        </div>\n        <div id="rate-label" class="text-center text-xs mt-2 font-semibold ' +
-      (selected === 0 ? "text-gray-500" : selected <= 2 ? "text-red-400" : selected <= 3 ? "text-orange-400" : "text-emerald-400") +
-      '">\n          ' +
+        .join(""),
+      '\n        </div>\n        <div id="rate-label" class="text-center text-xs mt-2 font-semibold ',
+      selected === 0 ? "text-gray-500" : selected <= 2 ? "text-red-400" : selected <= 3 ? "text-orange-400" : "text-emerald-400",
+      '">\n          '
+    ].join("") +
       (["", "Pas satisfait", "Peut mieux faire", "Correct", "Bien", "Excellent !"][selected] || "Cliquez pour noter") +
       '\n        </div>\n      </div>\n\n      <!-- Note basse \u2192 alerte escalade -->\n      <div id="rate-escalade-notice" class="' +
       (selected <= 2 && selected > 0 ? "" : "hidden") +
@@ -9880,25 +10236,28 @@ async function supportLoadFaq() {
           faq
             .map(
               (item) =>
-                '\n            <div class="bg-dark-800 border border-dark-600 rounded-2xl overflow-hidden">\n              <button class="w-full px-5 py-4 text-left flex ' +
-                'items-center justify-between gap-3 hover:bg-dark-700/40 transition"\n                      onclick="supportToggleFaq(\'faq-' +
-                item.id +
-                '\')">\n                <div class="flex items-center gap-3">\n                  <span class="text-xs px-2 py-0.5 rounded-full bg-dark-700 text-gray-400">' +
-                (catLabels[item.category] || item.category) +
-                '</span>\n                  <span class="text-sm font-medium text-white">' +
-                item.question +
-                '</span>\n                </div>\n                <i id="faq-ico-' +
-                item.id +
-                '" class="fas fa-chevron-down text-gray-500 text-xs flex-shrink-0 transition-transform"></i>\n              </button>\n              <div id="faq-' +
-                item.id +
-                ('" class="hidden px-5 pb-4">\n                <div class="pt-3 border-t border-dark-600 text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">\n     ' +
-                  "             ") +
-                item.answer.replace(/</g, "&lt;").replace(/>/g, "&gt;") +
-                '\n                </div>\n                <div class="mt-2 text-xs text-gray-600"><i class="fas fa-eye mr-1"></i>' +
-                (item.view_count || 0) +
-                " vue" +
-                ((item.view_count || 0) > 1 ? "s" : "") +
-                "</div>\n              </div>\n            </div>\n          "
+                [
+                  [
+                    '\n            <div class="bg-dark-800 border border-dark-600 rounded-2xl overflow-hidden">\n              <button class="w-full px-5 py-4 text-left flex ',
+                    'items-center justify-between gap-3 hover:bg-dark-700/40 transition"\n                      onclick="supportToggleFaq(\'faq-',
+                    item.id,
+                    '\')">\n                <div class="flex items-center gap-3">\n                  <span class="text-xs px-2 py-0.5 rounded-full bg-dark-700 text-gray-400">',
+                    catLabels[item.category] || item.category,
+                    '</span>\n                  <span class="text-sm font-medium text-white">',
+                    item.question,
+                    '</span>\n                </div>\n                <i id="faq-ico-',
+                    item.id
+                  ].join(""),
+                  '" class="fas fa-chevron-down text-gray-500 text-xs flex-shrink-0 transition-transform"></i>\n              </button>\n              <div id="faq-',
+                  item.id,
+                  '" class="hidden px-5 pb-4">\n                <div class="pt-3 border-t border-dark-600 text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">\n     ' +
+                    "             ",
+                  item.answer.replace(/</g, "&lt;").replace(/>/g, "&gt;"),
+                  '\n                </div>\n                <div class="mt-2 text-xs text-gray-600"><i class="fas fa-eye mr-1"></i>',
+                  item.view_count || 0,
+                  " vue",
+                  (item.view_count || 0) > 1 ? "s" : ""
+                ].join("") + "</div>\n              </div>\n            </div>\n          "
             )
             .join("") +
           "\n        </div>") +
@@ -10001,22 +10360,24 @@ async function renderKYC(el) {
       return;
     }
     el.innerHTML =
-      '\n    <div class="space-y-6">\n\n      <!-- En-tête -->\n      <div class="flex items-center justify-between flex-wrap gap-3">\n        <div>\n          <h1 ' +
-      'class="text-2xl font-bold text-white flex items-center gap-2">\n            <i class="fas fa-shield-halved text-purple-400"></i>\n            ' +
-      'Vérification d\'identité (KYC)\n          </h1>\n          <p class="text-gray-400 mt-1 text-sm">Complétez votre vérification pour accéder à toutes les ' +
-      "fonctionnalités</p>\n        </div>\n        <button onclick=\"renderKYC(document.getElementById('page-content'))\"\n" +
-      ('                class="btn-secondary text-xs px-3 py-1.5">\n          <i class="fas fa-refresh mr-1"></i> Actualiser\n        </button>\n      </div>\n\n   ' +
-        "   <!-- Barre de progression des niveaux -->\n      ") +
-      _kycBuildLevelProgress(memberLevel, cfgRes?.levels || []) +
-      "\n\n      <!-- Bandeau rejet pr\xE9c\xE9dent (informatif, ne bloque plus la progression) -->\n      " +
-      (!app && lastRejected
-        ? '\n      <div class="bg-orange-900/20 border border-orange-500/30 rounded-2xl p-4 flex items-start gap-3">\n        <i class="fas fa-exclamation-triangle ' +
-          'text-orange-400 mt-0.5 flex-shrink-0"></i>\n        <div>\n          <div class="text-sm font-semibold text-orange-300">Vérification niveau ' +
-          lastRejected.target_level +
-          (' refusée</div>\n          <div class="text-xs text-gray-400 mt-0.5">Votre dernier dossier a été refusé. Vous pouvez en soumettre un nouveau ci-dessous.<' +
-            "/div>\n        </div>\n      </div>")
-        : "") +
-      "\n\n      <!-- Carte statut dossier en cours -->\n      " +
+      [
+        '\n    <div class="space-y-6">\n\n      <!-- En-tête -->\n      <div class="flex items-center justify-between flex-wrap gap-3">\n        <div>\n          <h1 ',
+        'class="text-2xl font-bold text-white flex items-center gap-2">\n            <i class="fas fa-shield-halved text-purple-400"></i>\n            ',
+        'Vérification d\'identité (KYC)\n          </h1>\n          <p class="text-gray-400 mt-1 text-sm">Complétez votre vérification pour accéder à toutes les ',
+        "fonctionnalités</p>\n        </div>\n        <button onclick=\"renderKYC(document.getElementById('page-content'))\"\n",
+        '                class="btn-secondary text-xs px-3 py-1.5">\n          <i class="fas fa-refresh mr-1"></i> Actualiser\n        </button>\n      </div>\n\n   ' +
+          "   <!-- Barre de progression des niveaux -->\n      ",
+        _kycBuildLevelProgress(memberLevel, cfgRes?.levels || []),
+        "\n\n      <!-- Bandeau rejet pr\xE9c\xE9dent (informatif, ne bloque plus la progression) -->\n      ",
+        !app && lastRejected
+          ? '\n      <div class="bg-orange-900/20 border border-orange-500/30 rounded-2xl p-4 flex items-start gap-3">\n        <i class="fas fa-exclamation-triangle ' +
+            'text-orange-400 mt-0.5 flex-shrink-0"></i>\n        <div>\n          <div class="text-sm font-semibold text-orange-300">Vérification niveau ' +
+            lastRejected.target_level +
+            (' refusée</div>\n          <div class="text-xs text-gray-400 mt-0.5">Votre dernier dossier a été refusé. Vous pouvez en soumettre un nouveau ci-dessous.<' +
+              "/div>\n        </div>\n      </div>")
+          : "",
+        "\n\n      <!-- Carte statut dossier en cours -->\n      "
+      ].join("") +
       (app ? _kycBuildApplicationCard(app, memberLevel) : "") +
       "\n\n      <!-- Section actions -->\n      " +
       _kycBuildActionSection(memberLevel, app, cfgRes?.levels || [], statusRes) +
@@ -10040,15 +10401,17 @@ function _kycBuildLevelProgress(current, levels) {
     const txtCol = done ? "text-white" : "text-gray-500";
     const icon = done && !active ? "fas fa-check" : active ? "fas fa-user-check" : "fas fa-lock";
     return (
-      '\n      <div class="flex flex-col items-center flex-1">\n        <div class="w-9 h-9 rounded-full border-2 ' +
-      border +
-      " " +
-      bg +
-      ' flex items-center justify-center mb-1.5 relative z-10">\n          <i class="' +
-      icon +
-      " text-xs " +
-      (active ? "text-white" : done ? "text-white" : "text-gray-500") +
-      '"></i>\n        </div>\n        <div class="text-[10px] font-semibold ' +
+      [
+        '\n      <div class="flex flex-col items-center flex-1">\n        <div class="w-9 h-9 rounded-full border-2 ',
+        border,
+        " ",
+        bg,
+        ' flex items-center justify-center mb-1.5 relative z-10">\n          <i class="',
+        icon,
+        " text-xs ",
+        active ? "text-white" : done ? "text-white" : "text-gray-500",
+        '"></i>\n        </div>\n        <div class="text-[10px] font-semibold '
+      ].join("") +
       txtCol +
       ' text-center leading-tight">\n          ' +
       (lv.name || "Niveau " + i) +
@@ -10056,16 +10419,18 @@ function _kycBuildLevelProgress(current, levels) {
     );
   });
   return (
-    '\n  <div class="bg-dark-800 border border-dark-600 rounded-2xl p-5">\n    <div class="flex items-center gap-2 mb-4">\n      <span class="text-sm ' +
-    'font-semibold text-white">Votre niveau actuel :</span>\n      <span class="text-sm font-bold ' +
-    kycLevelColor(current) +
-    '">' +
-    kycLevelLabel(current) +
-    ('</span>\n    </div>\n    <div class="relative">\n      <!-- Ligne de connexion -->\n      <div class="absolute top-4 left-0 right-0 h-0.5 bg-dark-600 z-0">' +
-      '</div>\n      <div class="absolute top-4 left-0 h-0.5 bg-green-500 z-0 transition-all" style="width:') +
-    pct +
-    '%"></div>\n      <div class="flex relative z-10">' +
-    steps.join("") +
+    [
+      '\n  <div class="bg-dark-800 border border-dark-600 rounded-2xl p-5">\n    <div class="flex items-center gap-2 mb-4">\n      <span class="text-sm ',
+      'font-semibold text-white">Votre niveau actuel :</span>\n      <span class="text-sm font-bold ',
+      kycLevelColor(current),
+      '">',
+      kycLevelLabel(current),
+      '</span>\n    </div>\n    <div class="relative">\n      <!-- Ligne de connexion -->\n      <div class="absolute top-4 left-0 right-0 h-0.5 bg-dark-600 z-0">' +
+        '</div>\n      <div class="absolute top-4 left-0 h-0.5 bg-green-500 z-0 transition-all" style="width:',
+      pct,
+      '%"></div>\n      <div class="flex relative z-10">',
+      steps.join("")
+    ].join("") +
     "</div>\n    </div>\n    " +
     (current < maxLevel
       ? '\n    <p class="text-xs text-gray-400 mt-4 text-center">\n      <i class="fas fa-info-circle mr-1 text-purple-400"></i>\n      Passez au niveau <strong ' +
@@ -10088,17 +10453,19 @@ function _kycBuildApplicationCard(app, memberLevel) {
   const docRows = docs
     .map(
       (d) =>
-        '\n    <div class="flex items-center justify-between py-2 border-b border-dark-600/50 last:border-0">\n      <div class="flex items-center gap-2 flex-1 ' +
-        'min-w-0">\n        ' +
-        kycDocStatusIcon(d.status) +
-        '\n        <span class="text-sm text-gray-300 truncate">' +
-        (d.doc_type_name || d.doc_type_id) +
-        "</span>\n        " +
-        (d.status === "rejected" && d.rejection_reason
-          ? '<span class="text-[10px] text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded flex-shrink-0">' + d.rejection_reason + "</span>"
-          : "") +
-        '\n      </div>\n      <div class="flex items-center gap-2 flex-shrink-0 ml-2">\n        <span class="text-xs text-gray-500">' +
-        fmtDate(d.uploaded_at) +
+        [
+          '\n    <div class="flex items-center justify-between py-2 border-b border-dark-600/50 last:border-0">\n      <div class="flex items-center gap-2 flex-1 ',
+          'min-w-0">\n        ',
+          kycDocStatusIcon(d.status),
+          '\n        <span class="text-sm text-gray-300 truncate">',
+          d.doc_type_name || d.doc_type_id,
+          "</span>\n        ",
+          d.status === "rejected" && d.rejection_reason
+            ? '<span class="text-[10px] text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded flex-shrink-0">' + d.rejection_reason + "</span>"
+            : "",
+          '\n      </div>\n      <div class="flex items-center gap-2 flex-shrink-0 ml-2">\n        <span class="text-xs text-gray-500">',
+          fmtDate(d.uploaded_at)
+        ].join("") +
         "</span>\n        " +
         (isDraft || d.status === "rejected"
           ? "<button onclick=\"kycDeleteDoc('" +
@@ -10110,68 +10477,74 @@ function _kycBuildApplicationCard(app, memberLevel) {
     )
     .join("");
   return (
-    '\n  <div class="bg-dark-800 border ' +
-    (app.status === "approved" ? "border-green-500/40" : app.status === "rejected" ? "border-red-500/40" : "border-purple-500/30") +
-    (' rounded-2xl p-5">\n    <div class="flex items-center justify-between mb-4 flex-wrap gap-2">\n      <div class="flex items-center gap-2">\n        <i ' +
-      'class="fas fa-folder-open text-purple-400"></i>\n        <span class="font-semibold text-white">Dossier niveau ') +
-    app.target_level +
-    '</span>\n        <span class="text-xs px-2 py-0.5 rounded-full border ' +
-    kycLevelBg(app.target_level) +
-    " " +
-    kycLevelColor(app.target_level) +
-    '">\n          ' +
-    kycLevelLabel(app.target_level) +
-    '\n        </span>\n      </div>\n      <span class="text-sm font-semibold ' +
-    stClass +
-    '">\n        <i class="fas fa-circle text-[8px] mr-1"></i>' +
-    stLabel +
-    "\n      </span>\n    </div>\n\n    " +
-    (app.rejection_reason
-      ? '\n    <div class="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 mb-4 flex items-start gap-2">\n      <i class="fas fa-triangle-exclamation ' +
-        'text-red-400 mt-0.5"></i>\n      <div>\n        <div class="text-sm text-red-300 font-medium">Motif de rejet</div>\n        <div class="text-sm ' +
-        'text-red-400/80 mt-0.5">' +
-        app.rejection_reason +
-        "</div>\n        " +
-        (canResubmit
-          ? '<button onclick="kycOpenUpload(' +
-            app.target_level +
-            ", '" +
-            app.id +
-            ('\')" \n          class="mt-2 text-xs bg-red-500/20 hover:bg-red-500/30 text-red-300 px-3 py-1.5 rounded-lg transition font-medium">\n          <i ' +
-              'class="fas fa-refresh mr-1"></i>Corriger et re-soumettre\n        </button>')
-          : "") +
-        "\n      </div>\n    </div>"
-      : "") +
-    "\n\n    " +
-    (docs.length
-      ? '\n    <div class="mb-4">\n      <div class="text-xs text-gray-400 uppercase tracking-wider mb-2 font-medium">Documents soumis</div>\n      <div ' +
-        'class="bg-dark-700/50 rounded-xl px-3 py-1">' +
-        docRows +
-        "</div>\n    </div>"
-      : "") +
-    "\n\n    <!-- Actions dossier draft -->\n    " +
-    (isDraft
-      ? '\n    <div class="flex gap-2 flex-wrap">\n      <button onclick="kycOpenUpload(' +
-        app.target_level +
-        ", '" +
-        app.id +
-        '\')"\n              class="btn-primary text-sm flex-1">\n        <i class="fas fa-plus mr-2"></i>Ajouter des documents\n      </button>\n      ' +
-        (docs.length > 0
-          ? "<button onclick=\"kycSubmitApplication('" +
-            app.id +
-            '\')"\n              class="btn-success text-sm flex-1">\n        <i class="fas fa-paper-plane mr-2"></i>Soumettre pour v\xE9rification\n      </button>'
-          : "") +
-        "\n    </div>"
-      : "") +
-    "\n\n    <!-- Re-soumettre si rejet\xE9 -->\n    " +
-    (canResubmit
-      ? '\n    <button onclick="kycOpenUpload(' +
-        app.target_level +
-        ', null)"\n            class="w-full btn-primary text-sm mt-2">\n      <i class="fas fa-refresh mr-2"></i>Cr\xE9er un nouveau dossier\n    </button>'
-      : "") +
-    '\n\n    <div class="mt-3 text-xs text-gray-500 text-right">\n      Cr\xE9\xE9 le ' +
-    fmtDate(app.created_at) +
-    "\n      " +
+    [
+      [
+        [
+          '\n  <div class="bg-dark-800 border ',
+          app.status === "approved" ? "border-green-500/40" : app.status === "rejected" ? "border-red-500/40" : "border-purple-500/30",
+          ' rounded-2xl p-5">\n    <div class="flex items-center justify-between mb-4 flex-wrap gap-2">\n      <div class="flex items-center gap-2">\n        <i ' +
+            'class="fas fa-folder-open text-purple-400"></i>\n        <span class="font-semibold text-white">Dossier niveau ',
+          app.target_level,
+          '</span>\n        <span class="text-xs px-2 py-0.5 rounded-full border ',
+          kycLevelBg(app.target_level),
+          " ",
+          kycLevelColor(app.target_level),
+          '">\n          '
+        ].join(""),
+        kycLevelLabel(app.target_level),
+        '\n        </span>\n      </div>\n      <span class="text-sm font-semibold ',
+        stClass,
+        '">\n        <i class="fas fa-circle text-[8px] mr-1"></i>',
+        stLabel,
+        "\n      </span>\n    </div>\n\n    ",
+        app.rejection_reason
+          ? '\n    <div class="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 mb-4 flex items-start gap-2">\n      <i class="fas fa-triangle-exclamation ' +
+            'text-red-400 mt-0.5"></i>\n      <div>\n        <div class="text-sm text-red-300 font-medium">Motif de rejet</div>\n        <div class="text-sm ' +
+            'text-red-400/80 mt-0.5">' +
+            app.rejection_reason +
+            "</div>\n        " +
+            (canResubmit
+              ? '<button onclick="kycOpenUpload(' +
+                app.target_level +
+                ", '" +
+                app.id +
+                ('\')" \n          class="mt-2 text-xs bg-red-500/20 hover:bg-red-500/30 text-red-300 px-3 py-1.5 rounded-lg transition font-medium">\n          <i ' +
+                  'class="fas fa-refresh mr-1"></i>Corriger et re-soumettre\n        </button>')
+              : "") +
+            "\n      </div>\n    </div>"
+          : "",
+        "\n\n    "
+      ].join(""),
+      docs.length
+        ? '\n    <div class="mb-4">\n      <div class="text-xs text-gray-400 uppercase tracking-wider mb-2 font-medium">Documents soumis</div>\n      <div ' +
+          'class="bg-dark-700/50 rounded-xl px-3 py-1">' +
+          docRows +
+          "</div>\n    </div>"
+        : "",
+      "\n\n    <!-- Actions dossier draft -->\n    ",
+      isDraft
+        ? '\n    <div class="flex gap-2 flex-wrap">\n      <button onclick="kycOpenUpload(' +
+          app.target_level +
+          ", '" +
+          app.id +
+          '\')"\n              class="btn-primary text-sm flex-1">\n        <i class="fas fa-plus mr-2"></i>Ajouter des documents\n      </button>\n      ' +
+          (docs.length > 0
+            ? "<button onclick=\"kycSubmitApplication('" +
+              app.id +
+              '\')"\n              class="btn-success text-sm flex-1">\n        <i class="fas fa-paper-plane mr-2"></i>Soumettre pour v\xE9rification\n      </button>'
+            : "") +
+          "\n    </div>"
+        : "",
+      "\n\n    <!-- Re-soumettre si rejet\xE9 -->\n    ",
+      canResubmit
+        ? '\n    <button onclick="kycOpenUpload(' +
+          app.target_level +
+          ', null)"\n            class="w-full btn-primary text-sm mt-2">\n      <i class="fas fa-refresh mr-2"></i>Cr\xE9er un nouveau dossier\n    </button>'
+        : "",
+      '\n\n    <div class="mt-3 text-xs text-gray-500 text-right">\n      Cr\xE9\xE9 le ',
+      fmtDate(app.created_at),
+      "\n      "
+    ].join("") +
     (app.submitted_at ? " \xB7 Soumis le " + fmtDate(app.submitted_at) : "") +
     "\n    </div>\n  </div>"
   );
@@ -10204,30 +10577,32 @@ function _kycBuildActionSection(memberLevel, app, levels, statusRes) {
   if (!nextLv) return "";
   const docs = _kycGetRequiredDocs(nextLevel, statusRes);
   return (
-    '\n  <div class="bg-dark-800 border border-dark-600 rounded-2xl p-5">\n    <div class="flex items-center gap-2 mb-4">\n      <div class="w-8 h-8 ' +
-    'rounded-lg bg-purple-500/20 flex items-center justify-center">\n        <i class="fas fa-arrow-up text-purple-400 text-sm"></i>\n      </div>\n      <div>' +
-    '\n        <div class="font-semibold text-white">Passez au niveau ' +
-    nextLevel +
-    '</div>\n        <div class="text-xs text-gray-400">' +
-    (nextLv.name || kycLevelLabel(nextLevel)) +
-    (nextLv.description ? " — " + nextLv.description : "") +
-    "</div>\n      </div>\n    </div>\n\n    " +
-    (docs.length
-      ? '\n    <div class="mb-4">\n      <div class="text-xs text-gray-400 uppercase tracking-wider mb-2">Documents requis</div>\n      <div class="grid ' +
-        'grid-cols-1 gap-2">\n        ' +
-        docs
-          .map(
-            (d) =>
-              '\n        <div class="flex items-center gap-2 text-sm text-gray-300">\n          <i class="fas fa-file-alt text-purple-400/60 text-xs w-4 flex-shrink-0">' +
-              "</i>\n          <span>" +
-              d.label +
-              "</span>\n          " +
-              (d.required ? "" : '<span class="text-[10px] text-gray-500 ml-auto">Optionnel</span>') +
-              "\n        </div>"
-          )
-          .join("") +
-        "\n      </div>\n    </div>"
-      : "") +
+    [
+      '\n  <div class="bg-dark-800 border border-dark-600 rounded-2xl p-5">\n    <div class="flex items-center gap-2 mb-4">\n      <div class="w-8 h-8 ',
+      'rounded-lg bg-purple-500/20 flex items-center justify-center">\n        <i class="fas fa-arrow-up text-purple-400 text-sm"></i>\n      </div>\n      <div>',
+      '\n        <div class="font-semibold text-white">Passez au niveau ',
+      nextLevel,
+      '</div>\n        <div class="text-xs text-gray-400">',
+      nextLv.name || kycLevelLabel(nextLevel),
+      nextLv.description ? " — " + nextLv.description : "",
+      "</div>\n      </div>\n    </div>\n\n    ",
+      docs.length
+        ? '\n    <div class="mb-4">\n      <div class="text-xs text-gray-400 uppercase tracking-wider mb-2">Documents requis</div>\n      <div class="grid ' +
+          'grid-cols-1 gap-2">\n        ' +
+          docs
+            .map(
+              (d) =>
+                '\n        <div class="flex items-center gap-2 text-sm text-gray-300">\n          <i class="fas fa-file-alt text-purple-400/60 text-xs w-4 flex-shrink-0">' +
+                "</i>\n          <span>" +
+                d.label +
+                "</span>\n          " +
+                (d.required ? "" : '<span class="text-[10px] text-gray-500 ml-auto">Optionnel</span>') +
+                "\n        </div>"
+            )
+            .join("") +
+          "\n      </div>\n    </div>"
+        : ""
+    ].join("") +
     '\n\n    <button onclick="kycOpenUpload(' +
     nextLevel +
     (', null)"\n            class="w-full bg-purple-600 hover:bg-purple-500 text-white font-semibold text-sm px-4 py-3 rounded-xl transition flex ' +
@@ -10311,15 +10686,17 @@ function _kycWizardRender(docs) {
       const bg = done ? "bg-green-500" : active ? "bg-purple-600" : "bg-dark-600";
       const ring = active ? "ring-2 ring-purple-400 ring-offset-2 ring-offset-dark-800" : "";
       return (
-        '\n      <div class="flex flex-col items-center flex-1">\n        <div class="w-8 h-8 rounded-full ' +
-        bg +
-        " " +
-        ring +
-        ' flex items-center justify-center text-xs font-bold text-white mb-1 transition-all">\n          ' +
-        (done ? '<i class="fas fa-check text-[10px]"></i>' : n) +
-        '\n        </div>\n        <span class="text-[10px] ' +
-        (active ? "text-purple-300 font-semibold" : done ? "text-green-400" : "text-gray-500") +
-        ' text-center leading-tight">' +
+        [
+          '\n      <div class="flex flex-col items-center flex-1">\n        <div class="w-8 h-8 rounded-full ',
+          bg,
+          " ",
+          ring,
+          ' flex items-center justify-center text-xs font-bold text-white mb-1 transition-all">\n          ',
+          done ? '<i class="fas fa-check text-[10px]"></i>' : n,
+          '\n        </div>\n        <span class="text-[10px] ',
+          active ? "text-purple-300 font-semibold" : done ? "text-green-400" : "text-gray-500",
+          ' text-center leading-tight">'
+        ].join("") +
         label +
         "</span>\n      </div>"
       );
@@ -10361,16 +10738,18 @@ function _kycWizardStep1Html(docs) {
       const isSelected = _kycWizard.docTypeId === d.doc_type_id;
       const catIcon = d.category === "identity" ? "id-card" : d.category === "address" ? "home" : "file-alt";
       return (
-        '\n    <div class="kyc-doc-option flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all select-none\n                ' +
-        (isSelected ? "border-purple-500 bg-purple-500/10" : "border-dark-500 bg-dark-700/50 hover:border-purple-500/50 hover:bg-dark-700") +
-        '"\n         data-doc-id="' +
-        d.doc_type_id +
-        ('"\n         role="button" tabindex="0">\n      <div class="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0 ' +
-          'pointer-events-none">\n        <i class="fas fa-') +
-        catIcon +
-        ' text-purple-400 text-sm"></i>\n      </div>\n      <div class="flex-1 pointer-events-none">\n        <div class="text-sm text-white font-medium">' +
-        (d.doc_type_name || d.doc_type_id) +
-        "</div>\n        " +
+        [
+          '\n    <div class="kyc-doc-option flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all select-none\n                ',
+          isSelected ? "border-purple-500 bg-purple-500/10" : "border-dark-500 bg-dark-700/50 hover:border-purple-500/50 hover:bg-dark-700",
+          '"\n         data-doc-id="',
+          d.doc_type_id,
+          '"\n         role="button" tabindex="0">\n      <div class="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0 ' +
+            'pointer-events-none">\n        <i class="fas fa-',
+          catIcon,
+          ' text-purple-400 text-sm"></i>\n      </div>\n      <div class="flex-1 pointer-events-none">\n        <div class="text-sm text-white font-medium">',
+          d.doc_type_name || d.doc_type_id,
+          "</div>\n        "
+        ].join("") +
         (d.required ? '<div class="text-[10px] text-purple-400">Obligatoire</div>' : '<div class="text-[10px] text-gray-500">Optionnel</div>') +
         '\n      </div>\n      <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all pointer-events-none\n                  ' +
         (isSelected ? "border-purple-500 bg-purple-500" : "border-dark-400 bg-transparent") +
@@ -10393,25 +10772,27 @@ function _kycWizardStep1Html(docs) {
     : "";
   const canNext = _kycWizard.docTypeId && _kycWizard.docBase64;
   return (
-    '\n    <div class="space-y-4">\n      <div>\n        <div class="text-sm font-semibold text-white mb-1">Sélectionnez le type de document</div>\n        <' +
-    'div class="text-xs text-gray-400 mb-3">Choisissez la pièce d\'identité que vous souhaitez soumettre</div>\n        ' +
-    groupHint +
-    '\n        <div class="space-y-2 mt-3" id="kyc-doc-options-list">' +
-    docOptions +
-    ('</div>\n      </div>\n\n      <div>\n        <div class="text-sm font-semibold text-white mb-2">\n          <i class="fas fa-upload text-purple-400 mr-2"><' +
-      "/i>Uploader le document\n        </div>\n        ") +
-    (previewHtml ||
-      '\n        <div class="border-2 border-dashed border-purple-500/40 rounded-xl p-5 text-center cursor-pointer hover:border-purple-400 transition-all"\n    ' +
-        '         id="kyc-step1-drop"\n             onclick="document.getElementById(\'kyc-step1-file\').click()"\n             ' +
-        "ondragover=\"event.preventDefault();this.classList.add('!border-purple-500')\"\n             ondragleave=\"this.classList.remove('!border-purple-500')\"\n   " +
-        '          ondrop="_kycWizardDropDoc(event)">\n          <i class="fas fa-cloud-upload-alt text-3xl text-gray-500 mb-2 block"></i>\n' +
-        ('          <p class="text-sm text-gray-400">Glissez votre fichier ici ou <span class="text-purple-400 font-medium">cliquez</span></p>\n          <p ' +
-          'class="text-xs text-gray-600 mt-1">JPG, PNG, PDF — toute taille acceptée (compression auto)</p>\n        </div>')) +
-    ('\n        <input type="file" id="kyc-step1-file" class="hidden" accept=".jpg,.jpeg,.png,.pdf"\n               ' +
-      'onchange="_kycWizardLoadDocFile(this.files[0])">\n        <div id="kyc-compress-progress" class="hidden mt-2 text-xs text-purple-300 text-center ' +
-      'animate-pulse"></div>\n      </div>\n\n      <div id="kyc-wizard-err1" class="hidden bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-sm ' +
-      'text-red-400"></div>\n\n      <button onclick="_kycWizardNext1()"\n              class="w-full ') +
-    (canNext ? "bg-purple-600 hover:bg-purple-500" : "bg-dark-600 cursor-not-allowed opacity-60") +
+    [
+      '\n    <div class="space-y-4">\n      <div>\n        <div class="text-sm font-semibold text-white mb-1">Sélectionnez le type de document</div>\n        <',
+      'div class="text-xs text-gray-400 mb-3">Choisissez la pièce d\'identité que vous souhaitez soumettre</div>\n        ',
+      groupHint,
+      '\n        <div class="space-y-2 mt-3" id="kyc-doc-options-list">',
+      docOptions,
+      '</div>\n      </div>\n\n      <div>\n        <div class="text-sm font-semibold text-white mb-2">\n          <i class="fas fa-upload text-purple-400 mr-2"><' +
+        "/i>Uploader le document\n        </div>\n        ",
+      previewHtml ||
+        '\n        <div class="border-2 border-dashed border-purple-500/40 rounded-xl p-5 text-center cursor-pointer hover:border-purple-400 transition-all"\n    ' +
+          '         id="kyc-step1-drop"\n             onclick="document.getElementById(\'kyc-step1-file\').click()"\n             ' +
+          "ondragover=\"event.preventDefault();this.classList.add('!border-purple-500')\"\n             ondragleave=\"this.classList.remove('!border-purple-500')\"\n   " +
+          '          ondrop="_kycWizardDropDoc(event)">\n          <i class="fas fa-cloud-upload-alt text-3xl text-gray-500 mb-2 block"></i>\n' +
+          ('          <p class="text-sm text-gray-400">Glissez votre fichier ici ou <span class="text-purple-400 font-medium">cliquez</span></p>\n          <p ' +
+            'class="text-xs text-gray-600 mt-1">JPG, PNG, PDF — toute taille acceptée (compression auto)</p>\n        </div>'),
+      '\n        <input type="file" id="kyc-step1-file" class="hidden" accept=".jpg,.jpeg,.png,.pdf"\n               ' +
+        'onchange="_kycWizardLoadDocFile(this.files[0])">\n        <div id="kyc-compress-progress" class="hidden mt-2 text-xs text-purple-300 text-center ' +
+        'animate-pulse"></div>\n      </div>\n\n      <div id="kyc-wizard-err1" class="hidden bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-sm ' +
+        'text-red-400"></div>\n\n      <button onclick="_kycWizardNext1()"\n              class="w-full ',
+      canNext ? "bg-purple-600 hover:bg-purple-500" : "bg-dark-600 cursor-not-allowed opacity-60"
+    ].join("") +
     (' text-white font-bold text-sm px-4 py-3 rounded-xl transition flex items-center justify-center gap-2">\n        <i class="fas fa-arrow-right"></i>\n     ' +
       "   Continuer vers la selfie\n      </button>\n    </div>")
   );
@@ -10610,30 +10991,32 @@ function _kycWizardOpenCropEditor(dataUrl, mime, fileName) {
   const body = document.getElementById("kyc-wizard-body");
   if (!body) return;
   body.innerHTML =
-    '\n    <div class="space-y-3">\n      <div class="flex items-center justify-between">\n        <div class="text-sm font-semibold text-white">\n          <i ' +
-    'class="fas fa-crop-alt text-purple-400 mr-2"></i>Ajuster le document\n        </div>\n        <div class="text-xs text-gray-400">Glissez pour déplacer · ' +
-    'Molette pour zoomer</div>\n      </div>\n\n      <!-- Canvas zone -->\n      <div class="relative rounded-xl overflow-hidden bg-dark-900 border-2 ' +
-    'border-purple-500/30"\n           style="height:280px">\n        <canvas id="kyc-crop-canvas"\n' +
-    ('                style="width:100%;height:100%;display:block;cursor:grab;touch-action:none"\n                onmousedown="_kycCropMouseDown(event)"\n     ' +
-      '           onmousemove="_kycCropMouseMove(event)"\n                onmouseup="_kycCropMouseUp(event)"\n                ' +
-      'onmouseleave="_kycCropMouseUp(event)"\n                onwheel="_kycCropWheel(event)"\n                ontouchstart="_kycCropTouchStart(event)"\n         ' +
-      '       ontouchmove="_kycCropTouchMove(event)"\n                ontouchend="_kycCropTouchEnd(event)"></canvas>\n') +
-    ('        <!-- Grille guide -->\n        <div class="absolute inset-0 pointer-events-none" style="\n          background-image: ' +
-      "linear-gradient(rgba(139,92,246,.15) 1px, transparent 1px),\n                            linear-gradient(90deg, rgba(139,92,246,.15) 1px, transparent " +
-      '1px);\n          background-size: 33.33% 33.33%;">\n        </div>\n        <!-- Coins de cadrage -->\n        <div class="absolute top-2 left-2 w-5 h-5 ' +
-      'border-t-2 border-l-2 border-purple-400 rounded-tl pointer-events-none"></div>\n') +
-    ('        <div class="absolute top-2 right-2 w-5 h-5 border-t-2 border-r-2 border-purple-400 rounded-tr pointer-events-none"></div>\n        <div ' +
-      'class="absolute bottom-2 left-2 w-5 h-5 border-b-2 border-l-2 border-purple-400 rounded-bl pointer-events-none"></div>\n        <div class="absolute ' +
-      'bottom-2 right-2 w-5 h-5 border-b-2 border-r-2 border-purple-400 rounded-br pointer-events-none"></div>\n      </div>\n\n      <!-- Contrôles -->\n      <' +
-      'div class="flex items-center gap-2 flex-wrap">\n        <!-- Zoom -->\n') +
-    ('        <div class="flex items-center gap-1.5 bg-dark-700 rounded-xl px-3 py-2 border border-dark-500">\n          <button ' +
-      'onclick="_kycCropZoom(-0.15)"\n                  class="w-7 h-7 rounded-lg bg-dark-600 hover:bg-purple-600 text-white text-sm font-bold transition flex ' +
-      'items-center justify-center">\n            <i class="fas fa-minus text-xs"></i>\n          </button>\n          <span id="kyc-crop-zoom-label" ' +
-      'class="text-xs text-gray-300 w-10 text-center">100%</span>\n          <button onclick="_kycCropZoom(0.15)"\n') +
-    ('                  class="w-7 h-7 rounded-lg bg-dark-600 hover:bg-purple-600 text-white text-sm font-bold transition flex items-center justify-center">\n' +
-      '            <i class="fas fa-plus text-xs"></i>\n          </button>\n        </div>\n        <!-- Rotation -->\n        <button ' +
-      'onclick="_kycCropRotate()"\n                class="flex items-center gap-2 bg-dark-700 hover:bg-dark-600 border border-dark-500 text-white text-xs ' +
-      'font-medium px-3 py-2 rounded-xl transition">\n          <i class="fas fa-rotate-right text-purple-400"></i>Pivoter 90°\n') +
+    [
+      '\n    <div class="space-y-3">\n      <div class="flex items-center justify-between">\n        <div class="text-sm font-semibold text-white">\n          <i ',
+      'class="fas fa-crop-alt text-purple-400 mr-2"></i>Ajuster le document\n        </div>\n        <div class="text-xs text-gray-400">Glissez pour déplacer · ',
+      'Molette pour zoomer</div>\n      </div>\n\n      <!-- Canvas zone -->\n      <div class="relative rounded-xl overflow-hidden bg-dark-900 border-2 ',
+      'border-purple-500/30"\n           style="height:280px">\n        <canvas id="kyc-crop-canvas"\n',
+      '                style="width:100%;height:100%;display:block;cursor:grab;touch-action:none"\n                onmousedown="_kycCropMouseDown(event)"\n     ' +
+        '           onmousemove="_kycCropMouseMove(event)"\n                onmouseup="_kycCropMouseUp(event)"\n                ' +
+        'onmouseleave="_kycCropMouseUp(event)"\n                onwheel="_kycCropWheel(event)"\n                ontouchstart="_kycCropTouchStart(event)"\n         ' +
+        '       ontouchmove="_kycCropTouchMove(event)"\n                ontouchend="_kycCropTouchEnd(event)"></canvas>\n',
+      '        <!-- Grille guide -->\n        <div class="absolute inset-0 pointer-events-none" style="\n          background-image: ' +
+        "linear-gradient(rgba(139,92,246,.15) 1px, transparent 1px),\n                            linear-gradient(90deg, rgba(139,92,246,.15) 1px, transparent " +
+        '1px);\n          background-size: 33.33% 33.33%;">\n        </div>\n        <!-- Coins de cadrage -->\n        <div class="absolute top-2 left-2 w-5 h-5 ' +
+        'border-t-2 border-l-2 border-purple-400 rounded-tl pointer-events-none"></div>\n',
+      '        <div class="absolute top-2 right-2 w-5 h-5 border-t-2 border-r-2 border-purple-400 rounded-tr pointer-events-none"></div>\n        <div ' +
+        'class="absolute bottom-2 left-2 w-5 h-5 border-b-2 border-l-2 border-purple-400 rounded-bl pointer-events-none"></div>\n        <div class="absolute ' +
+        'bottom-2 right-2 w-5 h-5 border-b-2 border-r-2 border-purple-400 rounded-br pointer-events-none"></div>\n      </div>\n\n      <!-- Contrôles -->\n      <' +
+        'div class="flex items-center gap-2 flex-wrap">\n        <!-- Zoom -->\n',
+      '        <div class="flex items-center gap-1.5 bg-dark-700 rounded-xl px-3 py-2 border border-dark-500">\n          <button ' +
+        'onclick="_kycCropZoom(-0.15)"\n                  class="w-7 h-7 rounded-lg bg-dark-600 hover:bg-purple-600 text-white text-sm font-bold transition flex ' +
+        'items-center justify-center">\n            <i class="fas fa-minus text-xs"></i>\n          </button>\n          <span id="kyc-crop-zoom-label" ' +
+        'class="text-xs text-gray-300 w-10 text-center">100%</span>\n          <button onclick="_kycCropZoom(0.15)"\n',
+      '                  class="w-7 h-7 rounded-lg bg-dark-600 hover:bg-purple-600 text-white text-sm font-bold transition flex items-center justify-center">\n' +
+        '            <i class="fas fa-plus text-xs"></i>\n          </button>\n        </div>\n        <!-- Rotation -->\n        <button ' +
+        'onclick="_kycCropRotate()"\n                class="flex items-center gap-2 bg-dark-700 hover:bg-dark-600 border border-dark-500 text-white text-xs ' +
+        'font-medium px-3 py-2 rounded-xl transition">\n          <i class="fas fa-rotate-right text-purple-400"></i>Pivoter 90°\n'
+    ].join("") +
     ('        </button>\n        <!-- Réinitialiser -->\n        <button onclick="_kycCropReset()"\n                class="flex items-center gap-2 bg-dark-700 ' +
       'hover:bg-dark-600 border border-dark-500 text-gray-400 text-xs px-3 py-2 rounded-xl transition">\n          <i class="fas fa-undo"></i>Réinitialiser\n   ' +
       '     </button>\n      </div>\n\n      <!-- Actions -->\n      <div class="flex gap-2">\n        <button onclick="_kycWizardClearDoc()"\n                ' +
@@ -11052,31 +11435,35 @@ function _kycWizardStepLivenessHtml() {
     })
     .join('<span class="text-gray-600 mx-1">\u203a</span>');
   return (
-    '\n  <div class="space-y-3">\n\n    <!-- Progression -->\n    <div class="flex items-center justify-between px-1">\n      <div class="flex items-center ' +
-    'gap-1">' +
-    progress +
-    '</div>\n      <span class="text-xs text-gray-500">\xC9tape ' +
-    (cur + 1) +
-    " / " +
-    steps.length +
-    ('</span>\n    </div>\n\n    <!-- Flux caméra -->\n    <div class="relative bg-dark-900 rounded-2xl overflow-hidden border-2 border-purple-500/50" ' +
-      'style="min-height:280px">\n      <video id="kyc-liveness-video" autoplay playsinline muted\n             class="w-full rounded-2xl" ' +
-      'style="max-height:340px;object-fit:cover;display:none"></video>\n\n      <!-- Overlay cercle + instruction -->\n      <div id="kyc-liveness-overlay" ' +
-      'class="absolute inset-0 flex flex-col items-center justify-center text-center p-4 hidden">\n' +
-      '        <div class="w-48 h-48 rounded-full border-2 border-dashed border-purple-400/80 flex items-center justify-center mb-3">\n          <i class="fas ') +
-    s.icon +
-    ' text-4xl text-purple-400/70"></i>\n        </div>\n        <div class="font-bold text-white text-base mt-1">' +
-    s.label +
-    '</div>\n        <div class="text-xs text-gray-300 mt-1">' +
-    s.hint +
-    ('</div>\n      </div>\n\n      <!-- Placeholder avant activation caméra -->\n      <div id="kyc-liveness-placeholder" class="absolute inset-0 flex flex-col ' +
-      'items-center justify-center text-center p-6">\n        <div class="w-16 h-16 rounded-full bg-purple-600/20 border border-purple-500/30 flex ' +
-      'items-center justify-center mb-3">\n          <i class="fas fa-camera text-2xl text-purple-400"></i>\n        </div>\n        <p class="text-sm ' +
-      'text-gray-400">Activation de la caméra…</p>\n      </div>\n    </div>\n\n    <!-- Instruction texte sous la cam -->\n' +
-      '    <div id="kyc-liveness-hint" class="bg-purple-500/10 border border-purple-500/20 rounded-xl px-4 py-3 text-center hidden">\n      <i class="fas ') +
-    s.icon +
-    ' text-purple-400 mr-2"></i>\n      <span class="text-sm text-white font-medium">' +
-    s.hint +
+    [
+      [
+        '\n  <div class="space-y-3">\n\n    <!-- Progression -->\n    <div class="flex items-center justify-between px-1">\n      <div class="flex items-center ',
+        'gap-1">',
+        progress,
+        '</div>\n      <span class="text-xs text-gray-500">\xC9tape ',
+        cur + 1,
+        " / ",
+        steps.length,
+        '</span>\n    </div>\n\n    <!-- Flux caméra -->\n    <div class="relative bg-dark-900 rounded-2xl overflow-hidden border-2 border-purple-500/50" ' +
+          'style="min-height:280px">\n      <video id="kyc-liveness-video" autoplay playsinline muted\n             class="w-full rounded-2xl" ' +
+          'style="max-height:340px;object-fit:cover;display:none"></video>\n\n      <!-- Overlay cercle + instruction -->\n      <div id="kyc-liveness-overlay" ' +
+          'class="absolute inset-0 flex flex-col items-center justify-center text-center p-4 hidden">\n' +
+          '        <div class="w-48 h-48 rounded-full border-2 border-dashed border-purple-400/80 flex items-center justify-center mb-3">\n          <i class="fas ',
+        s.icon
+      ].join(""),
+      ' text-4xl text-purple-400/70"></i>\n        </div>\n        <div class="font-bold text-white text-base mt-1">',
+      s.label,
+      '</div>\n        <div class="text-xs text-gray-300 mt-1">',
+      s.hint,
+      '</div>\n      </div>\n\n      <!-- Placeholder avant activation caméra -->\n      <div id="kyc-liveness-placeholder" class="absolute inset-0 flex flex-col ' +
+        'items-center justify-center text-center p-6">\n        <div class="w-16 h-16 rounded-full bg-purple-600/20 border border-purple-500/30 flex ' +
+        'items-center justify-center mb-3">\n          <i class="fas fa-camera text-2xl text-purple-400"></i>\n        </div>\n        <p class="text-sm ' +
+        'text-gray-400">Activation de la caméra…</p>\n      </div>\n    </div>\n\n    <!-- Instruction texte sous la cam -->\n' +
+        '    <div id="kyc-liveness-hint" class="bg-purple-500/10 border border-purple-500/20 rounded-xl px-4 py-3 text-center hidden">\n      <i class="fas ',
+      s.icon,
+      ' text-purple-400 mr-2"></i>\n      <span class="text-sm text-white font-medium">',
+      s.hint
+    ].join("") +
     ('</span>\n    </div>\n\n    <!-- Boutons -->\n    <button onclick="_kycWizardLivenessDone()"\n            class="w-full bg-purple-600 hover:bg-purple-500 ' +
       'text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2">\n      <i class="fas fa-check"></i>Fait — étape suivante\n    <' +
       '/button>\n    <button onclick="_kycWizardBack()" class="w-full text-gray-400 hover:text-white text-sm py-1.5 transition">\n      <i class="fas ' +
@@ -11191,69 +11578,71 @@ function _kycWizardStep3Html(result) {
           label: "Validation finale"
         }
       ]
-        .map(
-          (s) =>
-            '\n          <div id="' +
-            s.id +
-            ('" class="flex items-center gap-3 px-3 py-2 rounded-xl bg-dark-700/50 opacity-40 transition-all">\n            <div class="w-7 h-7 rounded-full ' +
-              'bg-dark-600 flex items-center justify-center flex-shrink-0">\n              <i class="fas ') +
-            s.icon +
-            ' text-gray-400 text-xs"></i>\n            </div>\n            <span class="text-sm text-gray-400">' +
-            s.label +
-            '</span>\n            <div class="ml-auto" id="' +
-            s.id +
+        .map((s) =>
+          [
+            '\n          <div id="',
+            s.id,
+            '" class="flex items-center gap-3 px-3 py-2 rounded-xl bg-dark-700/50 opacity-40 transition-all">\n            <div class="w-7 h-7 rounded-full ' +
+              'bg-dark-600 flex items-center justify-center flex-shrink-0">\n              <i class="fas ',
+            s.icon,
+            ' text-gray-400 text-xs"></i>\n            </div>\n            <span class="text-sm text-gray-400">',
+            s.label,
+            '</span>\n            <div class="ml-auto" id="',
+            s.id,
             '-spin"></div>\n          </div>'
+          ].join("")
         )
         .join("") +
       "\n        </div>\n      </div>"
     );
   }
   if (result.decision === "approved") {
-    return (
-      '\n    <div class="space-y-5 text-center">\n      <div class="relative mx-auto w-24 h-24">\n        <div class="absolute inset-0 rounded-full ' +
-      'bg-green-500/20 border-2 border-green-500/40 animate-pulse"></div>\n        <div class="relative w-24 h-24 rounded-full bg-green-500/30 border-2 ' +
-      'border-green-400/60 flex items-center justify-center">\n          <i class="fas fa-shield-check text-4xl text-green-400"></i>\n        </div>\n      <' +
-      '/div>\n\n      <div>\n        <div class="text-white font-bold text-xl mb-1">Identité vérifiée !</div>\n' +
-      '        <div class="text-sm text-green-400 font-medium">Niveau ' +
-      _kycWizard.targetLevel +
-      (' débloqué avec succès</div>\n      </div>\n\n      <div class="bg-green-500/10 border border-green-500/25 rounded-2xl p-5 text-left space-y-3">\n        <' +
+    return [
+      '\n    <div class="space-y-5 text-center">\n      <div class="relative mx-auto w-24 h-24">\n        <div class="absolute inset-0 rounded-full ',
+      'bg-green-500/20 border-2 border-green-500/40 animate-pulse"></div>\n        <div class="relative w-24 h-24 rounded-full bg-green-500/30 border-2 ',
+      'border-green-400/60 flex items-center justify-center">\n          <i class="fas fa-shield-check text-4xl text-green-400"></i>\n        </div>\n      <',
+      '/div>\n\n      <div>\n        <div class="text-white font-bold text-xl mb-1">Identité vérifiée !</div>\n',
+      '        <div class="text-sm text-green-400 font-medium">Niveau ',
+      _kycWizard.targetLevel,
+      ' débloqué avec succès</div>\n      </div>\n\n      <div class="bg-green-500/10 border border-green-500/25 rounded-2xl p-5 text-left space-y-3">\n        <' +
         'div class="flex items-center gap-3">\n          <div class="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center flex-shrink-0">\n        ' +
         '    <i class="fas fa-star text-green-400 text-sm"></i>\n          </div>\n          <div>\n            <div class="text-sm font-semibold text-green-300">' +
         "Accès immédiat débloqué</div>\n            <div " +
-        'class="text-xs text-gray-400 mt-0.5">Vous bénéficiez maintenant de toutes les fonctionnalités du niveau ') +
-      _kycWizard.targetLevel +
-      (".</div>\n          </div>\n        </div>\n      </div>\n\n      <button onclick=\"_kycWizardClose();renderKYC(document.getElementById('page-content'))\"\n    " +
+        'class="text-xs text-gray-400 mt-0.5">Vous bénéficiez maintenant de toutes les fonctionnalités du niveau ',
+      _kycWizard.targetLevel,
+      ".</div>\n          </div>\n        </div>\n      </div>\n\n      <button onclick=\"_kycWizardClose();renderKYC(document.getElementById('page-content'))\"\n    " +
         '          class="w-full bg-green-600 hover:bg-green-500 text-white font-bold text-sm px-4 py-3 rounded-xl transition flex items-center justify-center ' +
-        'gap-2">\n        <i class="fas fa-check-circle"></i>Accéder à mon espace\n      </button>\n    </div>')
-    );
+        'gap-2">\n        <i class="fas fa-check-circle"></i>Accéder à mon espace\n      </button>\n    </div>'
+    ].join("");
   }
   return (
-    '\n    <div class="space-y-5 text-center">\n      <!-- Icône animée succès -->\n      <div class="relative mx-auto w-24 h-24">\n        <div ' +
-    'class="absolute inset-0 rounded-full bg-purple-500/15 animate-ping" style="animation-duration:2s"></div>\n        <div class="relative w-24 h-24 ' +
-    'rounded-full bg-gradient-to-br from-purple-600/40 to-purple-800/40 border-2 border-purple-500/60 flex items-center justify-center">\n          <i ' +
-    'class="fas fa-paper-plane text-4xl text-purple-300"></i>\n        </div>\n      </div>\n' +
-    ('\n      <!-- Titre & sous-titre -->\n      <div>\n        <div class="text-white font-bold text-xl mb-1">Dossier transmis avec succès</div>\n        <div ' +
-      'class="text-sm text-purple-300 font-medium">Votre demande de vérification est entre de bonnes mains</div>\n      </div>\n\n      <!-- Bloc premium ' +
-      'd\'information -->\n      <div class="bg-dark-700/60 border border-purple-500/20 rounded-2xl p-5 text-left space-y-4">\n\n        <div class="flex ' +
-      'items-start gap-3">\n          <div class="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">\n') +
-    ('            <i class="fas fa-user-shield text-purple-400 text-sm"></i>\n          </div>\n          <div>\n            <div class="text-sm font-semibold ' +
-      'text-white">Examiné par notre équipe dédiée</div>\n            <div class="text-xs text-gray-400 mt-0.5 leading-relaxed">Vos documents ont bien été ' +
-      "reçus et seront vérifiés par un membre de notre équipe. Ce processus garantit une validation soignée de votre dossier.</div>\n          </div>\n        <" +
-      '/div>\n\n        <div class="h-px bg-dark-600"></div>\n\n') +
-    ('        <div class="flex items-start gap-3">\n          <div class="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0 ' +
-      'mt-0.5">\n            <i class="fas fa-clock text-blue-400 text-sm"></i>\n          </div>\n          <div>\n            <div class="text-sm font-semibold ' +
-      'text-white">Délai de traitement : 24 à 48h</div>\n            <div class="text-xs text-gray-400 mt-0.5 leading-relaxed">Vous recevrez une notification ' +
-      "dès que votre vérification sera finalisée. En cas de question, notre support reste disponible.</div>\n") +
-    ('          </div>\n        </div>\n\n        <div class="h-px bg-dark-600"></div>\n\n        <div class="flex items-start gap-3">\n          <div class="w-8 ' +
-      'h-8 rounded-lg bg-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">\n            <i class="fas fa-lock text-green-400 text-sm"></i>\n ' +
-      '         </div>\n          <div>\n            <div class="text-sm font-semibold text-white">Confidentialité assurée</div>\n            <div ' +
-      'class="text-xs text-gray-400 mt-0.5 leading-relaxed">Vos documents sont chiffrés et traités dans le strict respect de votre vie privée, conformément à ' +
-      "nos engagements de sécurité.</div>\n") +
-    ("          </div>\n        </div>\n\n      </div>\n\n      <!-- Bouton de retour premium -->\n      <button " +
-      'onclick="_kycWizardClose();renderKYC(document.getElementById(\'page-content\'))"\n              class="w-full bg-gradient-to-r from-purple-600 ' +
-      "to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white font-bold text-sm px-4 py-3.5 rounded-xl transition flex items-center " +
-      'justify-center gap-2 shadow-lg shadow-purple-900/30">\n        <i class="fas fa-home"></i>Retour à mon espace KYC\n      </button>\n') +
-    "    </div>"
+    [
+      '\n    <div class="space-y-5 text-center">\n      <!-- Icône animée succès -->\n      <div class="relative mx-auto w-24 h-24">\n        <div ',
+      'class="absolute inset-0 rounded-full bg-purple-500/15 animate-ping" style="animation-duration:2s"></div>\n        <div class="relative w-24 h-24 ',
+      'rounded-full bg-gradient-to-br from-purple-600/40 to-purple-800/40 border-2 border-purple-500/60 flex items-center justify-center">\n          <i ',
+      'class="fas fa-paper-plane text-4xl text-purple-300"></i>\n        </div>\n      </div>\n',
+      '\n      <!-- Titre & sous-titre -->\n      <div>\n        <div class="text-white font-bold text-xl mb-1">Dossier transmis avec succès</div>\n        <div ' +
+        'class="text-sm text-purple-300 font-medium">Votre demande de vérification est entre de bonnes mains</div>\n      </div>\n\n      <!-- Bloc premium ' +
+        'd\'information -->\n      <div class="bg-dark-700/60 border border-purple-500/20 rounded-2xl p-5 text-left space-y-4">\n\n        <div class="flex ' +
+        'items-start gap-3">\n          <div class="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">\n',
+      '            <i class="fas fa-user-shield text-purple-400 text-sm"></i>\n          </div>\n          <div>\n            <div class="text-sm font-semibold ' +
+        'text-white">Examiné par notre équipe dédiée</div>\n            <div class="text-xs text-gray-400 mt-0.5 leading-relaxed">Vos documents ont bien été ' +
+        "reçus et seront vérifiés par un membre de notre équipe. Ce processus garantit une validation soignée de votre dossier.</div>\n          </div>\n        <" +
+        '/div>\n\n        <div class="h-px bg-dark-600"></div>\n\n',
+      '        <div class="flex items-start gap-3">\n          <div class="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0 ' +
+        'mt-0.5">\n            <i class="fas fa-clock text-blue-400 text-sm"></i>\n          </div>\n          <div>\n            <div class="text-sm font-semibold ' +
+        'text-white">Délai de traitement : 24 à 48h</div>\n            <div class="text-xs text-gray-400 mt-0.5 leading-relaxed">Vous recevrez une notification ' +
+        "dès que votre vérification sera finalisée. En cas de question, notre support reste disponible.</div>\n",
+      '          </div>\n        </div>\n\n        <div class="h-px bg-dark-600"></div>\n\n        <div class="flex items-start gap-3">\n          <div class="w-8 ' +
+        'h-8 rounded-lg bg-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">\n            <i class="fas fa-lock text-green-400 text-sm"></i>\n ' +
+        '         </div>\n          <div>\n            <div class="text-sm font-semibold text-white">Confidentialité assurée</div>\n            <div ' +
+        'class="text-xs text-gray-400 mt-0.5 leading-relaxed">Vos documents sont chiffrés et traités dans le strict respect de votre vie privée, conformément à ' +
+        "nos engagements de sécurité.</div>\n",
+      "          </div>\n        </div>\n\n      </div>\n\n      <!-- Bouton de retour premium -->\n      <button " +
+        'onclick="_kycWizardClose();renderKYC(document.getElementById(\'page-content\'))"\n              class="w-full bg-gradient-to-r from-purple-600 ' +
+        "to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white font-bold text-sm px-4 py-3.5 rounded-xl transition flex items-center " +
+        'justify-center gap-2 shadow-lg shadow-purple-900/30">\n        <i class="fas fa-home"></i>Retour à mon espace KYC\n      </button>\n'
+    ].join("") + "    </div>"
   );
 }
 async function _kycWizardRunAnalysis() {
@@ -11489,87 +11878,91 @@ async function renderEarnings(el) {
     const periods = stmtData.available_periods || [];
     const orders = ordersData.orders || [];
     el.innerHTML =
-      '\n    <div class="space-y-6">\n\n      <!-- En-tête premium -->\n      <div class="relative overflow-hidden bg-gradient-to-br from-dark-800 via-dark-800 ' +
-      'to-emerald-900/20 border border-emerald-500/20 rounded-2xl p-6">\n        <div class="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full ' +
-      '-translate-y-1/2 translate-x-1/3 pointer-events-none"></div>\n        <div class="relative flex items-start justify-between gap-4 flex-wrap">\n          ' +
-      '<div>\n            <div class="flex items-center gap-3 mb-2">\n' +
-      ('              <div class="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center">\n                <i ' +
-        'class="fas fa-file-invoice-dollar text-emerald-400 text-xl"></i>\n              </div>\n              <div>\n                <h2 class="text-xl font-bold ' +
-        'text-white">Earnings &amp; Documents</h2>\n                <p class="text-xs text-emerald-400 font-medium">Official Income Documents · Registered in ' +
-        "England &amp; Wales</p>\n              </div>\n            </div>\n") +
-      ('            <p class="text-sm text-gray-400 max-w-lg">Téléchargez vos documents officiels pour vos déclarations fiscales, preuves de revenus ou tout ' +
-        'usage légal. Chaque document porte un numéro de référence unique.</p>\n          </div>\n          <div class="flex flex-col items-end gap-2">\n          ' +
-        '  <div class="text-xs text-gray-500">Généré automatiquement par</div>\n            <div class="text-sm font-bold text-white">') +
-      (stmtData.company?.legal_name || stmtData.company?.name || stmtData.company?.network_name || "LEADER") +
-      "</div>\n            " +
-      (stmtData.company?.registration_number
-        ? '<div class="text-[10px] font-mono text-gray-500">Co. No. ' + stmtData.company.registration_number + "</div>"
-        : "") +
-      ('\n          </div>\n        </div>\n      </div>\n\n      <!-- 3 cartes documents -->\n      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">\n\n        <' +
-        '!-- Document 1 : Monthly Earnings Statement -->\n        <div class="bg-dark-800 border border-dark-600 hover:border-emerald-500/40 rounded-2xl p-5 ' +
-        'transition-all group">\n          <div class="flex items-start justify-between mb-4">\n            <div class="w-11 h-11 rounded-xl bg-emerald-500/15 ' +
-        'flex items-center justify-center">\n              <i class="fas fa-file-invoice-dollar text-emerald-400 text-lg"></i>\n' +
-        ('            </div>\n            <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300">Mensuel</span>\n     ' +
-          '     </div>\n          <div class="font-bold text-white mb-1">Monthly Earnings Statement</div>\n          <div class="text-xs text-gray-400 mb-4">Relevé ' +
-          'mensuel détaillé de toutes vos commissions. Accepté pour déclaration fiscale dans la plupart des pays.</div>\n\n          <div class="space-y-2 mb-4">\n  ' +
-          '          <label class="text-xs text-gray-400">Sélectionner la période :</label>\n') +
-        '            <select id="stmt-period-select" class="form-input w-full text-sm">\n              ') +
-      (periods.length > 0
-        ? periods
-            .map((p) => {
-              const [yr, mo] = p.split("-");
-              const label = new Date(yr, parseInt(mo) - 1, 1).toLocaleDateString("fr-FR", {
-                month: "long",
-                year: "numeric"
-              });
-              return '<option value="' + p + '">' + (label.charAt(0).toUpperCase() + label.slice(1)) + "</option>";
-            })
-            .join("")
-        : '<option value="' + new Date().toISOString().substring(0, 7) + '">Ce mois</option>') +
-      ('\n            </select>\n          </div>\n\n          <button onclick="generateMonthlyStatement()" id="btn-stmt"\n            class="w-full bg-emerald-600 ' +
-        'hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl transition flex items-center justify-center gap-2 text-sm">\n            <i class="fas ' +
-        'fa-download"></i>Relevé mensuel PDF\n          </button>\n          <button onclick="generateOfficialLetterMonthly()" id="btn-letter-monthly"\n           ' +
-        ' class="w-full mt-2 bg-white hover:bg-gray-100 text-gray-900 border border-gray-300 font-bold py-2.5 rounded-xl transition flex items-center ' +
-        'justify-center gap-2 text-sm">\n' +
-        ('            <i class="fas fa-file-contract text-emerald-600"></i>Lettre officielle (fond blanc)\n          </button>\n          <div class="mt-2 ' +
-          'text-[10px] text-center font-mono text-gray-600">STMT-YYYY-MM-MXXXXX / LTR-YYYY-MM-MXXXXX</div>\n        </div>\n\n        <!-- Document 2 : Annual ' +
-          'Income Certificate -->\n        <div class="bg-dark-800 border border-dark-600 hover:border-rouge-500/30 rounded-2xl p-5 transition-all group">\n        ' +
-          '  <div class="flex items-start justify-between mb-4">\n            <div class="w-11 h-11 rounded-xl bg-rouge-500/15 flex items-center justify-center">\n') +
-        ('              <i class="fas fa-certificate text-rouge-400 text-lg"></i>\n            </div>\n            <span class="text-[10px] font-semibold px-2 ' +
-          'py-0.5 rounded-full bg-rouge-500/15 text-rouge-400">Annuel</span>\n          </div>\n          <div class="font-bold text-white mb-1">Annual Income ' +
-          'Certificate</div>\n          <div class="text-xs text-gray-400 mb-4">Attestation officielle de revenus pour l\'année fiscale complète. Idéal pour ' +
-          'déclaration d\'impôts ou obtention de crédit.</div>\n\n          <div class="space-y-2 mb-4">\n') +
-        ('            <label class="text-xs text-gray-400">Année fiscale :</label>\n            <select id="annual-year-select" class="form-input w-full text-sm">' +
-          "\n              ")) +
-      [new Date().getFullYear() - 1, new Date().getFullYear() - 2, new Date().getFullYear() - 3]
-        .map((y) => '<option value="' + y + '">' + y + "</option>")
-        .join("") +
-      ('\n            </select>\n          </div>\n\n          <button onclick="generateAnnualCertificate()" id="btn-annual"\n            class="w-full ' +
-        "bg-gradient-to-r from-rouge-600 to-yellow-600 hover:from-rouge-500 hover:to-yellow-500 text-dark-900 font-bold py-2.5 rounded-xl transition flex " +
-        'items-center justify-center gap-2 text-sm">\n            <i class="fas fa-download"></i>Certificat annuel PDF\n          </button>\n          <button ' +
-        'onclick="generateOfficialLetterAnnual()" id="btn-letter-annual"\n            class="w-full mt-2 bg-white hover:bg-gray-100 text-gray-900 border ' +
-        'border-gray-300 font-bold py-2.5 rounded-xl transition flex items-center justify-center gap-2 text-sm">\n' +
-        ('            <i class="fas fa-file-contract text-yellow-600"></i>Lettre officielle (fond blanc)\n          </button>\n          <div class="mt-2 ' +
-          'text-[10px] text-center font-mono text-gray-600">AIC-YYYY-MXXXXX / LTR-YYYY-MXXXXX</div>\n        </div>\n\n        <!-- Document 3 : Purchase Receipt -->' +
-          '\n        <div class="bg-dark-800 border border-dark-600 hover:border-blue-500/40 rounded-2xl p-5 transition-all group">\n          <div class="flex ' +
-          'items-start justify-between mb-4">\n            <div class="w-11 h-11 rounded-xl bg-blue-500/15 flex items-center justify-center">\n') +
-        ('              <i class="fas fa-receipt text-blue-400 text-lg"></i>\n            </div>\n            <span class="text-[10px] font-semibold px-2 py-0.5 ' +
-          'rounded-full bg-blue-500/20 text-blue-300">Par commande</span>\n          </div>\n          <div class="font-bold text-white mb-1">Purchase Receipt</div>' +
-          '\n          <div class="text-xs text-gray-400 mb-4">Reçu officiel pour chaque achat de package. Prouve votre investissement. Peut être déductible selon ' +
-          'votre pays.</div>\n\n          <div class="space-y-2 mb-4">\n') +
-        ('            <label class="text-xs text-gray-400">Sélectionner une commande :</label>\n            <select id="receipt-order-select" class="form-input ' +
-          'w-full text-sm">\n              ')) +
-      (orders.length > 0
-        ? orders
-            .map((o) => {
-              const d = new Date(o.created_at).toLocaleDateString("fr-FR");
-              const amt = "$" + Number(o.amount_usd || 0).toFixed(2);
-              return '<option value="' + o.id + '">' + d + " \u2014 " + o.package_name + " " + amt + "</option>";
-            })
-            .join("")
-        : '<option value="">Aucune commande</option>') +
-      '\n            </select>\n          </div>\n\n          <button onclick="generatePurchaseReceipt()" id="btn-receipt"\n            ' +
-      (orders.length === 0 ? "disabled" : "") +
+      [
+        [
+          '\n    <div class="space-y-6">\n\n      <!-- En-tête premium -->\n      <div class="relative overflow-hidden bg-gradient-to-br from-dark-800 via-dark-800 ',
+          'to-emerald-900/20 border border-emerald-500/20 rounded-2xl p-6">\n        <div class="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full ',
+          '-translate-y-1/2 translate-x-1/3 pointer-events-none"></div>\n        <div class="relative flex items-start justify-between gap-4 flex-wrap">\n          ',
+          '<div>\n            <div class="flex items-center gap-3 mb-2">\n',
+          '              <div class="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center">\n                <i ' +
+            'class="fas fa-file-invoice-dollar text-emerald-400 text-xl"></i>\n              </div>\n              <div>\n                <h2 class="text-xl font-bold ' +
+            'text-white">Earnings &amp; Documents</h2>\n                <p class="text-xs text-emerald-400 font-medium">Official Income Documents · Registered in ' +
+            "England &amp; Wales</p>\n              </div>\n            </div>\n",
+          '            <p class="text-sm text-gray-400 max-w-lg">Téléchargez vos documents officiels pour vos déclarations fiscales, preuves de revenus ou tout ' +
+            'usage légal. Chaque document porte un numéro de référence unique.</p>\n          </div>\n          <div class="flex flex-col items-end gap-2">\n          ' +
+            '  <div class="text-xs text-gray-500">Généré automatiquement par</div>\n            <div class="text-sm font-bold text-white">',
+          stmtData.company?.legal_name || stmtData.company?.name || stmtData.company?.network_name || "LEADER",
+          "</div>\n            ",
+          stmtData.company?.registration_number
+            ? '<div class="text-[10px] font-mono text-gray-500">Co. No. ' + stmtData.company.registration_number + "</div>"
+            : ""
+        ].join(""),
+        '\n          </div>\n        </div>\n      </div>\n\n      <!-- 3 cartes documents -->\n      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">\n\n        <' +
+          '!-- Document 1 : Monthly Earnings Statement -->\n        <div class="bg-dark-800 border border-dark-600 hover:border-emerald-500/40 rounded-2xl p-5 ' +
+          'transition-all group">\n          <div class="flex items-start justify-between mb-4">\n            <div class="w-11 h-11 rounded-xl bg-emerald-500/15 ' +
+          'flex items-center justify-center">\n              <i class="fas fa-file-invoice-dollar text-emerald-400 text-lg"></i>\n' +
+          ('            </div>\n            <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300">Mensuel</span>\n     ' +
+            '     </div>\n          <div class="font-bold text-white mb-1">Monthly Earnings Statement</div>\n          <div class="text-xs text-gray-400 mb-4">Relevé ' +
+            'mensuel détaillé de toutes vos commissions. Accepté pour déclaration fiscale dans la plupart des pays.</div>\n\n          <div class="space-y-2 mb-4">\n  ' +
+            '          <label class="text-xs text-gray-400">Sélectionner la période :</label>\n') +
+          '            <select id="stmt-period-select" class="form-input w-full text-sm">\n              ',
+        periods.length > 0
+          ? periods
+              .map((p) => {
+                const [yr, mo] = p.split("-");
+                const label = new Date(yr, parseInt(mo) - 1, 1).toLocaleDateString("fr-FR", {
+                  month: "long",
+                  year: "numeric"
+                });
+                return '<option value="' + p + '">' + (label.charAt(0).toUpperCase() + label.slice(1)) + "</option>";
+              })
+              .join("")
+          : '<option value="' + new Date().toISOString().substring(0, 7) + '">Ce mois</option>',
+        '\n            </select>\n          </div>\n\n          <button onclick="generateMonthlyStatement()" id="btn-stmt"\n            class="w-full bg-emerald-600 ' +
+          'hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl transition flex items-center justify-center gap-2 text-sm">\n            <i class="fas ' +
+          'fa-download"></i>Relevé mensuel PDF\n          </button>\n          <button onclick="generateOfficialLetterMonthly()" id="btn-letter-monthly"\n           ' +
+          ' class="w-full mt-2 bg-white hover:bg-gray-100 text-gray-900 border border-gray-300 font-bold py-2.5 rounded-xl transition flex items-center ' +
+          'justify-center gap-2 text-sm">\n' +
+          ('            <i class="fas fa-file-contract text-emerald-600"></i>Lettre officielle (fond blanc)\n          </button>\n          <div class="mt-2 ' +
+            'text-[10px] text-center font-mono text-gray-600">STMT-YYYY-MM-MXXXXX / LTR-YYYY-MM-MXXXXX</div>\n        </div>\n\n        <!-- Document 2 : Annual ' +
+            'Income Certificate -->\n        <div class="bg-dark-800 border border-dark-600 hover:border-rouge-500/30 rounded-2xl p-5 transition-all group">\n        ' +
+            '  <div class="flex items-start justify-between mb-4">\n            <div class="w-11 h-11 rounded-xl bg-rouge-500/15 flex items-center justify-center">\n') +
+          ('              <i class="fas fa-certificate text-rouge-400 text-lg"></i>\n            </div>\n            <span class="text-[10px] font-semibold px-2 ' +
+            'py-0.5 rounded-full bg-rouge-500/15 text-rouge-400">Annuel</span>\n          </div>\n          <div class="font-bold text-white mb-1">Annual Income ' +
+            'Certificate</div>\n          <div class="text-xs text-gray-400 mb-4">Attestation officielle de revenus pour l\'année fiscale complète. Idéal pour ' +
+            'déclaration d\'impôts ou obtention de crédit.</div>\n\n          <div class="space-y-2 mb-4">\n') +
+          ('            <label class="text-xs text-gray-400">Année fiscale :</label>\n            <select id="annual-year-select" class="form-input w-full text-sm">' +
+            "\n              "),
+        [new Date().getFullYear() - 1, new Date().getFullYear() - 2, new Date().getFullYear() - 3]
+          .map((y) => '<option value="' + y + '">' + y + "</option>")
+          .join(""),
+        '\n            </select>\n          </div>\n\n          <button onclick="generateAnnualCertificate()" id="btn-annual"\n            class="w-full ' +
+          "bg-gradient-to-r from-rouge-600 to-yellow-600 hover:from-rouge-500 hover:to-yellow-500 text-dark-900 font-bold py-2.5 rounded-xl transition flex " +
+          'items-center justify-center gap-2 text-sm">\n            <i class="fas fa-download"></i>Certificat annuel PDF\n          </button>\n          <button ' +
+          'onclick="generateOfficialLetterAnnual()" id="btn-letter-annual"\n            class="w-full mt-2 bg-white hover:bg-gray-100 text-gray-900 border ' +
+          'border-gray-300 font-bold py-2.5 rounded-xl transition flex items-center justify-center gap-2 text-sm">\n' +
+          ('            <i class="fas fa-file-contract text-yellow-600"></i>Lettre officielle (fond blanc)\n          </button>\n          <div class="mt-2 ' +
+            'text-[10px] text-center font-mono text-gray-600">AIC-YYYY-MXXXXX / LTR-YYYY-MXXXXX</div>\n        </div>\n\n        <!-- Document 3 : Purchase Receipt -->' +
+            '\n        <div class="bg-dark-800 border border-dark-600 hover:border-blue-500/40 rounded-2xl p-5 transition-all group">\n          <div class="flex ' +
+            'items-start justify-between mb-4">\n            <div class="w-11 h-11 rounded-xl bg-blue-500/15 flex items-center justify-center">\n') +
+          ('              <i class="fas fa-receipt text-blue-400 text-lg"></i>\n            </div>\n            <span class="text-[10px] font-semibold px-2 py-0.5 ' +
+            'rounded-full bg-blue-500/20 text-blue-300">Par commande</span>\n          </div>\n          <div class="font-bold text-white mb-1">Purchase Receipt</div>' +
+            '\n          <div class="text-xs text-gray-400 mb-4">Reçu officiel pour chaque achat de package. Prouve votre investissement. Peut être déductible selon ' +
+            'votre pays.</div>\n\n          <div class="space-y-2 mb-4">\n') +
+          ('            <label class="text-xs text-gray-400">Sélectionner une commande :</label>\n            <select id="receipt-order-select" class="form-input ' +
+            'w-full text-sm">\n              '),
+        orders.length > 0
+          ? orders
+              .map((o) => {
+                const d = new Date(o.created_at).toLocaleDateString("fr-FR");
+                const amt = "$" + Number(o.amount_usd || 0).toFixed(2);
+                return ['<option value="', o.id, '">', d, " \u2014 ", o.package_name, " ", amt, "</option>"].join("");
+              })
+              .join("")
+          : '<option value="">Aucune commande</option>',
+        '\n            </select>\n          </div>\n\n          <button onclick="generatePurchaseReceipt()" id="btn-receipt"\n            ',
+        orders.length === 0 ? "disabled" : ""
+      ].join("") +
       ('\n            class="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded-xl ' +
         'transition flex items-center justify-center gap-2 text-sm">\n            <i class="fas fa-download"></i>Télécharger PDF\n          </button>\n          <' +
         'div class="mt-2 text-[10px] text-center font-mono text-gray-600">RCP-XXXXXXXX</div>\n        </div>\n      </div>\n\n      <!-- Info légale -->\n      <div ' +
@@ -11743,41 +12136,43 @@ function _pdfKpiCard(pdf, x, y, w, h, label, value, color) {
   pdf.setFont("helvetica", "bold");
   pdf.text(String(value), x + 2.5, y + 14);
 }
-const _DEFAULT_LEADER_LOGO =
-  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAlgAAAB1CAYAAACSy58dAAA1wklEQVR42u29f3ydVZXv/15rP+ckaQu0TUspbVLEKpC0gFbkp1ZHZxjH67xmRlPGGb165zqojD9AhBaY" +
-  "mTRfUQqKjIO/HcerV+dqo150HGW8OppxrijcMmKbFrGAtAUE2vKjtEnOefZe3z+e5zRpoTRp0uQ5J/vzep1XmtOT5Jy9117rs37stYSIiIi6Rhe4XvCrF7fe1OT05VUzD2gR3puBlQWpeHvnuh277u" +
-  "gG7YEQd228WJlkX/uMbD0trknENIHCSoXjDXpr8l9IJFLq7APR4rwl8+AS8D+0an83dCv01IlC7nLQ651b3hVULgVfBXHxPBzOBosidp9VNr0lNxQSDcbYyNVVbXN/t+T0UjNIRArz/gLQrELV/CuB" +
-  "O3LiNxXnWQCTcuenMV2W6Rm0gFuagg2C7MXYjYRHxOShoGzH2E" +
-  ("5Vt8HGx6EvfabueVSgL1CXBDbTnZp0/JVJ8mdRd45KdQZQB/4Oq26+7DnOVib7pc6Pg55ZYNkHqILtQ+RpjF0i/BbjwRDsPhK2MzS0A7YO5XI+4vOtdEWU/UREX56tf4HsLQ6zdHf2/WapH4F/VABM" +
-    "wkki5fOGuULEYR0Sq54YGdXYmekq4PIFC2Yi6afMsCJFr3L4iuFAzh/BuaYQco6IO6PYHERGfHEgoBiIQdl2G533g2ySEO4I6M9JmzZD775nevh9vn4clZrulFNFXNSdY7KVNtqFOlvEvaT4/FsO+I" +
-    "KAOgPzVUrNDxvL7gb+n4ndRsVvgLsfHuFwFIpsJWAVsCJ5CimEBNG99Sv4MgTBg6VgSVQEhw1yKMKeuBRjw9osepVeVfZrW1Sfvy+YFyiUvBmQGmrw4ssWL27p2bFjgKmNUD6dn01fML130Kod+A8Q" +
-    "ydnWXEHngqxA3VuUAKWhbSadPxOTfw3O/5DBLQ8Me/hdDnoBfJ") +
-  ("3ozsGoO0fvvEBwmUyPam3rSfYPln8FKSHSLkg7yO8JBmV5ymzZnWLyvSB8j+rGjcNka+plP8kWukihWMtoOab1K/eWK0OzGOYelbuiFDdkXUh0geuBdM3i1rOccNlgRq60gJur3swcLGrRwdOAO7tB" +
-    "eqaMYJnmZzMPDxXYgz+kfjTL0kMAkmRGx7UjrNLAXit13iZob6j6b0Pvb4d/aZdCb8HrtaLuHCMZGYOtrHfZJ5f9YNRKS5BjReQViLxC8R+yUuftIro+qP8mg73bDrIxk060olGLiKhPUko3JKLyKR" +
-    "VxPnuukDkVA19WETM7O+qdiXJIJMkekJGt1GcPZoq4VyP6GS25fikv+wLJ8pdn29Cbpwy7InGJqGfZd7nsa0a4vIc0BZyIOxf0Jg26UcrLv0TScUHORH3+85Mq+1HRRUTUGdaD9oIfWNz6vhaVFRUz" +
-    "r3Vwlg25AGBzvMBwFPS41DIRNYPjEeYK7q2q9El52b9T6rwoMz") +
-  ("C9NU8+Eq2IBiBd+wmXZSnQ1APHCvpmVfcTKS37AeVlrx1BtCYtYxIJVkREHaEbdBX4v1407wUlR/dgsFAH51hTA7CzuiHpHfYmI46ewcnTbKkHM0FfppJ8VcrLbqfU8cb8tZNqbCIijr7sM8LRyGVf" +
-    "9FWKfkdKy35AsmwlWd1vGG51EglWREQE0JkTk9TxyZLojJAVrRSarAhIaoaInFxZ2Lo0J4qRYE0a2UJqUS1BX6xS+icpLf8prvPCyTQ2ERFTJ/shiOirVOXHUl7+ZZo6n58Xw8vR5EGRYEVE1AnWg1" +
-    "sF/srFc/9bi8qrB4OlUh9pHjHwTSrOSpwVdc+UbEHu2YcAqReRc9W5W6W8/Ks0dSydDGMTETF1so9mRMtM0D/XIP9Pk85L8xccNQcjHqaIiDpAN2gXhO4l808oqX64YnWRGhwJy6rwszqsiCmDDhOt" +
-    "EAS9SE3v0GTZe8hqVGI0K6KRiZZk9YkyG01uktLyf6Pc0ZE7GP") +
-  "n/R4IVETGt0Jk1QrJBH/6u" +
-  ("rNLqDZP6Or/qDczs7Hxcjo+7OtVEC83qVGQ26j6WFQOf+sLM2HRNuLGJiCgO0TKDNBWRVyjuNkrL/oJMJ9lE8qJIsCIiCo6uPDW4uq31dc1OL8p7XtXVDbBaHRZwyuDCOYsB6476p2DGRl+llH6mpW" +
-    "VvGnHTMO5RREMKfnbz0HvgWBX3eSl1fho6ykCYqFYm8fBERBRcEXSAdS+de6yK3BzyDoxH8otsaocCZ3VYTptV5SUwXLAfUShjMwdx/1NKnR8jI/Eh9s2KmAYOhhdJ3i4l/QEtL1iUORjjT5VHghUR" +
-    "UWB0Zx3bw+CQfLBFZUnVjqxjuwElEZWM6EwJLG8lLarnAfRHglVQY+O9SPIeKS37PnScMFHGJiKiwA6Gy6O4L9O0+d8pdZ6RpcrHJ/eRYEVEFBS1cTjvb59zfknlkoEjTA0ahESEqoWfBWyfm6JIlo" +
-    "AEA8POBVgb67AKamzIjY17pZbcv1M6rXMijE1ERMFFPwGfInKy" +
-    ("ov9GctrLxiv3kWBFRBTX0NHdQbmMflIRHfn8WDlWWUCRazG7pFlVbWrIjaZmGLLs8pMXHC/jSHdGTIaxSVNEXqC4H2UjRyLJipgWJMsjzFVx38Od9qrxyH0kWBERBUQ3uF7wQ0/NW92senrFrHaN+E" +
-      "iYmg4FM0J4bN323V/c6/0/zFBJDNLJ1l4eQlnl2FK1eiZAb9RBdWBsZL6q3uqalv1uJFkR00DuHVhAZKY69y2S014+4mZtJFgREfWMWmrwqva5HU65epy3Bk1BfOCJQV+5rxu0afuudw56+1Hz1JCs" +
-      "4AQEiXVY9WRskJlm8m2aTnt1JFkR0wBak3uV5NuUTntRVos4NpIVCVZERMEsWleNGZl8qqTSHPLnj4hdgTkRELv/ow8/vROgB7w1JRdVze4riSSTnC4UA0w4v0a44pbXi7GhWc3dQtJ5fiRZEdND7o" +
-      "NH5DjB/TPNnW15+xIdwy+IiIgoCrrznldr2lrf0eL05RMwDie4") +
-    ("rP7qbshaI6wHvW7rbx8bqsrrzWyvE8Qmr+hd06zS/YzVJ885rgdCrMOqG2OTe/T6reHC99jCIaKh/V2X3ap1iyRwC5w+kzE4vJFgRUQUh1zpWvBXLpq7WEWuqwQLTFBD0UDYBFlKbhX4bkg+8tBjv6" +
-      "j48F8dojrcxfjoqiuQFKykMl/TZBnAqqiH6sXY1Dz6VsX9MyxbMFaPPiKiPklWmgrJi6Wcfp5snNSoJh3EgxERURDUxuGoyt83qcz22fy+cUV3hlsjyKb8bxhAD6TdkNzw4O5vVoK/Oq/HmqxUoU9E" +
-      "MMK5AB0xglVvHn2KuOdJ2b6edb7uEuIeRjS23CeQVoXSRdmQ6L40J1mRYEVEFB3ra+NwFs19fbPTP56gcTgm4CpmaclxD0D/iChVjWSt2777un0hfGkSbxZmzU5NzgfYPHXd5SOO3NikQnKBlOTmvB" +
-      "FpTBVGTAO59x7VGygtXzFiQHQkWBERRYWB9IOtaT9ujjr9WGo2") +
-    ("If2hDExFAH47J23ZlpOqA8jMWvBd4PaWd1086MNtkxTJkjR7Fyu6lyxp7s3+XoyA1CPJkuRiLXW8NdZjRUwHoc/Up5RUwhdgadPw85FgRUQUEr2gPRDMkuubVRalRpAJOJsC5gTM7N7Ld+wYyIcr28" +
-      "Gv6QC7eStDJXhDNdiOkogLR/F2n4B6M1Nh8WB172kA3ZFg1aO9ceADoh+nfPoLYz1WxDSR+RSS5VJq6gY8dGkkWBERBcRwarD1FWXVv8xTgxNyLmuz/xDb/FznvQfCenA923c9VA3h9WY26PKfP1qf" +
-      "28A3qYg4Ozvqorr26A3cTCV8IdvDWI8VMS1IlheR91NadnruWLhIsCIiCnZSe4HuJUuaReVTcoDhmsA/YrLxcK+p3Sy8Ycfu29NgbyurqEzCzUIlq8PqjHVYdWxs0hTceZp0vj9vxhjtSkSjOxaAKy" +
-      "n298+t3yIiIqYE60F7wQ/4p/9mhpNTxzMO5xBwadbVczMcvph8")) +
-  ("f9H7jl1fGfTh2pajW4+laTb4+aXdK0lWxcHPdU6yQkClm/KpL4TeMMFyHBFRRMfCI8lKysvfQJYqdJFgRUQUAN2gq8BffeL8M8sqV0zQrcGRMAWpWtjnLdwL0DGKKFFPHslat33X3wyE0NtylG4W5n" +
+const _DEFAULT_LEADER_LOGO = [
+  [
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAlgAAAB1CAYAAACSy58dAAA1wklEQVR42u29f3ydVZXv/15rP+ckaQu0TUspbVLEKpC0gFbkp1ZHZxjH67xmRlPGGb165zqojD9AhBaY",
+    "mTRfUQqKjIO/HcerV+dqo150HGW8OppxrijcMmKbFrGAtAUE2vKjtEnOefZe3z+e5zRpoTRp0uQ5J/vzep1XmtOT5Jy9117rs37stYSIiIi6Rhe4XvCrF7fe1OT05VUzD2gR3puBlQWpeHvnuh277u",
+    "gG7YEQd228WJlkX/uMbD0trknENIHCSoXjDXpr8l9IJFLq7APR4rwl8+AS8D+0an83dCv01IlC7nLQ651b3hVULgVfBXHxPBzOBosidp9VNr0lNxQSDcbYyNVVbXN/t+T0UjNIRArz/gLQrELV/CuB",
+    "O3LiNxXnWQCTcuenMV2W6Rm0gFuagg2C7MXYjYRHxOShoGzH2E",
+    "5Vt8HGx6EvfabueVSgL1CXBDbTnZp0/JVJ8mdRd45KdQZQB/4Oq26+7DnOVib7pc6Pg55ZYNkHqILtQ+RpjF0i/BbjwRDsPhK2MzS0A7YO5XI+4vOtdEWU/UREX56tf4HsLQ6zdHf2/WapH4F/VABM" +
+      "wkki5fOGuULEYR0Sq54YGdXYmekq4PIFC2Yi6afMsCJFr3L4iuFAzh/BuaYQco6IO6PYHERGfHEgoBiIQdl2G533g2ySEO4I6M9JmzZD775nevh9vn4clZrulFNFXNSdY7KVNtqFOlvEvaT4/FsO+I" +
+      "KAOgPzVUrNDxvL7gb+n4ndRsVvgLsfHuFwFIpsJWAVsCJ5CimEBNG99Sv4MgTBg6VgSVQEhw1yKMKeuBRjw9osepVeVfZrW1Sfvy+YFyiUvBmQGmrw4ssWL27p2bFjgKmNUD6dn01fML130Kod+A8Q" +
+      "ydnWXEHngqxA3VuUAKWhbSadPxOTfw3O/5DBLQ8Me/hdDnoBfJ",
+    "3ozsGoO0fvvEBwmUyPam3rSfYPln8FKSHSLkg7yO8JBmV5ymzZnWLyvSB8j+rGjcNka+plP8kWukihWMtoOab1K/eWK0OzGOYelbuiFDdkXUh0geuBdM3i1rOccNlgRq60gJur3swcLGrRwdOAO7tB" +
+      "eqaMYJnmZzMPDxXYgz+kfjTL0kMAkmRGx7UjrNLAXit13iZob6j6b0Pvb4d/aZdCb8HrtaLuHCMZGYOtrHfZJ5f9YNRKS5BjReQViLxC8R+yUuftIro+qP8mg73bDrIxk060olGLiKhPUko3JKLyKR" +
+      "VxPnuukDkVA19WETM7O+qdiXJIJMkekJGt1GcPZoq4VyP6GS25fikv+wLJ8pdn29Cbpwy7InGJqGfZd7nsa0a4vIc0BZyIOxf0Jg26UcrLv0TScUHORH3+85Mq+1HRRUTUGdaD9oIfWNz6vhaVFRUz" +
+      "r3Vwlg25AGBzvMBwFPS41DIRNYPjEeYK7q2q9El52b9T6rwoMz",
+    "C9NU8+Eq2IBiBd+wmXZSnQ1APHCvpmVfcTKS37AeVlrx1BtCYtYxIJVkREHaEbdBX4v1407wUlR/dgsFAH51hTA7CzuiHpHfYmI46ewcnTbKkHM0FfppJ8VcrLbqfU8cb8tZNqbCIijr7sM8LRyGVf" +
+      "9FWKfkdKy35AsmwlWd1vGG51EglWREQE0JkTk9TxyZLojJAVrRSarAhIaoaInFxZ2Lo0J4qRYE0a2UJqUS1BX6xS+icpLf8prvPCyTQ2ERFTJ/shiOirVOXHUl7+ZZo6n58Xw8vR5EGRYEVE1AnWg1" +
+      "sF/srFc/9bi8qrB4OlUh9pHjHwTSrOSpwVdc+UbEHu2YcAqReRc9W5W6W8/Ks0dSydDGMTETF1so9mRMtM0D/XIP9Pk85L8xccNQcjHqaIiDpAN2gXhO4l808oqX64YnWRGhwJy6rwszqsiCmDDhOt" +
+      "EAS9SE3v0GTZe8hqVGI0K6KRiZZk9YkyG01uktLyf6Pc0ZE7GP",
+    "n/R4IVETGt0Jk1QrJBH/6u",
+    "rNLqDZP6Or/qDczs7Hxcjo+7OtVEC83qVGQ26j6WFQOf+sLM2HRNuLGJiCgO0TKDNBWRVyjuNkrL/oJMJ9lE8qJIsCIiCo6uPDW4uq31dc1OL8p7XtXVDbBaHRZwyuDCOYsB6476p2DGRl+llH6mpW" +
+      "VvGnHTMO5RREMKfnbz0HvgWBX3eSl1fho6ykCYqFYm8fBERBRcEXSAdS+de6yK3BzyDoxH8otsaocCZ3VYTptV5SUwXLAfUShjMwdx/1NKnR8jI/Eh9s2KmAYOhhdJ3i4l/QEtL1iUORjjT5VHghUR" +
+      "UWB0Zx3bw+CQfLBFZUnVjqxjuwElEZWM6EwJLG8lLarnAfRHglVQY+O9SPIeKS37PnScMFHGJiKiwA6Gy6O4L9O0+d8pdZ6RpcrHJ/eRYEVEFBS1cTjvb59zfknlkoEjTA0ahESEqoWfBWyfm6JIlo" +
+      "AEA8POBVgb67AKamzIjY17pZbcv1M6rXMijE1ERMFFPwGfInKy" +
+      ("ov9GctrLxiv3kWBFRBTX0NHdQbmMflIRHfn8WDlWWUCRazG7pFlVbWrIjaZmGLLs8pMXHC/jSHdGTIaxSVNEXqC4H2UjRyLJipgWJMsjzFVx38Od9qrxyH0kWBERBUQ3uF7wQ0/NW92senrFrHaN+E" +
+        "iYmg4FM0J4bN323V/c6/0/zFBJDNLJ1l4eQlnl2FK1eiZAb9RBdWBsZL6q3uqalv1uJFkR00DuHVhAZKY69y2S014+4mZtJFgREfWMWmrwqva5HU65epy3Bk1BfOCJQV+5rxu0afuudw56+1Hz1JCs" +
+        "4AQEiXVY9WRskJlm8m2aTnt1JFkR0wBak3uV5NuUTntRVos4NpIVCVZERMEsWleNGZl8qqTSHPLnj4hdgTkRELv/ow8/vROgB7w1JRdVze4riSSTnC4UA0w4v0a44pbXi7GhWc3dQtJ5fiRZEdND7o" +
+        "NH5DjB/TPNnW15+xIdwy+IiIgoCrrznldr2lrf0eL05RMwDie4") +
+      ("rP7qbshaI6wHvW7rbx8bqsrrzWyvE8Qmr+hd06zS/YzVJ885rgdCrMOqG2OTe/T6reHC99jCIaKh/V2X3ap1iyRwC5w+kzE4vJFgRUQUh1zpWvBXLpq7WEWuqwQLTFBD0UDYBFlKbhX4bkg+8tBjv6" +
+        "j48F8dojrcxfjoqiuQFKykMl/TZBnAqqiH6sXY1Dz6VsX9MyxbMFaPPiKiPklWmgrJi6Wcfp5snNSoJh3EgxERURDUxuGoyt83qcz22fy+cUV3hlsjyKb8bxhAD6TdkNzw4O5vVoK/Oq/HmqxUoU9E" +
+        "MMK5AB0xglVvHn2KuOdJ2b6edb7uEuIeRjS23CeQVoXSRdmQ6L40J1mRYEVEFB3ra+NwFs19fbPTP56gcTgm4CpmaclxD0D/iChVjWSt2777un0hfGkSbxZmzU5NzgfYPHXd5SOO3NikQnKBlOTmvB" +
+        "FpTBVGTAO59x7VGygtXzFiQHQkWBERRYWB9IOtaT9ujjr9WGo2") +
+      ("If2hDExFAH47J23ZlpOqA8jMWvBd4PaWd1086MNtkxTJkjR7Fyu6lyxp7s3+XoyA1CPJkuRiLXW8NdZjRUwHoc/Up5RUwhdgadPw85FgRUQUEr2gPRDMkuubVRalRpAJOJsC5gTM7N7Ld+wYyIcr28" +
+        "Gv6QC7eStDJXhDNdiOkogLR/F2n4B6M1Nh8WB172kA3ZFg1aO9ceADoh+nfPoLYz1WxDSR+RSS5VJq6gY8dGkkWBERBcRwarD1FWXVv8xTgxNyLmuz/xDb/FznvQfCenA923c9VA3h9WY26PKfP1qf" +
+        "28A3qYg4Ozvqorr26A3cTCV8IdvDWI8VMS1IlheR91NadnruWLhIsCIiCnZSe4HuJUuaReVTcoDhmsA/YrLxcK+p3Sy8Ycfu29NgbyurqEzCzUIlq8PqjHVYdWxs0hTceZp0vj9vxhjtSkSjOxaAKy" +
+        "n298+t3yIiIqYE60F7wQ/4p/9mhpNTxzMO5xBwadbVczMcvph8")
+  ].join(""),
+  "f9H7jl1fGfTh2pajW4+laTb4+aXdK0lWxcHPdU6yQkClm/KpL4TeMMFyHBFRRMfCI8lKysvfQJYqdJFgRUQUAN2gq8BffeL8M8sqV0zQrcGRMAWpWtjnLdwL0DGKKFFPHslat33X3wyE0NtylG4W5n" +
     "VYIHLyvl+3Pr+2JlEy6tWjDwZuhpj7O8CgK65KRKOLvYCZWrg2K3jvDRyUfYgKLSJiCk5mZzYSxwVnn3IipfGMw3lWdlUbkWOy/f4Hdz+ck6fRpOFsbUaytFwtv3XQhzubjlIkK2R1WEmScFbUR43h" +
     "0Yu411DufN2RzG2LiKgzaHbJIzmFUtObM7V7YLuSqNAiIiYZ6/Po1fPa5r27xck5QzbucTjPSpRcVm58T2/eioFR1jlJrRnpww/vC5q+Pg32SCLibOJvFlrGKOX8KBWN4tFjCtfBihL0GrHgPaLhZd" +
     "5M4Iqs6W7fAS1nIsGKiJhE5KnBcE37cc9LxD4wFCzI0alXsYxf" +
@@ -11792,8 +12187,8 @@ const _DEFAULT_LEADER_LOGO =
     ("hgo4B+pyx1cyY2NpfUYmco9euJDmzrbGGQRtNX0VdeeEwrlc/rXW7qMOZT+AmMAf7afjkWdM5yjW8UXwwMZroAuNteB6wZfKvqdF9flVszABw5wN8LVi85KItqgkzSrOoBrM+p/24csJdssIb3tCsH" +
       "+czvbd3696ubQp+5vjTf2ERMBEz4Oxt5RoEA6+xyzcavifYeE+YDAzNkmSE66Qe/j15NGnkMzQYG/IPXptnD0j6s6Jk/2nzfx3zcK/Gv5OzH6bkawkyYv4fX0QLVEIIsbvZJ3d+9JYgxURcZTQBa4H" +
       "0jWLW89KhEvz1OCRGhkji1SZQFIWcSpQCYY3+1Ua7CcoP0q93DHjwZ339oxQSD0TrJxqJKtnx2M3r26be+pM5y7ZN46id8nvmQt23kQTwjoxMgJ2n1U3vSZ7oqNMs53ggp0eTH4HeK2IvjBfmlA/zn" +
-      "FW+mcmq4CbRl5fj4jYL/tm26za/9rhJ8+YTeJPU/W/a9AluGXZ")) +
-  ("/3ifRUYLi6xVoOhJJE2nk3JHJFjTU65dVuC+x2W3HSYbfZ4GjloN8wbohmRI+LQTcVWzoGOMzuQ1TkEgKYk4JzAUrFoN4XYzudWwf713x667eqEy8ufWg+vKfu6orHPtZmHv9t3vWdo+74XNKq8ePE" +
+      "FW+mcmq4CbRl5fj4jYL/tm26za/9rhJ8+YTeJPU/W/a9AluGXZ"),
+  "/3ifRUYLi6xVoOhJJE2nk3JHJFjTU65dVuC+x2W3HSYbfZ4GjloN8wbohmRI+LQTcVWzoGOMzuQ1TkEgKYk4JzAUrFoN4XYzudWwf713x667eqEy8ufWg+vKfu6orHPtZmHv9t3vWdo+74XNKq8ePE" +
     "KSZaCpGcF4UffSucf2bN39FAcW706HM6nsv5m2ucIg2zxsA74Di6/R8uwLzXgXoq/KuXbRjU1ucAIissLKp7+Qyi/vyT9jHRMtzXXnYwrzp+BzNKLuNOWASRN3PUHKbQFug451UqIL+BskOSUjWfvT" +
     "s0X8LB5covgLApFgTUuIypPQl3IUhvhG7Cc4ugr8mvbW1S2qLx4I5nVsxeYeIBFxZUEHg1nV7OcB+7oJ/3Ldtl13H0yo8hYHoQds1dHvim79YL1ga9KhP60m5Z+VRZcOZSRyTNGVrOEoVlKdP1BhGf" +
     "DTLtDe6dfZ/aDoVJfAowJ9A76y4xbgFsqdf6ImH8qMTVp0kiVZ" +
@@ -11808,8 +12203,8 @@ const _DEFAULT_LEADER_LOGO =
     ("zYOi2Euz71fW8b7KFOlOaWjdOTaS1eWsOnQl5rfkqdqCkXULIBicFglWRMQEoTMjQ8FjNzWpzPVmdlDtldWagbaoJJg9Ug32t+bc6R/c9thf3/jbJx5YD64bNO+cXlc3hnrAd4HbNX/X2wdC+I+ZGc" +
       "kaNTE08E0qYiE5O38q6qfnxIYUViahsulGo/qlrG9QcXtlmZATrONjVDJiHCQLYOtQkLAmbwVSSNJpxtKowCIiJgC1cThr2lr/sFn1ooPH4eTNOKVFxQk8MRjCB4NzZ1y7becHrrv/0Ue6IbF8XmFP" +
       "/V5jtw6wz24gFWTVUAgbS4KMfZyOnJ8T1miID2ts+jygVqm8G/MP5B59weQnL/xFOjPS3OuJ0cmII0Y+FaCy+TuG/wW4gsl8rUjPTooEKyJiAk5UB1j30rnHisjfhxHjcHJy4ZtVnIIfDPbZVKovum" +
-      "7brr8eSax6IJUGIRTdIB/atvNhH+SniYiMQflpmhWmvbQbkjyC")) +
-  ("Fw3xYUlWl8DWp4KE9+cefdHkSPKm3W3M6Dg+blnE+LFSgSDol/Kyp1C0YymiCyLBiogYP6FwPRAGh+SDzSpLqtmtQTXwiYg2qbg0hFt9sHOv27bz7dc/8ORv1oNrNGK1Pl+HzZBc0z7vi02JvH0wWB" +
+      "7brr8eSax6IJUGIRTdIB/atvNhH+SniYiMQflpmhWmvbQbkjyC"),
+  "Fw3xYUlWl8DWp4KE9+cefdHkSPKm3W3M6Dg+blnE+LFSgSDol/Kyp1C0YymiCyLBiogYP6FwPRAGh+SDzSpLqtmtQTXwiYg2qbg0hFt9sHOv27bz7dc/8ORv1oNrNGK1Pl+HzZBc0z7vi02JvH0wWB" +
     "htsXvWD8sQ4flDJ847uUbWooSNxqPvclQ2f8PwP8/qsQpVl1Kb4T2Lii2pkem4bxFHjqzdR8D/a97hPaE4elRyjjU73iKMiBgHauNwrmqff74TuyRPDQpgLVnLhQeqZtd8cNuur9RISP8U9a06yiQz" +
     "WQXpe553/IJjffhqWfUVAyEckCYdjWKyLNqXDCbhLKABOn9PFh4VwMTkowhfG+7ZWBiPPoA6FT0pwM/zJpJx2yKOWKAAqLCVkm1H9KQ8clscoRc7NhKsiIhxeirvXrq0icrjn1JUq2aVJpVywKh6u3" +
     "nAKmtv2vHU7u7cY1/VgN3JuyHpgfT9i2af3uT9NxLVpftCONLZ" +
@@ -11824,8 +12219,8 @@ const _DEFAULT_LEADER_LOGO =
     ("ABMLf5YHs4qkfy0f9vxYVFoREaM3/AZw/QNP/mbdtkfvq90kbNTPO7J319Vt865pRr8SoKViFiagmP1wCE5A0PMAOmIEa5QiCoATY2YxOb/FywoR44VCb6C8/BQRfQ14K1hk1PLTuC3WYEVEHKGLMh" +
       "U9mgxkLUgnSK34e3M+ZHkih0Tn5NFfDKXWttZPNjl522Awb9k04aPumEl+99qw82qEK0rdaLFiFgzNPYh0FcLmYAyNeF+xDiviCLBSoS8VC9ciSVPe761ABGu/rN8XCVZExJERgKNuHLpBN2eDpKUz" +
       "H6+T/117jgiGTcDfTXogffcJs+YfV27+p7LTV+/zWWf2ybLWlvfDwjjzitbWY3p27doTjfJoxBKjtLcNSeYWsvAX9uUUXmKrhogjcB5K0FfFdbxBxL2B4rUjoXabUZBfRYIVEVEQdIPWIlM9kD5bRK" +
-      "p78bFzB115iQvWbsjJiC0Wo92EWZZW3rTuoT278uiaHeF7SGoN")) +
-  ("VEvivl5SObVGribZFKs3LFFZwCy/jF3c1gXaG/thHc6zN0jOAKcF8+xraZPH4z5FHDm52lCldOoyRT+XzbcsZG2mQkgDsiUSrIiIKXR1ukA7MkLlDyZU3YvmLq6KdZroi0Q4w4xTh0TanTG35DTXLE" +
+      "p78bFzB115iQvWbsjJiC0Wo92EWZZW3rTuoT278uiaHeF7SGoN"),
+  "VEvivl5SObVGribZFKs3LFFZwCy/jF3c1gXaG/thHc6zN0jOAKcF8+xraZPH4z5FHDm52lCldOoyRT+XzbcsZG2mQkgDsiUSrIiIKXR1ukA7MkLlDyZU3YvmLq6KdZroi0Q4w4xTh0TanTG35DTXLE" +
     "IiwtM+7Gh6aM+T4whZ7B97c+XiOReW1f2TInOP1k3BUcKXRJLUu3OB22Id1uFQK/y1V+9v61k0mDyW/ePRuJcRY/C3ViSwoUq58zQ1/RdEZoMPBep9NcKREMHCI1QHt0aCFRExdaQqHRmRueak2UvE" +
     "J2cH5eUY51SwU0riZiV5OMobeIxgUMnqoQzwTUJiZrf3QNoFbqxRnlpdVw+ka9pa31FS+bghbrxjbyZQZ50PfHRzTA8exgj1euiYJSIX5j0YC+fdi9iDcRMjRifPSK3eCjZUaer4fTX5IiLHFzM1CE" +
     "AAcQZ3w9anIsGKiJgE5DfydCSpuhhKre3zXyoWfg/l1SFwZpOT" +
@@ -11840,8 +12235,8 @@ const _DEFAULT_LEADER_LOGO =
     ("sN5gxiSNvRkPg5DUDBWef8eiY06ufZYoeZAVBvelWl62RkjeOOztF3QvA3dk/4otGiKeccyTAx/kBKueyJUmkO4LKd8hL9CPEazpCT81wzElgClI3ad5ukHXZqTJX7xw4Yx5paG3SaqXlZ2cVDVhIC" +
       "tWl6NdLC5AENn4XK+pjb3ZDO7q9nmfaFJ5+2CwkBcMFJ2sSF6HVTJpegns+TWxDqsWuapqsuztoNeBLzC5EgeBgN6efX98HZ///ZdQpvA4RBRTLpwzCz+C/u3QrdATCdb0hLqpcw4UqJbq2bjV0oE9" +
       "wDXtrX8O1WvK6k6rGiOJ1WQYO/UGItIP8Gz1SbV6q8sWHzt3ppa/Unby+/u8pZJVj9aLh2gCiIULgP81vc9uVtCeRa46rwS9HoInk7ci7met8eJO0oG7sqd665gcOze1y7wv2uzCOj2Iif6P7NsfKx" +
-      "AJ1nSj2SBilv6dwC/ycKxN7t/3gnd1qWhrNUCrwF/ZPue8Eu7a")) +
-  ("ksor/eQTqxrp0IpZ1Xt+DdB/EMGqkav3LWw9dYZKb0llWU6u6urcC4g3MJNzyLveTz/l3aXZeelLYfkcKdtN4N6S9QQqcjrFAqgz5Gdw35PUffQxdGNhW154PfnRpGrztmFdGlEUoQB1WLqNavN3s6" +
+      "AJ1nSj2SBilv6dwC/ycKxN7t/3gnd1qWhrNUCrwF/ZPue8Eu7a"),
+  "ksor/eQTqxrp0IpZ1Xt+DdB/EMGqkav3LWw9dYZKb0llWU6u6urcC4g3MJNzyLveTz/l3aXZeelLYfkcKdtN4N6S9QQqcjrFAqgz5Gdw35PUffQxdGNhW154PfnRpGrztmFdGlEUoQB1WLqNavN3s6" +
     "f6PMRbhNOSYDln30wHt/ykGO+nPhZtVR61et/ChfNakmo3wl8lIjI4+cSq9p4sEREf7OFHk53b4cAbhDVydUV766vKyFdVZd4Uj70ZDzTN+vedduWiuYtueHD3ju6saWujpgnzLtZdOWnq9bWi8KwV" +
     "Ax8Cd3IdXV1HLNyaCedKzW491qklFfclKpt+E3VnxIFOhFPEPg8b9g1HmSPBmqbiYMdlQtDiYGAKogF9vl4UxPosleYBf037/C6h+uGSypLBYDaUjZKZEgMneYG7h61ffIDBEYRDuvKO8Vctnvffnf" +
     "BpkKRS7JuCh/24Br5JtWXIwouBHZ2NOZdQGb6fDvTmT58+05Xt" +
@@ -11856,8 +12251,8 @@ const _DEFAULT_LEADER_LOGO =
     ("Dr0yhYCZfEZLQ3sLsrYBEgc7fxWqvDb3Dg83U29CBW7/rbu21rc75OMmkhR5Pl/tBqGI3bmmfd7FZZHPeIyqWdDGrquUTIPJ+cOyE1FA4+PBqeHvxG/5t0xkG2P2oGK3UBoagmaBoSKsc8ls108s5S" +
       "3EwvtJXPckMUt/SLX/fz4XDyiiMq4Z/VmILC2mY+aPrW8zJQuLRxkmP+Q+ctzNVe3z1jWprK4Es2CFv3WnQ8Ew+F0Hb0zNyGcQNfqMPkmz5PaZV7S2HtOza9eeSSbjEWNQMmL2UYPwbLUpdfyx2gpn" +
       "j0i3R3mbPHaVqRy/19TekTsPh9Q/SbE/iBVNcfrstrjWubIwK5BRyriBMDDZ5KoHwsNQurpt3heanf75Ph9Ssr5X9TCfD4fMC/lmSmP2hTqYhmtqZonKApr8MuC2LtDeWA9TJARQxdJ7QrXy9Wzb+h" +
-      "pof6xAESLL7dGUh9KmE7/ykCSEyhWkW7YeLotVZIJV1NuD9Tbl")) +
-  ("ux7WVplEUlMjV5fMnz9rTktY36T6mn0+1F3tUsjTqQ3PrA5yckoiiXfuHOC2jmlALOvPeXMK4YOwdaiholfDuirao+kp22mWGvTftHTLpzLZfu7Ut8ZFi5hO6MqK2cN7lxw3e3aLfa+s+pqBEKp1Wh" +
+      "pof6xAESLL7dGUh9KmE7/ykCSEyhWkW7YeLotVZIJV1NuD9Tbl"),
+  "ux7WVplEUlMjV5fMnz9rTktY36T6mn0+1F3tUsjTqQ3PrA5yckoiiXfuHOC2jmlALOvPeXMK4YOwdaiholfDuirao+kp22mWGvTftHTLpzLZfu7Ut8ZFi5hO6MqK2cN7lxw3e3aLfa+s+pqBEKp1Wh" +
     "g+HRVr7drr+QCbY3qwYJzfKaQbQ7X5f3GIm1UREXVIrjy4BPP3WlXelst27UZpJFgREd15OmlN+3FzZlrp1iaVC/YFS4FSXJ36IVipgcFL3r10aVOeHowefDGMkAESvKyBDdV8lmIkwBEN4DioQNgb" +
     "8F2w8XFGOZUgEqyIaUOueiCsPnnOcUrpe00qZ+8LlmqcZlBf7ArUm5kKbbMGnjol39tIsArh4SfOLP0OftN3G6fvVcR0F+yMSIkGwlupbvnPLDU4urrPSLAipgu5sssXLJjpUv1OJFd1r/F8k4riwt" +
     "lRjxVlS2o3q+RSDnOzKiKifuQ6Tw0GfymVzV8fa01hVEwR00Hz" +
@@ -11872,8 +12267,8 @@ const _DEFAULT_LEADER_LOGO =
     ("JEnNvBTL4IZmEbcP1t3w4O4d68GtgrQeFrc7S7vaGtG7FF5LQdJBAhIAxM4dJgERR4HK+ixyZXtDsD/Eb/l5XtSexrWJaHDUarFOJOFiUj4yFsci3iKMqHusz4c4l2Xf2hlOOypmqRSr7sqXRHQghK" +
       "1NafKxbtBVdUgGxOyu/CpNUYirpsHAZPmaE49p7YFgMYp1lMgVT4Vgr8P3//hIin0jIurYf5csiiWXwdJjx3KjMBKsiLpGTlb8mvZ5K0qilxctNQhZuMcJErA1PQ8/vK9zjIWSBUDIbe3moWCB4qyv" +
       "eAhlldmSlM8EWBV12kRKbgrOYTwSLP09fP+PIrmKmIZQCAFxJ2rS9PZMd3fpKH8wIqJ+XYtOkO4s1f1pJ+LysFCR+l35ZhU34O1H12/b/Y0u6m+0S09OBivV8v1m9oiTrP6pKOTPCViQ8wA6YgRrAs" +
-      "lVkpjZliCsJK2lBSO5ipiWpqZ2o/AyWHHcaKNYkWBF1C3W59Gr")) +
-  ("ofbWS2eovGSoeKnBrJ1AsLSkXJ4TgHq8zm7doDc+8shehHucCFKcFKcYIGrn1QhXPBnj9QnwGbkK/8eqQy+nsvFXWd1JJFcR0xa1KNZCTQbzKNZKN4ofioioP9TqmNYsnr/UIWsHg4UCpgZ9s4qm8I" +
+      "lVkpjZliCsJK2lBSO5ipiWpqZ2o/AyWHHcaKNYkWBF1C3W59Gr"),
+  "ofbWS2eovGSoeKnBrJ1AsLSkXJ4TgHq8zm7doDc+8shehHucCFKcFKcYIGrn1QhXPBnj9QnwGbkK/8eqQy+nsvFXWd1JJFcR0xa1KNZCTQbzKNZKN4ofioioP9TqmNYsnr/UIWsHg4UCpgZ9s4qm8I" +
     "/XPrDzP/MO8/VKADRnMxvzpkdFIYqammHGi65obT0mX98YxToyifWZp67OLL3RqhsvhHt2AvG2YMRkEPtnexTJXR4RxTr5uHz4s0SCFdFwqNUxmYZPlFRmhgI0vzxIW5gTZCjY4+L0bw2kvwGaMQaR" +
     "u2raphAqD8QblqgucE1hGUBX1GtHIq4eEgfsCub/1Kr97x9hIyK5ipiEo/ysjyLpzFoU6wRNmt/BKKJYURFF1B3yFgd+Tdvct8xQ/b3BULzUIBDKIhqMa6+7/9FHeuu8y/jmXNGZhE1VM6RAuiNrOA" +
     "ri3DkQ67DGuHq5F544M39rkHA21f6v5YObIaZcI6b0aEvBznIt" +
@@ -11888,10 +12283,11 @@ const _DEFAULT_LEADER_LOGO =
     ("PQ8/vbMzs3QNFUWpjcy54OHHHzSTbU6kMA1Hs35YBsLSOxfPfx40ZB2WDROjGqFCMkWfJFm0yvaY2Xex8N9CtdJh6aaLSTfdlr2uy2VfY9PQiHpCr5HdWr4WvM/kvSi2KXgkOV7L4RKeJYpVK2yMBa" +
       "GjQ22tDmNUJPcqJYbfR7emHGqdukB7wS99tPWKZqdn7PNWUcEVyfu2rOdVsi+Ejbt37PpcI7RlONRHrUWHrsI2O2RpNdsHVxBB8s0qyZDZi4GtuQMZnv1s1oXey/mrjGi8KIC44bfuwbjXJNwmZreG" +
       "xP2YgbseHFZQXS43UKE+iFXUnRNvjw4g6EWS/dro2HD413U5qr2/sFLn/xZJ3gC+kvOXYpAsk3fB0puhb8/IPUlAS5FfjRp5ViQ93MaWsts6oRzXdpRrar7lWciV6wV/9aK55ySq1xnQ7KRcwM+QXa" +
-      "oze99nodo1XNvScKgVugfY1Ozkj33AFcWdDOCaVBgM9lpg/SFs")) +
-  ("THN2Nustem9AqGL2mInch1m/ILcH5A6q/lewuWIA1dqZ6pLs+ni9RausHHXnqNcqt0e+eZQ/UDTZr73/GaNn3/IBIbwetFyosymlE6RkV1mVq3KnxucEy99RoJBb0b2rADhEdmXfdxzkORxfKwJ+CP" +
+      "oze99nodo1XNvScKgVugfY1Ozkj33AFcWdDOCaVBgM9lpg/SFs"),
+  "THN2Nustem9AqGL2mInch1m/ILcH5A6q/lewuWIA1dqZ6pLs+ni9RausHHXnqNcqt0e+eZQ/UDTZr73/GaNn3/IBIbwetFyosymlE6RkV1mVq3KnxucEy99RoJBb0b2rADhEdmXfdxzkORxfKwJ+CP" +
     "ydEFKK12G8iJZDRdh68H/Uan6C2Gwz+5sBs6Gi1V4JGCaJt/DIDTt2/yBvPdzIKZiQbVrytb3eD1bMqkXZE4Ww1zSxYA8A9Dz7Pvwyd+J9fj28YOIk3swGgT2I7MT4rRgPitr93thGtfk3sOFJnhG2" +
-    "6HLwqEBfHqHorTOxynSnGPcjUXeOUnWGLJppm0b3ctuIhFKBZN+yYyv3H/6lvR5Qqpt+aaXOm0XcBcX6HCnAGbC4BXoHyKNY/z+2EOgkpJK3gAAAAABJRU5ErkJggg==");
+    "6HLwqEBfHqHorTOxynSnGPcjUXeOUnWGLJppm0b3ctuIhFKBZN+yYyv3H/6lvR5Qqpt+aaXOm0XcBcX6HCnAGbC4BXoHyKNY/z+2EOgkpJK3gAAAAABJRU5ErkJggg=="
+].join("");
 const _LANGS = {
   en: {
     name: "English",
@@ -11905,15 +12301,17 @@ const _LANGS = {
     dear: "To Whom It May Concern,",
     para1: (name, date) => "Kindly note that this letter is issued on the specific request made by " + name + " on " + date + ".",
     para2: (name, co, regNo, memberId, title) =>
-      "It is hereby informed that " +
-      name +
-      " and " +
-      co +
-      " entered into a Marketing and Promotion Agreement where " +
-      name +
-      " has been appointed as " +
-      (title || "an Independent Partner") +
-      ". Under the said agreement, " +
+      [
+        "It is hereby informed that ",
+        name,
+        " and ",
+        co,
+        " entered into a Marketing and Promotion Agreement where ",
+        name,
+        " has been appointed as ",
+        title || "an Independent Partner",
+        ". Under the said agreement, "
+      ].join("") +
       name +
       " is eligible to receive commissions based on the services provided. The Registration Number of " +
       name +
@@ -11921,7 +12319,9 @@ const _LANGS = {
       memberId +
       ".",
     para3annual: (name, start, amount, year) =>
-      "Since the start date (" + start + ") to date, " + name + " has earned " + amount + " USD in commissions during the fiscal year " + year + ".",
+      ["Since the start date (", start, ") to date, ", name, " has earned ", amount, " USD in commissions during the fiscal year ", year, "."].join(
+        ""
+      ),
     para3monthly: (name, period, amount) => "For the period of " + period + ", " + name + " has earned " + amount + " USD in commissions.",
     para4: () =>
       "Should you need any further clarification regarding the content of this letter then please contact us at the address below. This letter is issued " +
@@ -11945,16 +12345,17 @@ const _LANGS = {
     summaryByType: "SUMMARY BY TYPE",
     total: "TOTAL",
     declText: (name, uid, period, co, regNo) =>
-      "This Monthly Earnings Statement certifies that the above-listed commissions were earned by " +
-      name +
-      " (Member ID: " +
-      uid +
-      ") during the period of " +
-      period +
-      ". This document is issued by " +
-      co +
-      (regNo ? ", registered under Company No. " + regNo : "") +
-      ", and constitutes an official record of income for tax declaration purposes.",
+      [
+        "This Monthly Earnings Statement certifies that the above-listed commissions were earned by ",
+        name,
+        " (Member ID: ",
+        uid,
+        ") during the period of ",
+        period,
+        ". This document is issued by ",
+        co,
+        regNo ? ", registered under Company No. " + regNo : ""
+      ].join("") + ", and constitutes an official record of income for tax declaration purposes.",
     officialDecl: "OFFICIAL DECLARATION",
     annualCertTitle: "ANNUAL INCOME CERTIFICATE",
     fiscalYear: (y) => "Fiscal Year " + y,
@@ -11963,15 +12364,17 @@ const _LANGS = {
     monthlyBreakdown: "MONTHLY BREAKDOWN",
     officialCert: "OFFICIAL CERTIFICATION",
     certText: (name, uid, amount, co, wdAmount, year) =>
-      "We, the undersigned, hereby certify that " +
-      name +
-      " (Member ID: " +
-      uid +
-      ") has earned the total gross amount of " +
-      amount +
-      " in commissions and bonuses from " +
-      co +
-      " during the fiscal year " +
+      [
+        "We, the undersigned, hereby certify that ",
+        name,
+        " (Member ID: ",
+        uid,
+        ") has earned the total gross amount of ",
+        amount,
+        " in commissions and bonuses from ",
+        co,
+        " during the fiscal year "
+      ].join("") +
       year +
       ". Total withdrawals processed during this period amount to " +
       wdAmount +
@@ -11993,15 +12396,17 @@ const _LANGS = {
     dear: "À qui de droit,",
     para1: (name, date) => "Nous vous informons que cette lettre est \xE9mise \xE0 la demande expresse de " + name + " en date du " + date + ".",
     para2: (name, co, regNo, memberId, title) =>
-      "Il est par la pr\xE9sente confirm\xE9 que " +
-      name +
-      " et " +
-      co +
-      " ont conclu un Accord de Partenariat aux termes duquel " +
-      name +
-      " a \xE9t\xE9 nomm\xE9(e) " +
-      (title || "Partenaire Indépendant(e)") +
-      ". Dans le cadre dudit accord, " +
+      [
+        "Il est par la pr\xE9sente confirm\xE9 que ",
+        name,
+        " et ",
+        co,
+        " ont conclu un Accord de Partenariat aux termes duquel ",
+        name,
+        " a \xE9t\xE9 nomm\xE9(e) ",
+        title || "Partenaire Indépendant(e)",
+        ". Dans le cadre dudit accord, "
+      ].join("") +
       name +
       " est \xE9ligible \xE0 percevoir des commissions en contrepartie des services fournis. Le num\xE9ro d'enregistrement de " +
       name +
@@ -12009,15 +12414,17 @@ const _LANGS = {
       memberId +
       ".",
     para3annual: (name, start, amount, year) =>
-      "Depuis la date d'adh\xE9sion (" +
-      start +
-      ") \xE0 ce jour, " +
-      name +
-      " a per\xE7u " +
-      amount +
-      " USD de commissions au cours de l'exercice fiscal " +
-      year +
-      ".",
+      [
+        "Depuis la date d'adh\xE9sion (",
+        start,
+        ") \xE0 ce jour, ",
+        name,
+        " a per\xE7u ",
+        amount,
+        " USD de commissions au cours de l'exercice fiscal ",
+        year,
+        "."
+      ].join(""),
     para3monthly: (name, period, amount) => "Pour la p\xE9riode du " + period + ", " + name + " a per\xE7u " + amount + " USD de commissions.",
     para4: () =>
       "Pour toute question relative au contenu de cette lettre, veuillez nous contacter à l'adresse indiquée ci-dessous. Cette lettre est émise sans " +
@@ -12041,16 +12448,17 @@ const _LANGS = {
     summaryByType: "RÉCAPITULATIF PAR TYPE",
     total: "TOTAL",
     declText: (name, uid, period, co, regNo) =>
-      "Ce Relev\xE9 de Commissions Mensuel certifie que les commissions list\xE9es ci-dessus ont \xE9t\xE9 per\xE7ues par " +
-      name +
-      " (N\xB0 Membre : " +
-      uid +
-      ") au cours de la p\xE9riode " +
-      period +
-      ". Ce document est \xE9mis par " +
-      co +
-      (regNo ? ", immatriculée sous le numéro " + regNo : "") +
-      ", et constitue un justificatif officiel de revenus \xE0 des fins de d\xE9claration fiscale.",
+      [
+        "Ce Relev\xE9 de Commissions Mensuel certifie que les commissions list\xE9es ci-dessus ont \xE9t\xE9 per\xE7ues par ",
+        name,
+        " (N\xB0 Membre : ",
+        uid,
+        ") au cours de la p\xE9riode ",
+        period,
+        ". Ce document est \xE9mis par ",
+        co,
+        regNo ? ", immatriculée sous le numéro " + regNo : ""
+      ].join("") + ", et constitue un justificatif officiel de revenus \xE0 des fins de d\xE9claration fiscale.",
     officialDecl: "DÉCLARATION OFFICIELLE",
     annualCertTitle: "CERTIFICAT DE REVENUS ANNUEL",
     fiscalYear: (y) => "Exercice Fiscal " + y,
@@ -12059,15 +12467,17 @@ const _LANGS = {
     monthlyBreakdown: "DÉTAIL MENSUEL",
     officialCert: "CERTIFICATION OFFICIELLE",
     certText: (name, uid, amount, co, wdAmount, year) =>
-      "Nous, soussign\xE9s, certifions que " +
-      name +
-      " (N\xB0 Membre : " +
-      uid +
-      ") a per\xE7u un montant brut total de " +
-      amount +
-      " en commissions et primes de la part de " +
-      co +
-      " au cours de l'exercice fiscal " +
+      [
+        "Nous, soussign\xE9s, certifions que ",
+        name,
+        " (N\xB0 Membre : ",
+        uid,
+        ") a per\xE7u un montant brut total de ",
+        amount,
+        " en commissions et primes de la part de ",
+        co,
+        " au cours de l'exercice fiscal "
+      ].join("") +
       year +
       ". Le total des retraits trait\xE9s au cours de cette p\xE9riode s'\xE9l\xE8ve \xE0 " +
       wdAmount +
@@ -12089,29 +12499,33 @@ const _LANGS = {
     dear: "A quien corresponda,",
     para1: (name, date) => "Se comunica que esta carta ha sido emitida a petici\xF3n expresa de " + name + " con fecha " + date + ".",
     para2: (name, co, regNo, memberId, title) =>
-      "Se informa por la presente que " +
-      name +
-      " y " +
-      co +
-      " han suscrito un Acuerdo de Marketing y Promoci\xF3n en virtud del cual " +
-      name +
-      " ha sido designado/a como Socio/a Independiente. Conforme a dicho acuerdo, " +
-      name +
-      " es elegible para recibir comisiones en funci\xF3n de los servicios prestados. El n\xFAmero de registro de " +
+      [
+        "Se informa por la presente que ",
+        name,
+        " y ",
+        co,
+        " han suscrito un Acuerdo de Marketing y Promoci\xF3n en virtud del cual ",
+        name,
+        " ha sido designado/a como Socio/a Independiente. Conforme a dicho acuerdo, ",
+        name,
+        " es elegible para recibir comisiones en funci\xF3n de los servicios prestados. El n\xFAmero de registro de "
+      ].join("") +
       name +
       " en nuestro sistema es " +
       memberId +
       ".",
     para3annual: (name, start, amount, year) =>
-      "Desde la fecha de inicio (" +
-      start +
-      ") hasta la fecha, " +
-      name +
-      " ha percibido " +
-      amount +
-      " USD en comisiones durante el ejercicio fiscal " +
-      year +
-      ".",
+      [
+        "Desde la fecha de inicio (",
+        start,
+        ") hasta la fecha, ",
+        name,
+        " ha percibido ",
+        amount,
+        " USD en comisiones durante el ejercicio fiscal ",
+        year,
+        "."
+      ].join(""),
     para3monthly: (name, period, amount) => "Durante el per\xEDodo de " + period + ", " + name + " ha percibido " + amount + " USD en comisiones.",
     para4: () =>
       "Para cualquier aclaración sobre el contenido de esta carta, no dude en ponerse en contacto con nosotros en la dirección indicada. Esta carta se emite " +
@@ -12135,16 +12549,17 @@ const _LANGS = {
     summaryByType: "RESUMEN POR TIPO",
     total: "TOTAL",
     declText: (name, uid, period, co, regNo) =>
-      "Este Extracto Mensual de Comisiones certifica que las comisiones enumeradas fueron percibidas por " +
-      name +
-      " (N\xB0 Socio: " +
-      uid +
-      ") durante el per\xEDodo " +
-      period +
-      ". Este documento es emitido por " +
-      co +
-      (regNo ? ", registrada bajo el N° " + regNo : "") +
-      ", y constituye un registro oficial de ingresos a efectos fiscales.",
+      [
+        "Este Extracto Mensual de Comisiones certifica que las comisiones enumeradas fueron percibidas por ",
+        name,
+        " (N\xB0 Socio: ",
+        uid,
+        ") durante el per\xEDodo ",
+        period,
+        ". Este documento es emitido por ",
+        co,
+        regNo ? ", registrada bajo el N° " + regNo : ""
+      ].join("") + ", y constituye un registro oficial de ingresos a efectos fiscales.",
     officialDecl: "DECLARACIÓN OFICIAL",
     annualCertTitle: "CERTIFICADO DE INGRESOS ANUALES",
     fiscalYear: (y) => "Ejercicio Fiscal " + y,
@@ -12153,15 +12568,17 @@ const _LANGS = {
     monthlyBreakdown: "DESGLOSE MENSUAL",
     officialCert: "CERTIFICACIÓN OFICIAL",
     certText: (name, uid, amount, co, wdAmount, year) =>
-      "Los abajo firmantes certifican que " +
-      name +
-      " (N\xB0 Socio: " +
-      uid +
-      ") ha percibido un importe bruto total de " +
-      amount +
-      " en comisiones y bonificaciones de " +
-      co +
-      " durante el ejercicio fiscal " +
+      [
+        "Los abajo firmantes certifican que ",
+        name,
+        " (N\xB0 Socio: ",
+        uid,
+        ") ha percibido un importe bruto total de ",
+        amount,
+        " en comisiones y bonificaciones de ",
+        co,
+        " durante el ejercicio fiscal "
+      ].join("") +
       year +
       ". El total de retiros procesados durante este per\xEDodo asciende a " +
       wdAmount +
@@ -12183,29 +12600,33 @@ const _LANGS = {
     dear: "Sehr geehrte Damen und Herren,",
     para1: (name, date) => "Dieses Schreiben wird auf ausdr\xFCcklichen Wunsch von " + name + " vom " + date + " ausgestellt.",
     para2: (name, co, regNo, memberId, title) =>
-      "Hiermit wird best\xE4tigt, dass " +
-      name +
-      " und " +
-      co +
-      " eine Marketing- und Promotionsvereinbarung abgeschlossen haben, in deren Rahmen " +
-      name +
-      " als unabh\xE4ngige/r Partner/in ernannt wurde. Gem\xE4\xDF dieser Vereinbarung ist " +
-      name +
-      " berechtigt, Provisionen auf Basis der erbrachten Dienstleistungen zu erhalten. Die Registrierungsnummer von " +
+      [
+        "Hiermit wird best\xE4tigt, dass ",
+        name,
+        " und ",
+        co,
+        " eine Marketing- und Promotionsvereinbarung abgeschlossen haben, in deren Rahmen ",
+        name,
+        " als unabh\xE4ngige/r Partner/in ernannt wurde. Gem\xE4\xDF dieser Vereinbarung ist ",
+        name,
+        " berechtigt, Provisionen auf Basis der erbrachten Dienstleistungen zu erhalten. Die Registrierungsnummer von "
+      ].join("") +
       name +
       " in unserem System lautet " +
       memberId +
       ".",
     para3annual: (name, start, amount, year) =>
-      "Seit dem Startdatum (" +
-      start +
-      ") bis heute hat " +
-      name +
-      " im Gesch\xE4ftsjahr " +
-      year +
-      " Provisionen in H\xF6he von " +
-      amount +
-      " USD verdient.",
+      [
+        "Seit dem Startdatum (",
+        start,
+        ") bis heute hat ",
+        name,
+        " im Gesch\xE4ftsjahr ",
+        year,
+        " Provisionen in H\xF6he von ",
+        amount,
+        " USD verdient."
+      ].join(""),
     para3monthly: (name, period, amount) => "Im Zeitraum " + period + " hat " + name + " Provisionen in H\xF6he von " + amount + " USD verdient.",
     para4: () =>
       "Sollten Sie weitere Fragen zum Inhalt dieses Schreibens haben, wenden Sie sich bitte an die unten angegebene Adresse. Dieses Schreiben wird ohne " +
@@ -12229,16 +12650,17 @@ const _LANGS = {
     summaryByType: "ZUSAMMENFASSUNG NACH TYP",
     total: "GESAMT",
     declText: (name, uid, period, co, regNo) =>
-      "Diese monatliche Provisionsabrechnung best\xE4tigt, dass die oben aufgef\xFChrten Provisionen von " +
-      name +
-      " (Mitgl.-Nr.: " +
-      uid +
-      ") im Zeitraum " +
-      period +
-      " verdient wurden. Dieses Dokument wird von " +
-      co +
-      (regNo ? ", eingetragen unter Nr. " + regNo : "") +
-      " ausgestellt und stellt einen offiziellen Einkommensnachweis f\xFCr Steuererkl\xE4rungszwecke dar.",
+      [
+        "Diese monatliche Provisionsabrechnung best\xE4tigt, dass die oben aufgef\xFChrten Provisionen von ",
+        name,
+        " (Mitgl.-Nr.: ",
+        uid,
+        ") im Zeitraum ",
+        period,
+        " verdient wurden. Dieses Dokument wird von ",
+        co,
+        regNo ? ", eingetragen unter Nr. " + regNo : ""
+      ].join("") + " ausgestellt und stellt einen offiziellen Einkommensnachweis f\xFCr Steuererkl\xE4rungszwecke dar.",
     officialDecl: "OFFIZIELLE ERKLÄRUNG",
     annualCertTitle: "JAHRESEINKOMMENSBESCHEINIGUNG",
     fiscalYear: (y) => "Gesch\xE4ftsjahr " + y,
@@ -12247,15 +12669,17 @@ const _LANGS = {
     monthlyBreakdown: "MONATLICHE AUFSCHLÜSSELUNG",
     officialCert: "OFFIZIELLE ZERTIFIZIERUNG",
     certText: (name, uid, amount, co, wdAmount, year) =>
-      "Die Unterzeichnenden bescheinigen hiermit, dass " +
-      name +
-      " (Mitgl.-Nr.: " +
-      uid +
-      ") im Gesch\xE4ftsjahr " +
-      year +
-      " einen Bruttobetrag von " +
-      amount +
-      " an Provisionen und Boni von " +
+      [
+        "Die Unterzeichnenden bescheinigen hiermit, dass ",
+        name,
+        " (Mitgl.-Nr.: ",
+        uid,
+        ") im Gesch\xE4ftsjahr ",
+        year,
+        " einen Bruttobetrag von ",
+        amount,
+        " an Provisionen und Boni von "
+      ].join("") +
       co +
       " erhalten hat. Die im gleichen Zeitraum verarbeiteten Auszahlungen belaufen sich auf " +
       wdAmount +
@@ -12277,29 +12701,33 @@ const _LANGS = {
     dear: "A quem possa interessar,",
     para1: (name, date) => "Comunicamos que esta carta foi emitida a pedido expresso de " + name + " em " + date + ".",
     para2: (name, co, regNo, memberId, title) =>
-      "Informa-se pela presente que " +
-      name +
-      " e " +
-      co +
-      " celebraram um Acordo de Marketing e Promo\xE7\xE3o pelo qual " +
-      name +
-      " foi nomeado/a Parceiro/a Independente. Ao abrigo do referido acordo, " +
-      name +
-      " tem direito a receber comiss\xF5es pelos servi\xE7os prestados. O n\xFAmero de registo de " +
+      [
+        "Informa-se pela presente que ",
+        name,
+        " e ",
+        co,
+        " celebraram um Acordo de Marketing e Promo\xE7\xE3o pelo qual ",
+        name,
+        " foi nomeado/a Parceiro/a Independente. Ao abrigo do referido acordo, ",
+        name,
+        " tem direito a receber comiss\xF5es pelos servi\xE7os prestados. O n\xFAmero de registo de "
+      ].join("") +
       name +
       " nos nossos sistemas \xE9 " +
       memberId +
       ".",
     para3annual: (name, start, amount, year) =>
-      "Desde a data de in\xEDcio (" +
-      start +
-      ") at\xE9 \xE0 presente data, " +
-      name +
-      " recebeu " +
-      amount +
-      " USD em comiss\xF5es durante o exerc\xEDcio fiscal " +
-      year +
-      ".",
+      [
+        "Desde a data de in\xEDcio (",
+        start,
+        ") at\xE9 \xE0 presente data, ",
+        name,
+        " recebeu ",
+        amount,
+        " USD em comiss\xF5es durante o exerc\xEDcio fiscal ",
+        year,
+        "."
+      ].join(""),
     para3monthly: (name, period, amount) => "No per\xEDodo de " + period + ", " + name + " recebeu " + amount + " USD em comiss\xF5es.",
     para4: () =>
       "Para qualquer esclarecimento sobre o conteúdo desta carta, contacte-nos através do endereço indicado abaixo. Esta carta é emitida sem prejuízo e " +
@@ -12323,16 +12751,17 @@ const _LANGS = {
     summaryByType: "RESUMO POR TIPO",
     total: "TOTAL",
     declText: (name, uid, period, co, regNo) =>
-      "Este Extrato Mensal de Comiss\xF5es certifica que as comiss\xF5es listadas foram recebidas por " +
-      name +
-      " (N.\xBA S\xF3cio: " +
-      uid +
-      ") durante o per\xEDodo " +
-      period +
-      ". Este documento \xE9 emitido por " +
-      co +
-      (regNo ? ", registada sob o N.º " + regNo : "") +
-      " e constitui um registo oficial de rendimentos para efeitos de declara\xE7\xE3o fiscal.",
+      [
+        "Este Extrato Mensal de Comiss\xF5es certifica que as comiss\xF5es listadas foram recebidas por ",
+        name,
+        " (N.\xBA S\xF3cio: ",
+        uid,
+        ") durante o per\xEDodo ",
+        period,
+        ". Este documento \xE9 emitido por ",
+        co,
+        regNo ? ", registada sob o N.º " + regNo : ""
+      ].join("") + " e constitui um registo oficial de rendimentos para efeitos de declara\xE7\xE3o fiscal.",
     officialDecl: "DECLARAÇÃO OFICIAL",
     annualCertTitle: "CERTIFICADO DE RENDIMENTOS ANUAIS",
     fiscalYear: (y) => "Exerc\xEDcio Fiscal " + y,
@@ -12341,15 +12770,17 @@ const _LANGS = {
     monthlyBreakdown: "DETALHE MENSAL",
     officialCert: "CERTIFICAÇÃO OFICIAL",
     certText: (name, uid, amount, co, wdAmount, year) =>
-      "Os abaixo assinados certificam que " +
-      name +
-      " (N.\xBA S\xF3cio: " +
-      uid +
-      ") recebeu um montante bruto total de " +
-      amount +
-      " em comiss\xF5es e b\xF3nus de " +
-      co +
-      " durante o exerc\xEDcio fiscal " +
+      [
+        "Os abaixo assinados certificam que ",
+        name,
+        " (N.\xBA S\xF3cio: ",
+        uid,
+        ") recebeu um montante bruto total de ",
+        amount,
+        " em comiss\xF5es e b\xF3nus de ",
+        co,
+        " durante o exerc\xEDcio fiscal "
+      ].join("") +
       year +
       ". O total de levantamentos processados durante este per\xEDodo ascende a " +
       wdAmount +
@@ -12372,29 +12803,33 @@ const _LANGS = {
     para1: (name, date) =>
       "يُشار إلى أن هذا الخطاب صادر " + "بناءً على الطلب المقدّم من " + name + " \u0628\u062A\u0627\u0631\u064A\u062E " + date + ".",
     para2: (name, co, regNo, memberId, title) =>
-      "\u064A\u064F\u0634\u0639\u0631 \u0628\u0645\u0648\u062C\u0628 \u0647\u0630\u0627 \u0623\u0646 " +
-      name +
-      " \u0648" +
-      co +
-      (" أبرما اتفاقية تسويق وترويج " + "حيث عُيّن(ت) ") +
-      name +
-      (" بوصفه(ا) شريكاً(ة) مستقلاً(ة). بموجب " + "الاتفاقية المذكورة، يحق لـ") +
-      name +
-      (" تلقّي عمولات مقابل الخدمات " + "المقدَّمة. رقم تسجيل ") +
+      [
+        "\u064A\u064F\u0634\u0639\u0631 \u0628\u0645\u0648\u062C\u0628 \u0647\u0630\u0627 \u0623\u0646 ",
+        name,
+        " \u0648",
+        co,
+        " أبرما اتفاقية تسويق وترويج " + "حيث عُيّن(ت) ",
+        name,
+        " بوصفه(ا) شريكاً(ة) مستقلاً(ة). بموجب " + "الاتفاقية المذكورة، يحق لـ",
+        name,
+        " تلقّي عمولات مقابل الخدمات " + "المقدَّمة. رقم تسجيل "
+      ].join("") +
       name +
       " \u0644\u062F\u064A\u0646\u0627 \u0647\u0648 " +
       memberId +
       ".",
     para3annual: (name, start, amount, year) =>
-      "\u0645\u0646\u0630 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0646\u0636\u0645\u0627\u0645 (" +
-      start +
-      ") \u0648\u062D\u062A\u0649 \u0627\u0644\u064A\u0648\u0645\u060C \u062D\u0642\u0651\u0642(\u062A) " +
-      name +
-      " \u0645\u0628\u0644\u063A " +
-      amount +
-      (" دولار أمريكي من العمولات خلال " + "السنة المالية ") +
-      year +
-      ".",
+      [
+        "\u0645\u0646\u0630 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0646\u0636\u0645\u0627\u0645 (",
+        start,
+        ") \u0648\u062D\u062A\u0649 \u0627\u0644\u064A\u0648\u0645\u060C \u062D\u0642\u0651\u0642(\u062A) ",
+        name,
+        " \u0645\u0628\u0644\u063A ",
+        amount,
+        " دولار أمريكي من العمولات خلال " + "السنة المالية ",
+        year,
+        "."
+      ].join(""),
     para3monthly: (name, period, amount) =>
       "\u062E\u0644\u0627\u0644 \u0641\u062A\u0631\u0629 " +
       period +
@@ -12434,15 +12869,17 @@ const _LANGS = {
     summaryByType: "ملخص حسب النوع",
     total: "الإجمالي",
     declText: (name, uid, period, co, regNo) =>
-      "يُشهد بموجب هذا الكشف الشهري " +
-      "للعمولات أن العمولات المدرجة " +
-      "أعلاه قد حققها " +
-      name +
-      " (\u0631\u0642\u0645 \u0627\u0644\u0639\u0636\u0648: " +
-      uid +
-      ") \u062E\u0644\u0627\u0644 \u0641\u062A\u0631\u0629 " +
-      period +
-      ". \u064A\u0635\u062F\u0631 \u0647\u0630\u0627 \u0627\u0644\u0645\u0633\u062A\u0646\u062F \u0639\u0646 " +
+      [
+        "يُشهد بموجب هذا الكشف الشهري ",
+        "للعمولات أن العمولات المدرجة ",
+        "أعلاه قد حققها ",
+        name,
+        " (\u0631\u0642\u0645 \u0627\u0644\u0639\u0636\u0648: ",
+        uid,
+        ") \u062E\u0644\u0627\u0644 \u0641\u062A\u0631\u0629 ",
+        period,
+        ". \u064A\u0635\u062F\u0631 \u0647\u0630\u0627 \u0627\u0644\u0645\u0633\u062A\u0646\u062F \u0639\u0646 "
+      ].join("") +
       co +
       (regNo ? " المسجّلة برقم " + regNo : "") +
       ("، ويُعدّ سجلاً رسمياً للدخل " + "لأغراض التصريح الضريبي."),
@@ -12454,15 +12891,17 @@ const _LANGS = {
     monthlyBreakdown: "التفصيل الشهري",
     officialCert: "التصديق الرسمي",
     certText: (name, uid, amount, co, wdAmount, year) =>
-      "\u0646\u062D\u0646 \u0627\u0644\u0645\u0648\u0642\u0651\u0639\u064A\u0646 \u0623\u062F\u0646\u0627\u0647 \u0646\u064F\u0634\u0647\u062F \u0628\u0623\u0646 " +
-      name +
-      " (\u0631\u0642\u0645 \u0627\u0644\u0639\u0636\u0648: " +
-      uid +
-      ") \u0642\u062F \u062D\u0642\u0651\u0642(\u062A) \u0645\u0628\u0644\u063A\u0627\u064B \u0625\u062C\u0645\u0627\u0644\u064A\u0627\u064B \u0642\u062F\u0631\u0647 " +
-      amount +
-      " \u0645\u0646 \u0627\u0644\u0639\u0645\u0648\u0644\u0627\u062A \u0648\u0627\u0644\u0645\u0643\u0627\u0641\u0622\u062A \u0645\u0646 " +
-      co +
-      " \u062E\u0644\u0627\u0644 \u0627\u0644\u0633\u0646\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629 " +
+      [
+        "\u0646\u062D\u0646 \u0627\u0644\u0645\u0648\u0642\u0651\u0639\u064A\u0646 \u0623\u062F\u0646\u0627\u0647 \u0646\u064F\u0634\u0647\u062F \u0628\u0623\u0646 ",
+        name,
+        " (\u0631\u0642\u0645 \u0627\u0644\u0639\u0636\u0648: ",
+        uid,
+        ") \u0642\u062F \u062D\u0642\u0651\u0642(\u062A) \u0645\u0628\u0644\u063A\u0627\u064B \u0625\u062C\u0645\u0627\u0644\u064A\u0627\u064B \u0642\u062F\u0631\u0647 ",
+        amount,
+        " \u0645\u0646 \u0627\u0644\u0639\u0645\u0648\u0644\u0627\u062A \u0648\u0627\u0644\u0645\u0643\u0627\u0641\u0622\u062A \u0645\u0646 ",
+        co,
+        " \u062E\u0644\u0627\u0644 \u0627\u0644\u0633\u0646\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629 "
+      ].join("") +
       year +
       (". وقد بلغ إجمالي المسحوبات المعالجة " + "خلال هذه الفترة ") +
       wdAmount +
@@ -13360,40 +13799,47 @@ async function generatePurchaseReceipt() {
     const regNo = co.registration_number || "OC445365";
     const memberFull = ((m.first_name || "") + " " + (m.last_name || "")).trim();
     const memberTitle = co.member_title || "Partenaire Indépendant(e)";
-    const legalNote =
-      "Ce re\xE7u officiel certifie que " +
-      memberFull +
-      " (ID: " +
-      (m.unique_id || "N/A") +
-      "), " +
-      memberTitle +
-      ", a effectu\xE9 l'achat du \"" +
-      (o.package_name || "Package") +
-      '" pour un montant de ' +
-      _fmtMoney(o.amount_usd) +
-      " le " +
-      _fmtDate(o.created_at) +
-      ". Ce document est \xE9mis par " +
-      tradeName +
-      " (" +
-      legalName +
-      ", Co. No. " +
-      regNo +
-      ") et peut \xEAtre utilis\xE9 comme justificatif d'investissement \xE0 des fins fiscales et l\xE9gales. / This receipt certifies that " +
-      memberFull +
-      ' purchased "' +
-      (o.package_name || "Package") +
-      '" for ' +
-      _fmtMoney(o.amount_usd) +
-      " on " +
-      _fmtDate(o.created_at) +
-      ", issued by " +
-      tradeName +
-      " (" +
-      legalName +
-      ", Co. No. " +
-      regNo +
-      ").";
+    const legalNote = [
+      [
+        [
+          [
+            "Ce re\xE7u officiel certifie que ",
+            memberFull,
+            " (ID: ",
+            m.unique_id || "N/A",
+            "), ",
+            memberTitle,
+            ", a effectu\xE9 l'achat du \"",
+            o.package_name || "Package",
+            '" pour un montant de '
+          ].join(""),
+          _fmtMoney(o.amount_usd),
+          " le ",
+          _fmtDate(o.created_at),
+          ". Ce document est \xE9mis par ",
+          tradeName,
+          " (",
+          legalName,
+          ", Co. No. "
+        ].join(""),
+        regNo,
+        ") et peut \xEAtre utilis\xE9 comme justificatif d'investissement \xE0 des fins fiscales et l\xE9gales. / This receipt certifies that ",
+        memberFull,
+        ' purchased "',
+        o.package_name || "Package",
+        '" for ',
+        _fmtMoney(o.amount_usd),
+        " on "
+      ].join(""),
+      _fmtDate(o.created_at),
+      ", issued by ",
+      tradeName,
+      " (",
+      legalName,
+      ", Co. No. ",
+      regNo,
+      ")."
+    ].join("");
     const legalLines = pdf.splitTextToSize(legalNote, pw - 32);
     pdf.text(legalLines, pw / 2, y + 14, {
       align: "center"
@@ -13974,32 +14420,36 @@ function _buildMandateBlock(cardData, m) {
     .replace(/\[DATE\]/g, signedAt ? new Date(signedAt).toLocaleDateString("fr-FR") : new Date().toLocaleDateString("fr-FR"))
     .replace(/\n/g, "<br>");
   return (
-    '<div class="bg-dark-700/50 rounded-xl p-4 border ' +
-    (signed ? "border-indigo-500/40" : "border-dark-500") +
-    '">' +
-    '<div class="flex items-start gap-3">' +
-    '<input type="checkbox" id="prof-mandate" class="mt-0.5 accent-indigo-500 w-4 h-4 flex-shrink-0 cursor-pointer" ' +
-    (signed ? "checked disabled" : "") +
-    ' onchange="if(this.checked)signMandate(this)">' +
-    '<div class="flex-1 min-w-0">' +
-    '<span class="text-sm ' +
-    (signed ? "text-indigo-300" : "text-gray-300") +
-    '"><strong class="' +
-    (signed ? "text-indigo-200" : "text-white") +
-    '">' +
-    title +
-    "</strong></span>" +
-    (signed
-      ? '<span class="block text-xs text-indigo-400 mt-1"><i class="fas fa-check-circle mr-1"></i>Signé électroniquement le ' +
-        new Date(signedAt).toLocaleDateString("fr-FR", {
-          day: "2-digit",
-          month: "long",
-          year: "numeric"
-        }) +
-        "</span>"
-      : '<span class="block text-xs text-gray-500 mt-1">Cochez pour signer électroniquement</span>') +
-    ('<button type="button" onclick="toggleMandateText()" class="mt-2 text-xs text-indigo-400 hover:text-indigo-300 underline underline-offset-2 flex ' +
-      'items-center gap-1">') +
+    [
+      [
+        '<div class="bg-dark-700/50 rounded-xl p-4 border ',
+        signed ? "border-indigo-500/40" : "border-dark-500",
+        '">',
+        '<div class="flex items-start gap-3">',
+        '<input type="checkbox" id="prof-mandate" class="mt-0.5 accent-indigo-500 w-4 h-4 flex-shrink-0 cursor-pointer" ',
+        signed ? "checked disabled" : "",
+        ' onchange="if(this.checked)signMandate(this)">',
+        '<div class="flex-1 min-w-0">',
+        '<span class="text-sm '
+      ].join(""),
+      signed ? "text-indigo-300" : "text-gray-300",
+      '"><strong class="',
+      signed ? "text-indigo-200" : "text-white",
+      '">',
+      title,
+      "</strong></span>",
+      signed
+        ? '<span class="block text-xs text-indigo-400 mt-1"><i class="fas fa-check-circle mr-1"></i>Signé électroniquement le ' +
+          new Date(signedAt).toLocaleDateString("fr-FR", {
+            day: "2-digit",
+            month: "long",
+            year: "numeric"
+          }) +
+          "</span>"
+        : '<span class="block text-xs text-gray-500 mt-1">Cochez pour signer électroniquement</span>',
+      '<button type="button" onclick="toggleMandateText()" class="mt-2 text-xs text-indigo-400 hover:text-indigo-300 underline underline-offset-2 flex ' +
+        'items-center gap-1">'
+    ].join("") +
     '<i id="mandate-chevron" class="fas fa-chevron-right text-[10px] transition-transform"></i>' +
     '<span id="mandate-toggle-label">Voir le texte complet</span></button>' +
     ('<div id="mandate-full-text" class="hidden mt-3 p-3 bg-dark-800 border border-dark-600 rounded-lg text-xs text-gray-300 leading-relaxed max-h-64 ' +
@@ -14151,46 +14601,54 @@ function _wizardPhysCardStep1() {
   var price = _wizardData.physCardPrice || 19.9;
   var curr = _wizardData.physCardCurrency || "USD";
   _wizardShow(
-    '<div class="px-6 pt-5 pb-3 border-b border-dark-600">' +
-      '<div class="flex items-center justify-between mb-2">' +
-      '<span class="text-xs font-semibold text-amber-400 uppercase tracking-wider"><i class="fas fa-credit-card mr-1.5"></i>Carte physique — Livraison</span>' +
-      ('<button onclick="wizardClose()" class="text-gray-400 hover:text-white w-7 h-7 flex items-center justify-center rounded-lg hover:bg-dark-700 text-lg">×<' +
-        "/button>") +
-      "</div>" +
-      '<div class="w-full bg-dark-700 rounded-full h-1.5"><div class="bg-amber-500 h-1.5 rounded-full" style="width:33%"></div></div>' +
-      "</div>" +
-      '<div class="p-6 space-y-4">' +
-      '<div><h3 class="text-lg font-bold text-white">Informations de livraison</h3>' +
-      '<p class="text-sm text-gray-400 mt-1">Votre carte sera expédiée à cette adresse sous 7–14 jours ouvrés.</p></div>' +
-      '<div class="grid grid-cols-1 gap-3">' +
-      '<div><label class="text-xs text-gray-400 block mb-1">Nom complet <span class="text-red-400">*</span></label>' +
-      ('<input id="phys-full-name" class="w-full bg-dark-700 border border-dark-500 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none ' +
-        'focus:border-amber-400" placeholder="Prénom Nom"></div>') +
-      '<div><label class="text-xs text-gray-400 block mb-1">Adresse <span class="text-red-400">*</span></label>' +
-      ('<input id="phys-address" class="w-full bg-dark-700 border border-dark-500 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none ' +
-        'focus:border-amber-400" placeholder="Numéro et nom de rue"></div>') +
-      '<div class="grid grid-cols-2 gap-3">' +
-      '<div><label class="text-xs text-gray-400 block mb-1">Ville <span class="text-red-400">*</span></label>' +
-      ('<input id="phys-city" class="w-full bg-dark-700 border border-dark-500 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none ' +
-        'focus:border-amber-400" placeholder="Paris"></div>') +
-      '<div><label class="text-xs text-gray-400 block mb-1">Code postal <span class="text-red-400">*</span></label>' +
-      ('<input id="phys-postal" class="w-full bg-dark-700 border border-dark-500 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none ' +
-        'focus:border-amber-400" placeholder="75001"></div>') +
-      "</div>" +
-      '<div><label class="text-xs text-gray-400 block mb-1">Pays <span class="text-red-400">*</span></label>' +
-      ('<input id="phys-country" class="w-full bg-dark-700 border border-dark-500 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none ' +
-        'focus:border-amber-400" placeholder="France"></div>') +
-      '<div><label class="text-xs text-gray-400 block mb-1">Téléphone <span class="text-red-400">*</span></label>' +
-      ('<input id="phys-phone" class="w-full bg-dark-700 border border-dark-500 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none ' +
-        'focus:border-amber-400" placeholder="+33612345678"></div>') +
-      "</div>" +
-      '<div id="phys-addr-error" class="hidden bg-red-900/20 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm"></div>' +
-      '<div class="flex items-center justify-between bg-dark-700/50 rounded-xl px-4 py-3 border border-dark-600">' +
-      '<div class="flex items-center gap-2 text-gray-400 text-sm"><i class="fas fa-credit-card text-amber-400"></i> Carte physique LEADER</div>' +
-      '<span class="text-amber-400 font-bold">' +
-      curr +
-      " " +
-      price.toFixed(2) +
+    [
+      [
+        [
+          [
+            '<div class="px-6 pt-5 pb-3 border-b border-dark-600">',
+            '<div class="flex items-center justify-between mb-2">',
+            '<span class="text-xs font-semibold text-amber-400 uppercase tracking-wider"><i class="fas fa-credit-card mr-1.5"></i>Carte physique — Livraison</span>',
+            '<button onclick="wizardClose()" class="text-gray-400 hover:text-white w-7 h-7 flex items-center justify-center rounded-lg hover:bg-dark-700 text-lg">×<' +
+              "/button>",
+            "</div>",
+            '<div class="w-full bg-dark-700 rounded-full h-1.5"><div class="bg-amber-500 h-1.5 rounded-full" style="width:33%"></div></div>',
+            "</div>",
+            '<div class="p-6 space-y-4">',
+            '<div><h3 class="text-lg font-bold text-white">Informations de livraison</h3>'
+          ].join(""),
+          '<p class="text-sm text-gray-400 mt-1">Votre carte sera expédiée à cette adresse sous 7–14 jours ouvrés.</p></div>',
+          '<div class="grid grid-cols-1 gap-3">',
+          '<div><label class="text-xs text-gray-400 block mb-1">Nom complet <span class="text-red-400">*</span></label>',
+          '<input id="phys-full-name" class="w-full bg-dark-700 border border-dark-500 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none ' +
+            'focus:border-amber-400" placeholder="Prénom Nom"></div>',
+          '<div><label class="text-xs text-gray-400 block mb-1">Adresse <span class="text-red-400">*</span></label>',
+          '<input id="phys-address" class="w-full bg-dark-700 border border-dark-500 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none ' +
+            'focus:border-amber-400" placeholder="Numéro et nom de rue"></div>',
+          '<div class="grid grid-cols-2 gap-3">',
+          '<div><label class="text-xs text-gray-400 block mb-1">Ville <span class="text-red-400">*</span></label>'
+        ].join(""),
+        '<input id="phys-city" class="w-full bg-dark-700 border border-dark-500 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none ' +
+          'focus:border-amber-400" placeholder="Paris"></div>',
+        '<div><label class="text-xs text-gray-400 block mb-1">Code postal <span class="text-red-400">*</span></label>',
+        '<input id="phys-postal" class="w-full bg-dark-700 border border-dark-500 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none ' +
+          'focus:border-amber-400" placeholder="75001"></div>',
+        "</div>",
+        '<div><label class="text-xs text-gray-400 block mb-1">Pays <span class="text-red-400">*</span></label>',
+        '<input id="phys-country" class="w-full bg-dark-700 border border-dark-500 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none ' +
+          'focus:border-amber-400" placeholder="France"></div>',
+        '<div><label class="text-xs text-gray-400 block mb-1">Téléphone <span class="text-red-400">*</span></label>',
+        '<input id="phys-phone" class="w-full bg-dark-700 border border-dark-500 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none ' +
+          'focus:border-amber-400" placeholder="+33612345678"></div>'
+      ].join(""),
+      "</div>",
+      '<div id="phys-addr-error" class="hidden bg-red-900/20 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm"></div>',
+      '<div class="flex items-center justify-between bg-dark-700/50 rounded-xl px-4 py-3 border border-dark-600">',
+      '<div class="flex items-center gap-2 text-gray-400 text-sm"><i class="fas fa-credit-card text-amber-400"></i> Carte physique LEADER</div>',
+      '<span class="text-amber-400 font-bold">',
+      curr,
+      " ",
+      price.toFixed(2)
+    ].join("") +
       "</span>" +
       "</div>" +
       '<div class="flex gap-3">' +
@@ -14302,37 +14760,43 @@ async function renderMemberCard(e) {
         : "";
     const photoSrc = m && m.profile_photo ? m.profile_photo : "";
     const enrichedSection =
-      '<div class="bg-dark-800 rounded-2xl border border-dark-600 p-6 space-y-4">' +
-      ('<h3 class="font-semibold text-white flex items-center gap-2 pb-2 border-b border-dark-600"><i class="fas fa-user-circle text-rouge-400 text-sm"></i> ' +
-        'Profil enrichi<span class="text-xs text-gray-500 font-normal ml-2">Requis pour la carte</span></h3>') +
-      missingHtml +
-      '<div><label class="form-label">Photo de profil <span class="text-red-400">*</span></label>' +
-      '<div class="flex items-center gap-4">' +
-      '<div class="relative w-20 h-20 rounded-full overflow-hidden bg-dark-700 border-2 border-dark-500 flex-shrink-0">' +
-      (photoSrc
-        ? '<img id="prof-photo-preview" src="' + photoSrc + '" class="w-full h-full object-cover">'
-        : '<img id="prof-photo-preview" src="" class="w-full h-full object-cover hidden"><div id="prof-photo-placeholder" class="w-full h-full flex items-center ' +
-          'justify-center"><i class="fas fa-user text-gray-500 text-2xl"></i></div>') +
-      "</div>" +
-      '<div><input type="file" id="prof-photo-input" accept="image/*" class="hidden" onchange="handleProfilePhotoUpload(this)">' +
-      ('<button onclick="document.getElementById(\'prof-photo-input\').click()" class="text-sm bg-dark-700 border border-dark-500 text-gray-300 px-4 py-2 ' +
-        'rounded-xl hover:bg-dark-600 transition"><i class="fas fa-upload mr-1"></i>Choisir une photo</button>') +
-      ('<p class="text-xs text-gray-500 mt-1">Toute image · max 50 Mo (compressée automatiquement)</p><p id="prof-photo-status" class="text-xs text-rouge-400 ' +
-        'mt-1 hidden"></p></div></div></div>') +
-      '<div><label class="form-label">Ville de résidence <span class="text-red-400">*</span></label>' +
-      '<input id="p-city" class="form-input" value="' +
-      (m && m.city ? m.city : "") +
-      '" placeholder="Paris, London, Dakar\u2026"></div>' +
-      '<div><label class="form-label">Langue préférée <span class="text-red-400">*</span></label>' +
-      '<select id="prof-lang" class="form-input">' +
-      langOptions +
-      "</select></div>" +
-      '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">' +
-      '<div><label class="form-label"><i class=\"fas fa-brands fa-whatsapp text-green-400 mr-1\"></i>Numéro WhatsApp</label>' +
-      '<input id="prof-whatsapp" class="form-input" value="' +
-      (m && m.whatsapp_number ? m.whatsapp_number : "") +
-      '" placeholder="+33612345678 (avec indicatif)"></div>' +
-      '<div><label class="form-label"><i class=\"fas fa-comment text-blue-400 mr-1\"></i>ID Messenger Facebook</label>' +
+      [
+        [
+          [
+            '<div class="bg-dark-800 rounded-2xl border border-dark-600 p-6 space-y-4">',
+            '<h3 class="font-semibold text-white flex items-center gap-2 pb-2 border-b border-dark-600"><i class="fas fa-user-circle text-rouge-400 text-sm"></i> ' +
+              'Profil enrichi<span class="text-xs text-gray-500 font-normal ml-2">Requis pour la carte</span></h3>',
+            missingHtml,
+            '<div><label class="form-label">Photo de profil <span class="text-red-400">*</span></label>',
+            '<div class="flex items-center gap-4">',
+            '<div class="relative w-20 h-20 rounded-full overflow-hidden bg-dark-700 border-2 border-dark-500 flex-shrink-0">',
+            photoSrc
+              ? '<img id="prof-photo-preview" src="' + photoSrc + '" class="w-full h-full object-cover">'
+              : '<img id="prof-photo-preview" src="" class="w-full h-full object-cover hidden"><div id="prof-photo-placeholder" class="w-full h-full flex items-center ' +
+                'justify-center"><i class="fas fa-user text-gray-500 text-2xl"></i></div>',
+            "</div>",
+            '<div><input type="file" id="prof-photo-input" accept="image/*" class="hidden" onchange="handleProfilePhotoUpload(this)">'
+          ].join(""),
+          '<button onclick="document.getElementById(\'prof-photo-input\').click()" class="text-sm bg-dark-700 border border-dark-500 text-gray-300 px-4 py-2 ' +
+            'rounded-xl hover:bg-dark-600 transition"><i class="fas fa-upload mr-1"></i>Choisir une photo</button>',
+          '<p class="text-xs text-gray-500 mt-1">Toute image · max 50 Mo (compressée automatiquement)</p><p id="prof-photo-status" class="text-xs text-rouge-400 ' +
+            'mt-1 hidden"></p></div></div></div>',
+          '<div><label class="form-label">Ville de résidence <span class="text-red-400">*</span></label>',
+          '<input id="p-city" class="form-input" value="',
+          m && m.city ? m.city : "",
+          '" placeholder="Paris, London, Dakar\u2026"></div>',
+          '<div><label class="form-label">Langue préférée <span class="text-red-400">*</span></label>',
+          '<select id="prof-lang" class="form-input">'
+        ].join(""),
+        langOptions,
+        "</select></div>",
+        '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">',
+        '<div><label class="form-label"><i class=\"fas fa-brands fa-whatsapp text-green-400 mr-1\"></i>Numéro WhatsApp</label>',
+        '<input id="prof-whatsapp" class="form-input" value="',
+        m && m.whatsapp_number ? m.whatsapp_number : "",
+        '" placeholder="+33612345678 (avec indicatif)"></div>',
+        '<div><label class="form-label"><i class=\"fas fa-comment text-blue-400 mr-1\"></i>ID Messenger Facebook</label>'
+      ].join("") +
       '<input id="prof-messenger" class="form-input" value="' +
       (m && m.messenger_id ? m.messenger_id : "") +
       '" placeholder="votre.nom.facebook"></div>' +
@@ -14352,26 +14816,30 @@ async function renderMemberCard(e) {
     } else if (card) {
       const verifyUrl = window.location.origin + "/v/" + card.token;
       cardSection =
-        '<div class="bg-dark-800 rounded-2xl border border-rouge-500/25 p-6 space-y-4">' +
-        ('<h3 class="font-semibold text-white flex items-center gap-2 pb-2 border-b border-dark-600"><i class="fas fa-id-badge text-rouge-400 text-sm"></i> Ma ' +
-          "Carte de Membre") +
-        '<span class="ml-auto text-xs px-2 py-1 rounded-full font-medium ' +
-        (card.status === "active" ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400") +
-        '">' +
-        (card.status === "active" ? "Active" : "Révoquée") +
-        "</span></h3>" +
-        ('<div class="flex justify-center"><canvas id="card-canvas" width="600" height="360" style="max-width:100%;border-radius:16px;box-shadow:0 8px 32px ' +
-          'rgba(0,0,0,.4);"></canvas></div>') +
-        '<div class="bg-dark-700/50 rounded-xl p-3"><p class="text-xs text-gray-400 mb-1">Lien de vérification publique</p>' +
-        '<div class="flex gap-2 items-center"><span class="text-xs text-rouge-400 font-mono truncate flex-1">' +
-        verifyUrl +
-        "</span>" +
-        "<button onclick=\"navigator.clipboard.writeText('" +
-        verifyUrl +
-        ("').then(()=>showToast('Lien copié','success'))\" class=\"text-xs bg-dark-600 px-3 py-1.5 rounded-lg hover:bg-dark-500 text-gray-300 transition " +
-          'flex-shrink-0"><i class="fas fa-copy"></i></button></div></div>') +
-        _buildCardButtonsBlock(cardData) +
-        '<div class="pt-2 border-t border-dark-600"><p class="text-xs text-gray-400 mb-2">Changer de design</p><div class="flex gap-2">' +
+        [
+          [
+            '<div class="bg-dark-800 rounded-2xl border border-rouge-500/25 p-6 space-y-4">',
+            '<h3 class="font-semibold text-white flex items-center gap-2 pb-2 border-b border-dark-600"><i class="fas fa-id-badge text-rouge-400 text-sm"></i> Ma ' +
+              "Carte de Membre",
+            '<span class="ml-auto text-xs px-2 py-1 rounded-full font-medium ',
+            card.status === "active" ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400",
+            '">',
+            card.status === "active" ? "Active" : "Révoquée",
+            "</span></h3>",
+            '<div class="flex justify-center"><canvas id="card-canvas" width="600" height="360" style="max-width:100%;border-radius:16px;box-shadow:0 8px 32px ' +
+              'rgba(0,0,0,.4);"></canvas></div>',
+            '<div class="bg-dark-700/50 rounded-xl p-3"><p class="text-xs text-gray-400 mb-1">Lien de vérification publique</p>'
+          ].join(""),
+          '<div class="flex gap-2 items-center"><span class="text-xs text-rouge-400 font-mono truncate flex-1">',
+          verifyUrl,
+          "</span>",
+          "<button onclick=\"navigator.clipboard.writeText('",
+          verifyUrl,
+          "').then(()=>showToast('Lien copié','success'))\" class=\"text-xs bg-dark-600 px-3 py-1.5 rounded-lg hover:bg-dark-500 text-gray-300 transition " +
+            'flex-shrink-0"><i class="fas fa-copy"></i></button></div></div>',
+          _buildCardButtonsBlock(cardData),
+          '<div class="pt-2 border-t border-dark-600"><p class="text-xs text-gray-400 mb-2">Changer de design</p><div class="flex gap-2">'
+        ].join("") +
         (config.design_a_enabled
           ? '<button onclick="orderCard(\'A\')" class="text-sm px-4 py-2 rounded-xl border ' +
             (card.design === "A" ? "border-rouge-500 bg-rouge-500/10 text-rouge-400" : "border-dark-500 text-gray-300 hover:border-rouge-500/40") +
@@ -14385,36 +14853,40 @@ async function renderMemberCard(e) {
         "</div></div></div>";
     } else {
       cardSection =
-        '<div class="bg-dark-800 rounded-2xl border border-dark-600 p-6 space-y-4">' +
-        ('<h3 class="font-semibold text-white flex items-center gap-2 pb-2 border-b border-dark-600"><i class="fas fa-id-badge text-rouge-400 text-sm"></i> ' +
-          "Demander ma Carte de Membre</h3>") +
-        (!profileComplete
-          ? '<div class="bg-orange-900/20 border border-orange-500/30 rounded-xl p-4"><p class="text-orange-300 text-sm"><i class="fas fa-info-circle mr-1"></i>' +
-            "Complétez votre profil ci-dessus avant de demander votre carte.</p></div>"
-          : "") +
-        ('<p class="text-sm text-gray-400">Votre carte digitale certifie votre statut d\'<strong class="text-white">Ambassadeur</strong> LEADER. Elle contient un ' +
-          "QR code permettant de vérifier son authenticité en temps réel.</p>") +
-        '<div><p class="form-label mb-2">Choisissez votre design</p><div class="grid grid-cols-2 gap-3">' +
-        (config.design_a_enabled
-          ? '<label class="cursor-pointer"><input type="radio" name="card-design" value="A" checked class="hidden peer"><div class="border-2 border-dark-500 ' +
-            'peer-checked:border-rouge-500 rounded-xl p-4 text-center transition"><div class="w-full h-12 rounded-lg mb-2" ' +
-            'style="background:linear-gradient(135deg,' +
-            config.design_a_color1 +
-            "," +
-            config.design_a_color2 +
-            "," +
-            config.design_a_color3 +
-            ')"></div><p class="text-sm font-medium text-white">Design A</p><p class="text-xs text-gray-400">Prestige Orange</p></div></label>'
-          : "") +
-        (config.design_b_enabled
-          ? '<label class="cursor-pointer"><input type="radio" name="card-design" value="B" ' +
-            (!config.design_a_enabled ? "checked" : "") +
-            (' class="hidden peer"><div class="border-2 border-dark-500 peer-checked:border-blue-400 rounded-xl p-4 text-center transition"><div class="w-full h-12 ' +
-              'rounded-lg mb-2" style="background:linear-gradient(135deg,#0D1B2A,#1B2A4A,#8B6914)"></div><p class="text-sm font-medium text-white">Design B</p><p ' +
-              'class="text-xs text-gray-400">Prestige Navy</p></div></label>')
-          : "") +
-        "</div></div>" +
-        "<button onclick=\"orderCard(document.querySelector('[name=card-design]:checked')?.value||'A')\" id=\"btn-order-card\" " +
+        [
+          '<div class="bg-dark-800 rounded-2xl border border-dark-600 p-6 space-y-4">',
+          '<h3 class="font-semibold text-white flex items-center gap-2 pb-2 border-b border-dark-600"><i class="fas fa-id-badge text-rouge-400 text-sm"></i> ' +
+            "Demander ma Carte de Membre</h3>",
+          !profileComplete
+            ? '<div class="bg-orange-900/20 border border-orange-500/30 rounded-xl p-4"><p class="text-orange-300 text-sm"><i class="fas fa-info-circle mr-1"></i>' +
+              "Complétez votre profil ci-dessus avant de demander votre carte.</p></div>"
+            : "",
+          '<p class="text-sm text-gray-400">Votre carte digitale certifie votre statut d\'<strong class="text-white">Ambassadeur</strong> LEADER. Elle contient un ' +
+            "QR code permettant de vérifier son authenticité en temps réel.</p>",
+          '<div><p class="form-label mb-2">Choisissez votre design</p><div class="grid grid-cols-2 gap-3">',
+          config.design_a_enabled
+            ? [
+                '<label class="cursor-pointer"><input type="radio" name="card-design" value="A" checked class="hidden peer"><div class="border-2 border-dark-500 ',
+                'peer-checked:border-rouge-500 rounded-xl p-4 text-center transition"><div class="w-full h-12 rounded-lg mb-2" ',
+                'style="background:linear-gradient(135deg,',
+                config.design_a_color1,
+                ",",
+                config.design_a_color2,
+                ",",
+                config.design_a_color3,
+                ')"></div><p class="text-sm font-medium text-white">Design A</p><p class="text-xs text-gray-400">Prestige Orange</p></div></label>'
+              ].join("")
+            : "",
+          config.design_b_enabled
+            ? '<label class="cursor-pointer"><input type="radio" name="card-design" value="B" ' +
+              (!config.design_a_enabled ? "checked" : "") +
+              (' class="hidden peer"><div class="border-2 border-dark-500 peer-checked:border-blue-400 rounded-xl p-4 text-center transition"><div class="w-full h-12 ' +
+                'rounded-lg mb-2" style="background:linear-gradient(135deg,#0D1B2A,#1B2A4A,#8B6914)"></div><p class="text-sm font-medium text-white">Design B</p><p ' +
+                'class="text-xs text-gray-400">Prestige Navy</p></div></label>')
+            : "",
+          "</div></div>",
+          "<button onclick=\"orderCard(document.querySelector('[name=card-design]:checked')?.value||'A')\" id=\"btn-order-card\" "
+        ].join("") +
         (!profileComplete ? 'disabled title="Complétez votre profil"' : "") +
         (' class="w-full bg-rouge-500 text-dark-900 font-bold py-3 rounded-xl hover:bg-rouge-500 transition flex items-center justify-center gap-2 ' +
           'disabled:opacity-50 disabled:cursor-not-allowed"><i class="fas fa-id-badge"></i>') +
@@ -14820,16 +15292,17 @@ async function renderReserveStrategique(el) {
       'mt-0.5">Votre épargne constituée avec le soutien de LEADER</p><' +
       "/div></div>";
     html += '<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">';
-    html +=
-      '<div class="stat-card"><div class="flex items-center justify-between mb-2"><span class="text-xs text-gray-400 uppercase tracking-wider">Votre épargne ' +
-      'constituée</span><div class="w-8 h-8 rounded-lg bg-cyan-500/15 flex items-center justify-center"><i class="fas fa-piggy-bank text-cyan-400 text-sm"><' +
-      '/i></div></div><div class="text-2xl font-bold text-cyan-400">' +
-      fmt$(totalActive) +
-      '</div><div class="text-xs text-gray-500 mt-1">' +
-      active.length +
-      " dépôt" +
-      (active.length > 1 ? "s en cours" : " en cours") +
-      "</div></div>";
+    html += [
+      '<div class="stat-card"><div class="flex items-center justify-between mb-2"><span class="text-xs text-gray-400 uppercase tracking-wider">Votre épargne ',
+      'constituée</span><div class="w-8 h-8 rounded-lg bg-cyan-500/15 flex items-center justify-center"><i class="fas fa-piggy-bank text-cyan-400 text-sm"><',
+      '/i></div></div><div class="text-2xl font-bold text-cyan-400">',
+      fmt$(totalActive),
+      '</div><div class="text-xs text-gray-500 mt-1">',
+      active.length,
+      " dépôt",
+      active.length > 1 ? "s en cours" : " en cours",
+      "</div></div>"
+    ].join("");
     html +=
       '<div class="stat-card"><div class="flex items-center justify-between mb-2"><span class="text-xs text-gray-400 uppercase tracking-wider">Soutien LEADER<' +
       '/span><div class="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center"><i class="fas fa-seedling text-emerald-400 text-sm"></i></div>' +
@@ -14855,18 +15328,20 @@ async function renderReserveStrategique(el) {
       var totalProg = totalPrelevement + totalAbondement;
       var progPct = totalProg > 0 ? Math.round((totalAbondement / totalProg) * 100) : 0;
       html +=
-        '<div class="stat-card border-cyan-500/20 space-y-3"><div class="flex items-center justify-between mb-1"><span class="text-sm font-semibold text-white">' +
-        'Récapitulatif de votre épargne</span></div><div class="grid grid-cols-3 gap-3 text-center"><div class="bg-dark-700/50 rounded-xl p-3"><div ' +
-        'class="text-xs text-gray-400 mb-1">Votre contribution</div><div class="text-base font-bold text-cyan-400">' +
-        fmt$(totalPrelevement) +
-        ('</div><div class="text-xs text-gray-500">prélevé sur votre prime</div></div><div class="bg-dark-700/50 rounded-xl p-3"><div class="text-xs ' +
-          'text-gray-400 mb-1">Soutien de la compagnie</div><div class="text-base font-bold text-emerald-400">+') +
-        fmt$(totalAbondement) +
-        ('</div><div class="text-xs text-gray-500">abondement garanti</div></div><div class="bg-dark-700/50 rounded-xl p-3 border border-cyan-500/20"><div ' +
-          'class="text-xs text-gray-400 mb-1">Total constitué</div><div class="text-base font-bold text-white">') +
-        fmt$(totalActive) +
-        ('</div><div class="text-xs text-gray-500">disponible à l\'échéance</div></div></div><div class="flex justify-between text-xs text-gray-400 mb-1 mt-2"><' +
-          'span>Part abondement dans votre épargne</span><span class="text-emerald-400 font-medium">') +
+        [
+          '<div class="stat-card border-cyan-500/20 space-y-3"><div class="flex items-center justify-between mb-1"><span class="text-sm font-semibold text-white">',
+          'Récapitulatif de votre épargne</span></div><div class="grid grid-cols-3 gap-3 text-center"><div class="bg-dark-700/50 rounded-xl p-3"><div ',
+          'class="text-xs text-gray-400 mb-1">Votre contribution</div><div class="text-base font-bold text-cyan-400">',
+          fmt$(totalPrelevement),
+          '</div><div class="text-xs text-gray-500">prélevé sur votre prime</div></div><div class="bg-dark-700/50 rounded-xl p-3"><div class="text-xs ' +
+            'text-gray-400 mb-1">Soutien de la compagnie</div><div class="text-base font-bold text-emerald-400">+',
+          fmt$(totalAbondement),
+          '</div><div class="text-xs text-gray-500">abondement garanti</div></div><div class="bg-dark-700/50 rounded-xl p-3 border border-cyan-500/20"><div ' +
+            'class="text-xs text-gray-400 mb-1">Total constitué</div><div class="text-base font-bold text-white">',
+          fmt$(totalActive),
+          '</div><div class="text-xs text-gray-500">disponible à l\'échéance</div></div></div><div class="flex justify-between text-xs text-gray-400 mb-1 mt-2"><' +
+            'span>Part abondement dans votre épargne</span><span class="text-emerald-400 font-medium">'
+        ].join("") +
         progPct +
         '%</span></div><div class="h-2 bg-dark-700 rounded-full overflow-hidden"><div class="h-2 rounded-full" style="width:' +
         progPct +
@@ -14875,16 +15350,18 @@ async function renderReserveStrategique(el) {
     }
     if (withdrawalEnabled && totalAvailable > 0) {
       html +=
-        '<div class="stat-card border-cyan-500/20"><h3 class="font-semibold text-white mb-2 flex items-center gap-2"><i class="fas fa-arrow-right-from-bracket ' +
-        'text-cyan-400"></i> Transférer vers mon portefeuille</h3><p class="text-xs text-gray-400 mb-4">Vos fonds disponibles peuvent être transférés ' +
-        'immédiatement dans votre portefeuille.</p><div class="flex flex-col sm:flex-row gap-3"><div class="flex-1"><label class="text-xs text-gray-400 block ' +
-        'mb-1">Montant à transférer (max ' +
-        fmt$(totalAvailable) +
-        ')</label><input id="rs-withdraw-amount" type="number" min="1" max="' +
-        totalAvailable.toFixed(2) +
-        ('" step="0.01" placeholder="Ex : 500" class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-2.5 text-white text-sm ' +
-          'focus:border-cyan-500/60 focus:outline-none" /></div><button onclick="submitRSWithdrawal(') +
-        totalAvailable +
+        [
+          '<div class="stat-card border-cyan-500/20"><h3 class="font-semibold text-white mb-2 flex items-center gap-2"><i class="fas fa-arrow-right-from-bracket ',
+          'text-cyan-400"></i> Transférer vers mon portefeuille</h3><p class="text-xs text-gray-400 mb-4">Vos fonds disponibles peuvent être transférés ',
+          'immédiatement dans votre portefeuille.</p><div class="flex flex-col sm:flex-row gap-3"><div class="flex-1"><label class="text-xs text-gray-400 block ',
+          'mb-1">Montant à transférer (max ',
+          fmt$(totalAvailable),
+          ')</label><input id="rs-withdraw-amount" type="number" min="1" max="',
+          totalAvailable.toFixed(2),
+          '" step="0.01" placeholder="Ex : 500" class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-2.5 text-white text-sm ' +
+            'focus:border-cyan-500/60 focus:outline-none" /></div><button onclick="submitRSWithdrawal(',
+          totalAvailable
+        ].join("") +
         (')" class="bg-cyan-600 hover:bg-cyan-500 text-white font-semibold px-6 py-2.5 rounded-xl text-sm transition-colors flex items-center gap-2 ' +
           'justify-center sm:self-end"><i class="fas fa-wallet"></i> Transférer</button></div><div id="rs-withdraw-msg" class="mt-3 text-sm hidden"></div></div>');
     } else if (totalAvailable === 0 && totalActive > 0 && withdrawalEnabled) {
@@ -14920,35 +15397,41 @@ async function renderReserveStrategique(el) {
             var totalDur = Math.max(1, lockedTs - createdTs);
             var pct = Math.min(100, Math.round((elapsed / totalDur) * 100));
             return (
-              '<div class="bg-dark-700/60 border border-dark-600 rounded-xl p-4"><div class="flex items-start justify-between mb-3"><div><div class="text-sm ' +
-              'font-semibold text-white">Période ' +
-              (e.period || "—") +
-              '</div><div class="text-xs text-gray-400 mt-0.5">Constitué le ' +
-              fmtD(e.created_at) +
-              '</div></div><div class="text-right"><div class="text-lg font-bold text-cyan-400">' +
-              fmt$(total) +
-              ('</div><div class="text-xs text-gray-500">total constitué</div></div></div><div class="grid grid-cols-3 gap-2 mb-3"><div class="bg-dark-800/60 ' +
-                'rounded-lg p-2 text-center"><div class="text-xs text-gray-500 mb-0.5">Votre contribution</div><div class="text-sm font-semibold text-cyan-300">') +
-              fmt$(partPrel) +
-              '</div><div class="text-xs text-gray-600">' +
-              rsPct +
-              ('% de votre prime</div></div><div class="bg-dark-800/60 rounded-lg p-2 text-center"><div class="text-xs text-gray-500 mb-0.5">Soutien LEADER</div><div ' +
-                'class="text-sm font-semibold text-emerald-400">+') +
-              fmt$(partAbo) +
-              '</div><div class="text-xs text-gray-600">abondement +' +
-              abo +
-              ('%</div></div><div class="bg-dark-800/60 rounded-lg p-2 text-center border border-cyan-500/15"><div class="text-xs text-gray-500 mb-0.5">Total à ' +
-                'l\'échéance</div><div class="text-sm font-bold text-white">') +
-              fmt$(total) +
-              ('</div><div class="text-xs text-gray-600">garanti</div></div></div><div class="flex justify-between text-xs text-gray-400 mb-1"><span>Progression vers ' +
-                'la disponibilité</span><span class="text-cyan-400 font-medium">') +
-              pct +
-              '%</span></div><div class="h-1.5 bg-dark-600 rounded-full overflow-hidden"><div class="h-1.5 rounded-full" style="width:' +
-              pct +
-              '%;background:linear-gradient(90deg,#06b6d4,#0e7490)"></div></div><div class="flex justify-between text-xs text-gray-500 mt-1.5"><span>Déposé le ' +
-              fmtD(e.created_at) +
-              '</span><span>Disponible le <span class="text-orange-400 font-medium">' +
-              fmtD(e.locked_until) +
+              [
+                [
+                  [
+                    '<div class="bg-dark-700/60 border border-dark-600 rounded-xl p-4"><div class="flex items-start justify-between mb-3"><div><div class="text-sm ',
+                    'font-semibold text-white">Période ',
+                    e.period || "—",
+                    '</div><div class="text-xs text-gray-400 mt-0.5">Constitué le ',
+                    fmtD(e.created_at),
+                    '</div></div><div class="text-right"><div class="text-lg font-bold text-cyan-400">',
+                    fmt$(total),
+                    '</div><div class="text-xs text-gray-500">total constitué</div></div></div><div class="grid grid-cols-3 gap-2 mb-3"><div class="bg-dark-800/60 ' +
+                      'rounded-lg p-2 text-center"><div class="text-xs text-gray-500 mb-0.5">Votre contribution</div><div class="text-sm font-semibold text-cyan-300">',
+                    fmt$(partPrel)
+                  ].join(""),
+                  '</div><div class="text-xs text-gray-600">',
+                  rsPct,
+                  '% de votre prime</div></div><div class="bg-dark-800/60 rounded-lg p-2 text-center"><div class="text-xs text-gray-500 mb-0.5">Soutien LEADER</div><div ' +
+                    'class="text-sm font-semibold text-emerald-400">+',
+                  fmt$(partAbo),
+                  '</div><div class="text-xs text-gray-600">abondement +',
+                  abo,
+                  '%</div></div><div class="bg-dark-800/60 rounded-lg p-2 text-center border border-cyan-500/15"><div class="text-xs text-gray-500 mb-0.5">Total à ' +
+                    'l\'échéance</div><div class="text-sm font-bold text-white">',
+                  fmt$(total)
+                ].join(""),
+                '</div><div class="text-xs text-gray-600">garanti</div></div></div><div class="flex justify-between text-xs text-gray-400 mb-1"><span>Progression vers ' +
+                  'la disponibilité</span><span class="text-cyan-400 font-medium">',
+                pct,
+                '%</span></div><div class="h-1.5 bg-dark-600 rounded-full overflow-hidden"><div class="h-1.5 rounded-full" style="width:',
+                pct,
+                '%;background:linear-gradient(90deg,#06b6d4,#0e7490)"></div></div><div class="flex justify-between text-xs text-gray-500 mt-1.5"><span>Déposé le ',
+                fmtD(e.created_at),
+                '</span><span>Disponible le <span class="text-orange-400 font-medium">',
+                fmtD(e.locked_until)
+              ].join("") +
               "</span>" +
               (days !== null ? " (" + days + " j)" : "") +
               "</span></div></div>"
@@ -14974,31 +15457,33 @@ async function renderReserveStrategique(el) {
             var label = isAvail ? "Disponible" : isWithdrawn ? "Transféré" : isCan ? "Remplacé" : e.status;
             var partPrel = e.part_prelevement || 0;
             var partAbo = e.part_abondement || 0;
-            return (
-              '<div class="bg-dark-700/30 rounded-xl p-3 mb-1"><div class="flex items-center justify-between"><div class="flex items-center gap-3"><i class="fas ' +
-              icon +
-              " " +
-              color +
-              ' text-sm"></i><div><div class="text-sm text-white">Période ' +
-              (e.period || "—") +
-              '</div><div class="text-xs text-gray-500">' +
-              fmtD(isAvail ? e.unlocked_at : e.created_at) +
-              '</div></div></div><div class="text-right"><div class="text-sm font-semibold ' +
-              color +
-              '">' +
-              fmt$(e.amount) +
-              '</div><div class="text-xs text-gray-500">' +
-              label +
-              "</div></div></div>" +
-              (partPrel > 0 && !isCan
+            return [
+              [
+                '<div class="bg-dark-700/30 rounded-xl p-3 mb-1"><div class="flex items-center justify-between"><div class="flex items-center gap-3"><i class="fas ',
+                icon,
+                " ",
+                color,
+                ' text-sm"></i><div><div class="text-sm text-white">Période ',
+                e.period || "—",
+                '</div><div class="text-xs text-gray-500">',
+                fmtD(isAvail ? e.unlocked_at : e.created_at),
+                '</div></div></div><div class="text-right"><div class="text-sm font-semibold '
+              ].join(""),
+              color,
+              '">',
+              fmt$(e.amount),
+              '</div><div class="text-xs text-gray-500">',
+              label,
+              "</div></div></div>",
+              partPrel > 0 && !isCan
                 ? '<div class="flex gap-4 mt-2 pt-2 border-t border-dark-600 text-xs text-gray-500"><span>Votre part : <span class="text-gray-300">' +
                   fmt$(partPrel) +
                   '</span></span><span>Soutien LEADER : <span class="text-emerald-400">+' +
                   fmt$(partAbo) +
                   "</span></span></div>"
-                : "") +
+                : "",
               "</div>"
-            );
+            ].join("");
           })
           .join("") +
         "</div></div>";
@@ -15077,62 +15562,66 @@ async function renderServices(el) {
     const styleEl = document.createElement("style");
     styleEl.id = "services-page-styles";
     styleEl.textContent =
-      "\n      /* ── Hero ── */\n      .svc-hero {\n        background: linear-gradient(135deg, #02072C 0%, #0A1240 60%, #12185A 100%);\n        border-radius: " +
-      "20px;\n        padding: 40px 32px 32px;\n        position: relative;\n        overflow: hidden;\n        margin-bottom: 32px;\n      }\n      " +
-      ".svc-hero::before {\n        content: '';\n        position: absolute;\n        top: -60px; right: -60px;\n        width: 320px; height: 320px;\n        " +
-      "background: radial-gradient(circle, rgba(121,30,21,0.18) 0%, transparent 70%);\n" +
-      ("        pointer-events: none;\n      }\n      .svc-hero::after {\n        content: '';\n        position: absolute;\n        bottom: -40px; left: 20%;\n     " +
-        "   width: 280px; height: 200px;\n        background: radial-gradient(circle, rgba(10,18,64,0.6) 0%, transparent 70%);\n        pointer-events: none;\n    " +
-        "  }\n\n      /* ── Recherche ── */\n      .svc-search {\n        background: rgba(255,255,255,0.07);\n        border: 1px solid rgba(255,255,255,0.12);\n    " +
-        "    border-radius: 12px;\n        padding: 10px 16px;\n") +
-      ("        color: #fff;\n        font-size: 14px;\n        width: 100%;\n        max-width: 340px;\n        outline: none;\n        transition: border-color " +
-        ".2s, background .2s;\n      }\n      .svc-search::placeholder { color: rgba(255,255,255,0.35); }\n      .svc-search:focus { border-color: " +
-        "rgba(121,30,21,0.7); background: rgba(255,255,255,0.1); }\n\n      /* ── Pills catégories ── */\n      .svc-pills { display: flex; flex-wrap: wrap; gap: " +
-        "8px; margin-bottom: 28px; }\n      .svc-pill {\n        padding: 6px 16px; border-radius: 999px; font-size: 12px; font-weight: 600;\n") +
-      ("        cursor: pointer; border: 1.5px solid rgba(255,255,255,0.12);\n        color: rgba(245,240,232,0.55); background: transparent;\n        " +
-        "transition: all .2s; user-select: none;\n      }\n      .svc-pill:hover { border-color: rgba(121,30,21,0.5); color: #F5F0E8; }\n      .svc-pill.active {\n " +
-        "       background: linear-gradient(135deg, #791E15, #A02820);\n        border-color: transparent; color: #fff;\n        box-shadow: 0 4px 12px " +
-        "rgba(121,30,21,0.35);\n      }\n      .svc-pill-count {\n        display: inline-flex; align-items: center; justify-content: center;\n") +
-      ("        background: rgba(255,255,255,0.15); border-radius: 999px;\n        min-width: 18px; height: 18px; padding: 0 5px;\n        font-size: 10px; " +
-        "font-weight: 700; margin-left: 4px;\n      }\n      .svc-pill.active .svc-pill-count { background: rgba(255,255,255,0.25); }\n\n      /* ── Grille ── */\n  " +
-        "    .svc-grid {\n        display: grid;\n        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));\n        gap: 20px;\n      }\n      @media " +
-        "(max-width: 480px) {\n        .svc-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }\n") +
-      ("      }\n\n      /* ── Card service ── */\n      .svc-card {\n        background: linear-gradient(145deg, rgba(10,18,64,0.8) 0%, rgba(2,7,44,0.95) 100%);\n " +
-        "       border: 1px solid rgba(255,255,255,0.07);\n        border-radius: 20px;\n        overflow: hidden;\n        cursor: pointer;\n        transition: " +
-        "transform .28s cubic-bezier(.22,.68,0,1.2),\n                    box-shadow .28s ease,\n                    border-color .28s ease;\n        " +
-        "text-decoration: none;\n        display: flex; flex-direction: column;\n") +
-      ("        position: relative;\n      }\n      .svc-card:hover {\n        transform: translateY(-8px);\n        border-color: rgba(121,30,21,0.55);\n        " +
-        "box-shadow: 0 20px 48px rgba(0,0,0,0.55),\n                    0 0 0 1px rgba(121,30,21,0.2),\n                    0 0 32px rgba(121,30,21,0.12);\n      " +
-        "}\n\n      /* ── Card verrouillée ── */\n      .svc-card.locked {\n        cursor: default;\n        opacity: 0.6;\n        filter: saturate(0.3);\n      }\n  " +
-        "    .svc-card.locked:hover {\n        transform: none; box-shadow: none; border-color: rgba(255,255,255,0.07);\n") +
-      ("      }\n      .svc-lock-badge {\n        position: absolute; top: 10px; right: 10px;\n        background: rgba(0,0,0,0.7);\n        border: 1px solid " +
-        "rgba(255,255,255,0.15);\n        border-radius: 999px;\n        padding: 3px 8px;\n        display: flex; align-items: center; gap: 4px;\n        " +
-        "font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.6);\n        backdrop-filter: blur(4px);\n        z-index: 2;\n      }\n\n      /* ── Zone " +
-        "logo ── */\n      .svc-logo-zone {\n        height: 140px;\n        display: flex; align-items: center; justify-content: center;\n") +
-      ("        position: relative;\n        overflow: hidden;\n        background: #02072C !important;\n      }\n      .svc-logo-zone::before {\n        content: " +
-        "'';\n        position: absolute;\n        top: 50%; left: 50%;\n        transform: translate(-50%, -50%);\n        width: 120px; height: 120px;\n        " +
-        "border-radius: 50%;\n        background: var(--svc-accent, rgba(121,30,21,0.18));\n        filter: blur(32px);\n        pointer-events: none;\n        " +
-        "z-index: 0;\n      }\n      .svc-logo-zone::after {\n        content: '';\n") +
-      ("        position: absolute; bottom: 0; left: 8%; right: 8%;\n        height: 1px;\n        background: linear-gradient(90deg, transparent, " +
-        "rgba(255,255,255,0.06), transparent);\n        pointer-events: none;\n      }\n      .svc-logo-img {\n        max-height: 88px; max-width: 78%;\n        " +
-        "object-fit: contain;\n        position: relative; z-index: 1;\n        transition: transform .28s cubic-bezier(.22,.68,0,1.2), filter .28s ease;\n        " +
-        "mix-blend-mode: screen;\n        filter: brightness(1.08) contrast(1.05) saturate(1.1);\n") +
-      ("      }\n      .svc-card:not(.locked):hover .svc-logo-img {\n        transform: scale(1.1);\n        filter: brightness(1.15) contrast(1.08) " +
-        "saturate(1.15);\n      }\n      .svc-logo-letter {\n        width: 76px; height: 76px; border-radius: 20px;\n        display: flex; align-items: center; " +
-        "justify-content: center;\n        font-size: 30px; font-weight: 900; color: #fff;\n        background: linear-gradient(135deg, #791E15, #5A1510);\n       " +
-        " box-shadow: 0 8px 28px rgba(121,30,21,0.45);\n        position: relative; z-index: 1;\n") +
-      ("        transition: transform .28s cubic-bezier(.22,.68,0,1.2);\n      }\n      .svc-card:not(.locked):hover .svc-logo-letter { transform: scale(1.1); }\n" +
-        "\n      /* ── Corps card ── */\n      .svc-body {\n        padding: 18px 20px 20px;\n        flex: 1; display: flex; flex-direction: column; gap: 8px;\n    " +
-        "  }\n      .svc-name {\n        font-size: 16px; font-weight: 700; color: #fff;\n        line-height: 1.3;\n      }\n      .svc-cat {\n        display: " +
-        "inline-flex; align-items: center; gap: 5px;\n        font-size: 11px; font-weight: 600; padding: 3px 10px;\n") +
-      ("        border-radius: 999px; width: fit-content;\n      }\n      .svc-desc {\n        font-size: 13px; color: rgba(245,240,232,0.5);\n        " +
-        "line-height: 1.55; flex: 1;\n        display: -webkit-box; -webkit-line-clamp: 3;\n        -webkit-box-orient: vertical; overflow: hidden;\n      }\n      " +
-        ".svc-footer {\n        margin-top: 12px; padding-top: 12px;\n        border-top: 1px solid rgba(255,255,255,0.06);\n        display: flex; align-items: " +
-        "center; justify-content: space-between;\n      }\n      .svc-status-dot {\n") +
-      ("        width: 7px; height: 7px; border-radius: 50%;\n        display: inline-block; margin-right: 5px;\n      }\n      .svc-arrow {\n        width: 28px; " +
-        "height: 28px; border-radius: 50%;\n        background: rgba(121,30,21,0.2);\n        display: flex; align-items: center; justify-content: center;\n       " +
-        " font-size: 11px; color: #791E15;\n        transition: background .2s, transform .2s;\n      }\n      .svc-card:not(.locked):hover .svc-arrow {\n        " +
-        "background: #791E15; color: #fff; transform: translateX(3px);\n") +
+      [
+        [
+          "\n      /* ── Hero ── */\n      .svc-hero {\n        background: linear-gradient(135deg, #02072C 0%, #0A1240 60%, #12185A 100%);\n        border-radius: ",
+          "20px;\n        padding: 40px 32px 32px;\n        position: relative;\n        overflow: hidden;\n        margin-bottom: 32px;\n      }\n      ",
+          ".svc-hero::before {\n        content: '';\n        position: absolute;\n        top: -60px; right: -60px;\n        width: 320px; height: 320px;\n        ",
+          "background: radial-gradient(circle, rgba(121,30,21,0.18) 0%, transparent 70%);\n",
+          "        pointer-events: none;\n      }\n      .svc-hero::after {\n        content: '';\n        position: absolute;\n        bottom: -40px; left: 20%;\n     " +
+            "   width: 280px; height: 200px;\n        background: radial-gradient(circle, rgba(10,18,64,0.6) 0%, transparent 70%);\n        pointer-events: none;\n    " +
+            "  }\n\n      /* ── Recherche ── */\n      .svc-search {\n        background: rgba(255,255,255,0.07);\n        border: 1px solid rgba(255,255,255,0.12);\n    " +
+            "    border-radius: 12px;\n        padding: 10px 16px;\n",
+          "        color: #fff;\n        font-size: 14px;\n        width: 100%;\n        max-width: 340px;\n        outline: none;\n        transition: border-color " +
+            ".2s, background .2s;\n      }\n      .svc-search::placeholder { color: rgba(255,255,255,0.35); }\n      .svc-search:focus { border-color: " +
+            "rgba(121,30,21,0.7); background: rgba(255,255,255,0.1); }\n\n      /* ── Pills catégories ── */\n      .svc-pills { display: flex; flex-wrap: wrap; gap: " +
+            "8px; margin-bottom: 28px; }\n      .svc-pill {\n        padding: 6px 16px; border-radius: 999px; font-size: 12px; font-weight: 600;\n",
+          "        cursor: pointer; border: 1.5px solid rgba(255,255,255,0.12);\n        color: rgba(245,240,232,0.55); background: transparent;\n        " +
+            "transition: all .2s; user-select: none;\n      }\n      .svc-pill:hover { border-color: rgba(121,30,21,0.5); color: #F5F0E8; }\n      .svc-pill.active {\n " +
+            "       background: linear-gradient(135deg, #791E15, #A02820);\n        border-color: transparent; color: #fff;\n        box-shadow: 0 4px 12px " +
+            "rgba(121,30,21,0.35);\n      }\n      .svc-pill-count {\n        display: inline-flex; align-items: center; justify-content: center;\n",
+          "        background: rgba(255,255,255,0.15); border-radius: 999px;\n        min-width: 18px; height: 18px; padding: 0 5px;\n        font-size: 10px; " +
+            "font-weight: 700; margin-left: 4px;\n      }\n      .svc-pill.active .svc-pill-count { background: rgba(255,255,255,0.25); }\n\n      /* ── Grille ── */\n  " +
+            "    .svc-grid {\n        display: grid;\n        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));\n        gap: 20px;\n      }\n      @media " +
+            "(max-width: 480px) {\n        .svc-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }\n",
+          "      }\n\n      /* ── Card service ── */\n      .svc-card {\n        background: linear-gradient(145deg, rgba(10,18,64,0.8) 0%, rgba(2,7,44,0.95) 100%);\n " +
+            "       border: 1px solid rgba(255,255,255,0.07);\n        border-radius: 20px;\n        overflow: hidden;\n        cursor: pointer;\n        transition: " +
+            "transform .28s cubic-bezier(.22,.68,0,1.2),\n                    box-shadow .28s ease,\n                    border-color .28s ease;\n        " +
+            "text-decoration: none;\n        display: flex; flex-direction: column;\n"
+        ].join(""),
+        "        position: relative;\n      }\n      .svc-card:hover {\n        transform: translateY(-8px);\n        border-color: rgba(121,30,21,0.55);\n        " +
+          "box-shadow: 0 20px 48px rgba(0,0,0,0.55),\n                    0 0 0 1px rgba(121,30,21,0.2),\n                    0 0 32px rgba(121,30,21,0.12);\n      " +
+          "}\n\n      /* ── Card verrouillée ── */\n      .svc-card.locked {\n        cursor: default;\n        opacity: 0.6;\n        filter: saturate(0.3);\n      }\n  " +
+          "    .svc-card.locked:hover {\n        transform: none; box-shadow: none; border-color: rgba(255,255,255,0.07);\n",
+        "      }\n      .svc-lock-badge {\n        position: absolute; top: 10px; right: 10px;\n        background: rgba(0,0,0,0.7);\n        border: 1px solid " +
+          "rgba(255,255,255,0.15);\n        border-radius: 999px;\n        padding: 3px 8px;\n        display: flex; align-items: center; gap: 4px;\n        " +
+          "font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.6);\n        backdrop-filter: blur(4px);\n        z-index: 2;\n      }\n\n      /* ── Zone " +
+          "logo ── */\n      .svc-logo-zone {\n        height: 140px;\n        display: flex; align-items: center; justify-content: center;\n",
+        "        position: relative;\n        overflow: hidden;\n        background: #02072C !important;\n      }\n      .svc-logo-zone::before {\n        content: " +
+          "'';\n        position: absolute;\n        top: 50%; left: 50%;\n        transform: translate(-50%, -50%);\n        width: 120px; height: 120px;\n        " +
+          "border-radius: 50%;\n        background: var(--svc-accent, rgba(121,30,21,0.18));\n        filter: blur(32px);\n        pointer-events: none;\n        " +
+          "z-index: 0;\n      }\n      .svc-logo-zone::after {\n        content: '';\n",
+        "        position: absolute; bottom: 0; left: 8%; right: 8%;\n        height: 1px;\n        background: linear-gradient(90deg, transparent, " +
+          "rgba(255,255,255,0.06), transparent);\n        pointer-events: none;\n      }\n      .svc-logo-img {\n        max-height: 88px; max-width: 78%;\n        " +
+          "object-fit: contain;\n        position: relative; z-index: 1;\n        transition: transform .28s cubic-bezier(.22,.68,0,1.2), filter .28s ease;\n        " +
+          "mix-blend-mode: screen;\n        filter: brightness(1.08) contrast(1.05) saturate(1.1);\n",
+        "      }\n      .svc-card:not(.locked):hover .svc-logo-img {\n        transform: scale(1.1);\n        filter: brightness(1.15) contrast(1.08) " +
+          "saturate(1.15);\n      }\n      .svc-logo-letter {\n        width: 76px; height: 76px; border-radius: 20px;\n        display: flex; align-items: center; " +
+          "justify-content: center;\n        font-size: 30px; font-weight: 900; color: #fff;\n        background: linear-gradient(135deg, #791E15, #5A1510);\n       " +
+          " box-shadow: 0 8px 28px rgba(121,30,21,0.45);\n        position: relative; z-index: 1;\n",
+        "        transition: transform .28s cubic-bezier(.22,.68,0,1.2);\n      }\n      .svc-card:not(.locked):hover .svc-logo-letter { transform: scale(1.1); }\n" +
+          "\n      /* ── Corps card ── */\n      .svc-body {\n        padding: 18px 20px 20px;\n        flex: 1; display: flex; flex-direction: column; gap: 8px;\n    " +
+          "  }\n      .svc-name {\n        font-size: 16px; font-weight: 700; color: #fff;\n        line-height: 1.3;\n      }\n      .svc-cat {\n        display: " +
+          "inline-flex; align-items: center; gap: 5px;\n        font-size: 11px; font-weight: 600; padding: 3px 10px;\n",
+        "        border-radius: 999px; width: fit-content;\n      }\n      .svc-desc {\n        font-size: 13px; color: rgba(245,240,232,0.5);\n        " +
+          "line-height: 1.55; flex: 1;\n        display: -webkit-box; -webkit-line-clamp: 3;\n        -webkit-box-orient: vertical; overflow: hidden;\n      }\n      " +
+          ".svc-footer {\n        margin-top: 12px; padding-top: 12px;\n        border-top: 1px solid rgba(255,255,255,0.06);\n        display: flex; align-items: " +
+          "center; justify-content: space-between;\n      }\n      .svc-status-dot {\n",
+        "        width: 7px; height: 7px; border-radius: 50%;\n        display: inline-block; margin-right: 5px;\n      }\n      .svc-arrow {\n        width: 28px; " +
+          "height: 28px; border-radius: 50%;\n        background: rgba(121,30,21,0.2);\n        display: flex; align-items: center; justify-content: center;\n       " +
+          " font-size: 11px; color: #791E15;\n        transition: background .2s, transform .2s;\n      }\n      .svc-card:not(.locked):hover .svc-arrow {\n        " +
+          "background: #791E15; color: #fff; transform: translateX(3px);\n"
+      ].join("") +
       ("      }\n\n      /* ── Tooltip upgrade ── */\n      .svc-upgrade-tooltip {\n        position: absolute; bottom: 0; left: 0; right: 0;\n        background: " +
         "linear-gradient(to top, rgba(0,0,0,0.92), transparent);\n        padding: 24px 16px 12px;\n        text-align: center;\n        opacity: 0; transition: " +
         "opacity .2s;\n        pointer-events: none;\n      }\n      .svc-card.locked:hover .svc-upgrade-tooltip { opacity: 1; }\n    ");
@@ -15172,48 +15661,56 @@ async function renderServices(el) {
     const attrs = href ? 'href="' + href + '" target="_blank" rel="noopener noreferrer"' : "";
     const lockedClass = !isAccessible && !isComing ? "locked" : "";
     return (
-      "\n    <" +
-      tag +
-      ' class="svc-card ' +
-      lockedClass +
-      '" ' +
-      attrs +
-      '\n      data-name="' +
-      (s.name || "").toLowerCase() +
-      '"\n      data-cat="' +
-      (s.category || "général").toLowerCase() +
-      '"\n      style="--svc-accent:' +
-      accent +
-      '">\n\n      ' +
-      (!isAccessible && !isComing
-        ? '\n        <div class="svc-lock-badge">\n          <i class="fas fa-lock" style="font-size:8px"></i> Non inclus\n        </div>\n        <div ' +
-          'class="svc-upgrade-tooltip">\n          <p style="color:rgba(255,255,255,0.7);font-size:11px;font-weight:600">\n            ' +
-          (activePkg ? "Inclus dans un pack sup\xE9rieur" : "Achetez un package pour acc\xE9der") +
-          "\n          </p>\n        </div>\n      "
-        : "") +
-      "\n\n      " +
-      (isComing
-        ? '\n        <div class="svc-lock-badge" style="color:#f59e0b;border-color:rgba(245,158,11,0.3)">\n          <i class="fas fa-clock" style="font-size:8px"><' +
-          "/i> Bientôt\n        </div>\n      "
-        : "") +
-      '\n\n      <!-- Zone logo -->\n      <div class="svc-logo-zone">\n        ' +
-      (logo ? '<img src="' + logo + '" alt="' + s.name + '" class="svc-logo-img">' : '<div class="svc-logo-letter">' + s.name.charAt(0) + "</div>") +
-      '\n      </div>\n\n      <!-- Corps -->\n      <div class="svc-body">\n        <div class="svc-name">' +
-      s.name +
-      '</div>\n        <div class="svc-cat" style="background:' +
-      catBg +
-      ";color:" +
-      catColor +
-      '">\n          ' +
-      (s.category || "Général") +
-      "\n        </div>\n        " +
-      (s.description ? '<p class="svc-desc">' + s.description + "</p>" : "") +
-      ('\n\n        <div class="svc-footer">\n          <span style="font-size:11px;color:rgba(245,240,232,0.35)">\n            <span class="svc-status-dot" ' +
-        'style="background:') +
-      (isAccessible ? "#22c55e" : isComing ? "#f59e0b" : "#4b5563") +
-      '"></span>\n            ' +
-      (isAccessible ? "Accessible" : isComing ? "Bientôt" : "Non inclus") +
-      "\n          </span>\n          " +
+      [
+        [
+          [
+            [
+              "\n    <",
+              tag,
+              ' class="svc-card ',
+              lockedClass,
+              '" ',
+              attrs,
+              '\n      data-name="',
+              (s.name || "").toLowerCase(),
+              '"\n      data-cat="'
+            ].join(""),
+            (s.category || "général").toLowerCase(),
+            '"\n      style="--svc-accent:',
+            accent,
+            '">\n\n      ',
+            !isAccessible && !isComing
+              ? '\n        <div class="svc-lock-badge">\n          <i class="fas fa-lock" style="font-size:8px"></i> Non inclus\n        </div>\n        <div ' +
+                'class="svc-upgrade-tooltip">\n          <p style="color:rgba(255,255,255,0.7);font-size:11px;font-weight:600">\n            ' +
+                (activePkg ? "Inclus dans un pack sup\xE9rieur" : "Achetez un package pour acc\xE9der") +
+                "\n          </p>\n        </div>\n      "
+              : "",
+            "\n\n      ",
+            isComing
+              ? '\n        <div class="svc-lock-badge" style="color:#f59e0b;border-color:rgba(245,158,11,0.3)">\n          <i class="fas fa-clock" style="font-size:8px"><' +
+                "/i> Bientôt\n        </div>\n      "
+              : "",
+            '\n\n      <!-- Zone logo -->\n      <div class="svc-logo-zone">\n        '
+          ].join(""),
+          logo ? '<img src="' + logo + '" alt="' + s.name + '" class="svc-logo-img">' : '<div class="svc-logo-letter">' + s.name.charAt(0) + "</div>",
+          '\n      </div>\n\n      <!-- Corps -->\n      <div class="svc-body">\n        <div class="svc-name">',
+          s.name,
+          '</div>\n        <div class="svc-cat" style="background:',
+          catBg,
+          ";color:",
+          catColor,
+          '">\n          '
+        ].join(""),
+        s.category || "Général",
+        "\n        </div>\n        ",
+        s.description ? '<p class="svc-desc">' + s.description + "</p>" : "",
+        '\n\n        <div class="svc-footer">\n          <span style="font-size:11px;color:rgba(245,240,232,0.35)">\n            <span class="svc-status-dot" ' +
+          'style="background:',
+        isAccessible ? "#22c55e" : isComing ? "#f59e0b" : "#4b5563",
+        '"></span>\n            ',
+        isAccessible ? "Accessible" : isComing ? "Bientôt" : "Non inclus",
+        "\n          </span>\n          "
+      ].join("") +
       (isAccessible && href ? '<div class="svc-arrow"><i class="fas fa-arrow-right"></i></div>' : "") +
       "\n        </div>\n      </div>\n    </" +
       tag +
@@ -15221,50 +15718,57 @@ async function renderServices(el) {
     );
   }
   el.innerHTML =
-    '\n    <div>\n      <!-- Hero -->\n      <div class="svc-hero">\n        <div style="position:relative;z-index:1">\n          <div ' +
-    'style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(121,30,21,0.9);margin-bottom:8px">\n            <i ' +
-    'class="fas fa-th-large mr-2"></i>Espace Services\n          </div>\n          <h1 ' +
-    'style="font-size:clamp(22px,4vw,32px);font-weight:900;color:#fff;line-height:1.2;margin-bottom:10px">\n            ' +
-    pageTitle +
-    '\n          </h1>\n          <p style="font-size:14px;color:rgba(245,240,232,0.55);max-width:480px;line-height:1.6">\n            ' +
-    pageSubtitle +
-    ('\n          </p>\n          <div style="display:flex;gap:16px;margin-top:20px;flex-wrap:wrap">\n            <div ' +
-      'style="display:flex;align-items:center;gap:6px;font-size:12px">\n              <span ' +
-      'style="width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block"></span>\n              <span style="color:rgba(245,240,232,0.6)">') +
-    accessibleCount +
-    " service" +
-    (accessibleCount > 1 ? "s" : "") +
-    " accessible" +
-    (accessibleCount > 1 ? "s" : "") +
-    "</span>\n            </div>\n            " +
-    (activePkg
-      ? '\n            <div style="display:flex;align-items:center;gap:6px;font-size:12px">\n              <i class="fas fa-box" ' +
-        'style="color:rgba(121,30,21,0.8);font-size:10px"></i>\n              <span style="color:rgba(245,240,232,0.6)">Package : <span ' +
-        'style="color:#fff;font-weight:700">' +
-        activePkg +
-        "</span></span>\n            </div>"
-      : "") +
-    ('\n          </div>\n        </div>\n\n        <!-- Barre recherche -->\n        <div style="margin-top:24px;position:relative;z-index:1">\n          <input ' +
-      'type="search" class="svc-search" placeholder="Rechercher un service…"\n                 oninput="svcFilter(this.value, window._svcActiveCat||\'Tous\')">\n ' +
-      '       </div>\n      </div>\n\n      <!-- Pills catégories -->\n      <div class="svc-pills" id="svc-pills">\n        ') +
-    cats
-      .map((cat) => {
-        const count = cat === "Tous" ? services.length : services.filter((s) => (s.category || "général").toLowerCase() === cat.toLowerCase()).length;
-        return (
-          '<button class="svc-pill ' +
-          (cat === "Tous" ? "active" : "") +
-          "\"\n                    onclick=\"svcFilter('', '" +
-          cat +
-          '\')"\n                    data-cat="' +
-          cat +
-          '">\n            ' +
-          cat +
-          '\n            <span class="svc-pill-count">' +
-          count +
-          "</span>\n          </button>"
-        );
-      })
-      .join("") +
+    [
+      [
+        '\n    <div>\n      <!-- Hero -->\n      <div class="svc-hero">\n        <div style="position:relative;z-index:1">\n          <div ',
+        'style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(121,30,21,0.9);margin-bottom:8px">\n            <i ',
+        'class="fas fa-th-large mr-2"></i>Espace Services\n          </div>\n          <h1 ',
+        'style="font-size:clamp(22px,4vw,32px);font-weight:900;color:#fff;line-height:1.2;margin-bottom:10px">\n            ',
+        pageTitle,
+        '\n          </h1>\n          <p style="font-size:14px;color:rgba(245,240,232,0.55);max-width:480px;line-height:1.6">\n            ',
+        pageSubtitle,
+        '\n          </p>\n          <div style="display:flex;gap:16px;margin-top:20px;flex-wrap:wrap">\n            <div ' +
+          'style="display:flex;align-items:center;gap:6px;font-size:12px">\n              <span ' +
+          'style="width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block"></span>\n              <span style="color:rgba(245,240,232,0.6)">',
+        accessibleCount
+      ].join(""),
+      " service",
+      accessibleCount > 1 ? "s" : "",
+      " accessible",
+      accessibleCount > 1 ? "s" : "",
+      "</span>\n            </div>\n            ",
+      activePkg
+        ? '\n            <div style="display:flex;align-items:center;gap:6px;font-size:12px">\n              <i class="fas fa-box" ' +
+          'style="color:rgba(121,30,21,0.8);font-size:10px"></i>\n              <span style="color:rgba(245,240,232,0.6)">Package : <span ' +
+          'style="color:#fff;font-weight:700">' +
+          activePkg +
+          "</span></span>\n            </div>"
+        : "",
+      '\n          </div>\n        </div>\n\n        <!-- Barre recherche -->\n        <div style="margin-top:24px;position:relative;z-index:1">\n          <input ' +
+        'type="search" class="svc-search" placeholder="Rechercher un service…"\n                 oninput="svcFilter(this.value, window._svcActiveCat||\'Tous\')">\n ' +
+        '       </div>\n      </div>\n\n      <!-- Pills catégories -->\n      <div class="svc-pills" id="svc-pills">\n        ',
+      cats
+        .map((cat) => {
+          const count =
+            cat === "Tous" ? services.length : services.filter((s) => (s.category || "général").toLowerCase() === cat.toLowerCase()).length;
+          return (
+            [
+              '<button class="svc-pill ',
+              cat === "Tous" ? "active" : "",
+              "\"\n                    onclick=\"svcFilter('', '",
+              cat,
+              '\')"\n                    data-cat="',
+              cat,
+              '">\n            ',
+              cat,
+              '\n            <span class="svc-pill-count">'
+            ].join("") +
+            count +
+            "</span>\n          </button>"
+          );
+        })
+        .join("")
+    ].join("") +
     '\n      </div>\n\n      <!-- Grille -->\n      <div class="svc-grid" id="svc-grid">\n        ' +
     services.map(buildCard).join("") +
     "\n      </div>\n    </div>";
@@ -15302,50 +15806,54 @@ async function renderReservoir(e) {
       s = t.pending || [],
       r = t.placed || [];
     e.innerHTML =
-      '\n\n    <div class="space-y-6">\n\n      <div class="flex items-center justify-between flex-wrap gap-2">\n\n        <h2 class="text-xl font-bold">Réservoir ' +
-      'à placement</h2>\n\n        <div class="flex items-center gap-2">\n\n          <span class="bg-orange-500/20 text-orange-400 text-xs px-3 py-1 ' +
-      'rounded-full font-medium">\n\n            <i class="fas fa-clock mr-1"></i>' +
-      t.pending_count +
-      (' en attente\n\n          </span>\n\n          <span class="bg-green-500/20 text-green-400 text-xs px-3 py-1 rounded-full font-medium">\n\n            <i ' +
-        'class="fas fa-check mr-1"></i>') +
-      t.placed_count +
-      (' placé(s)\n\n          </span>\n\n        </div>\n\n      </div>\n\n\n\n      <!-- Explication + lien M3 -->\n\n      <div class="bg-dark-800 rounded-2xl border ' +
-        'border-rouge-500/25 p-5">\n\n        <div class="flex items-start gap-4">\n\n          <div class="w-10 h-10 rounded-xl bg-rouge-500/15 flex items-center ' +
-        'justify-center flex-shrink-0">\n\n            <i class="fas fa-info-circle text-rouge-400 text-lg"></i>\n\n          </div>\n\n          <div class="flex-1">' +
-        '\n\n            <h3 class="font-semibold text-white mb-1">Comment fonctionne le Réservoir ?</h3>\n' +
-        ('\n            <p class="text-sm text-gray-400 mb-3">\n\n              Les membres inscrits via votre <strong class="text-rouge-400">lien de parrainage M3<' +
-          '/strong>\n\n              arrivent ici en attente. <strong class="text-white">C\'est vous</strong> qui choisissez\n\n              où les placer dans votre ' +
-          'arbre binaire en cliquant sur\n\n              <span class="bg-orange-500/20 text-orange-300 px-2 py-0.5 rounded text-xs font-medium">\n\n                <' +
-          'i class="fas fa-sitemap mr-1"></i>Placer dans l\'arbre\n') +
-        ('\n              </span>.\n\n              Vous pouvez aussi envoyer un <strong class="text-blue-400">lien M2</strong> à un filleul\n\n              pour ' +
-          "qu'il s'inscrive directement sur un spot libre de votre arbre.\n\n            </p>\n\n            <!-- Lien de parrainage M3 — Point 4 : visible " +
-          "uniquement si licence active -->\n\n            ")) +
-      (n && a
-        ? '\n\n            <div class="flex gap-2">\n\n              <input id="reservoir-link-input" type="text" value="' +
-          a +
-          ('" readonly\n\n                class="flex-1 bg-dark-700 border border-dark-600 rounded-xl px-4 py-2.5 text-rouge-400 text-sm font-mono ' +
-            'focus:outline-none truncate">\n\n              <button onclick="copyReservoirLink()" class="bg-rouge-500 text-dark-900 font-bold px-4 py-2.5 rounded-xl ' +
-            'hover:bg-rouge-500 transition flex items-center gap-2 flex-shrink-0">\n\n                <i class="fas fa-copy"></i>\n\n                <span ' +
-            'class="hidden sm:inline text-sm">Copier</span>\n\n              </button>\n\n            </div>\n' +
-            ('\n            <p class="text-xs text-gray-500 mt-2">\n\n              <i class="fas fa-share-nodes mr-1"></i>\n\n              Partagez aussi via :\n\n       ' +
-              '       <a href="https://wa.me/?text=')) +
-          encodeURIComponent("Rejoignez LEADER avec mon lien : " + a) +
-          ('"\n\n                 target="_blank" class="text-green-400 hover:underline mx-1"><i class="fab fa-whatsapp"></i> WhatsApp</a>\n\n              <a ' +
-            'href="https://t.me/share/url?url=') +
-          encodeURIComponent(a) +
-          "&text=" +
-          encodeURIComponent("Rejoignez LEADER !") +
-          '"\n\n                 target="_blank" class="text-blue-400 hover:underline mx-1"><i class="fab fa-telegram"></i> Telegram</a>\n\n            </p>'
-        : '\n            <div class="bg-orange-900/20 border border-orange-500/30 rounded-xl p-4 flex items-start gap-3 mt-2">\n              <i class="fas fa-lock ' +
-          'text-orange-400 mt-0.5"></i>\n              <div>\n                <p class="text-orange-300 font-medium text-sm">Lien de parrainage indisponible</p>\n   ' +
-          '             <p class="text-orange-400/70 text-xs mt-1">Activez votre licence Finstrategia pour obtenir votre lien de parrainage et inviter des ' +
-          'membres.</p>\n                <button onclick="showPage(\'license\')" class="mt-2 text-xs bg-rouge-500 text-dark-900 font-bold px-3 py-1.5 rounded-lg ' +
-          'hover:bg-rouge-500 transition">\n' +
-          '                  <i class="fas fa-key mr-1"></i>Activer ma licence\n                </button>\n              </div>\n            </div>') +
-      ('\n\n          </div>\n\n        </div>\n\n      </div>\n\n\n\n      <!-- Filleuls EN ATTENTE de placement -->\n\n      <div class="bg-dark-800 rounded-2xl border ' +
-        'border-dark-600 overflow-hidden">\n\n        <div class="px-5 py-4 border-b border-dark-600 flex items-center justify-between">\n\n          <h3 ' +
-        'class="font-semibold flex items-center gap-2">\n\n            <i class="fas fa-clock text-orange-400"></i>\n\n            En attente de placement\n\n        ' +
-        "    ") +
+      [
+        '\n\n    <div class="space-y-6">\n\n      <div class="flex items-center justify-between flex-wrap gap-2">\n\n        <h2 class="text-xl font-bold">Réservoir ',
+        'à placement</h2>\n\n        <div class="flex items-center gap-2">\n\n          <span class="bg-orange-500/20 text-orange-400 text-xs px-3 py-1 ',
+        'rounded-full font-medium">\n\n            <i class="fas fa-clock mr-1"></i>',
+        t.pending_count,
+        ' en attente\n\n          </span>\n\n          <span class="bg-green-500/20 text-green-400 text-xs px-3 py-1 rounded-full font-medium">\n\n            <i ' +
+          'class="fas fa-check mr-1"></i>',
+        t.placed_count,
+        ' placé(s)\n\n          </span>\n\n        </div>\n\n      </div>\n\n\n\n      <!-- Explication + lien M3 -->\n\n      <div class="bg-dark-800 rounded-2xl border ' +
+          'border-rouge-500/25 p-5">\n\n        <div class="flex items-start gap-4">\n\n          <div class="w-10 h-10 rounded-xl bg-rouge-500/15 flex items-center ' +
+          'justify-center flex-shrink-0">\n\n            <i class="fas fa-info-circle text-rouge-400 text-lg"></i>\n\n          </div>\n\n          <div class="flex-1">' +
+          '\n\n            <h3 class="font-semibold text-white mb-1">Comment fonctionne le Réservoir ?</h3>\n' +
+          ('\n            <p class="text-sm text-gray-400 mb-3">\n\n              Les membres inscrits via votre <strong class="text-rouge-400">lien de parrainage M3<' +
+            '/strong>\n\n              arrivent ici en attente. <strong class="text-white">C\'est vous</strong> qui choisissez\n\n              où les placer dans votre ' +
+            'arbre binaire en cliquant sur\n\n              <span class="bg-orange-500/20 text-orange-300 px-2 py-0.5 rounded text-xs font-medium">\n\n                <' +
+            'i class="fas fa-sitemap mr-1"></i>Placer dans l\'arbre\n') +
+          ('\n              </span>.\n\n              Vous pouvez aussi envoyer un <strong class="text-blue-400">lien M2</strong> à un filleul\n\n              pour ' +
+            "qu'il s'inscrive directement sur un spot libre de votre arbre.\n\n            </p>\n\n            <!-- Lien de parrainage M3 — Point 4 : visible " +
+            "uniquement si licence active -->\n\n            "),
+        n && a
+          ? [
+              '\n\n            <div class="flex gap-2">\n\n              <input id="reservoir-link-input" type="text" value="',
+              a,
+              '" readonly\n\n                class="flex-1 bg-dark-700 border border-dark-600 rounded-xl px-4 py-2.5 text-rouge-400 text-sm font-mono ' +
+                'focus:outline-none truncate">\n\n              <button onclick="copyReservoirLink()" class="bg-rouge-500 text-dark-900 font-bold px-4 py-2.5 rounded-xl ' +
+                'hover:bg-rouge-500 transition flex items-center gap-2 flex-shrink-0">\n\n                <i class="fas fa-copy"></i>\n\n                <span ' +
+                'class="hidden sm:inline text-sm">Copier</span>\n\n              </button>\n\n            </div>\n' +
+                ('\n            <p class="text-xs text-gray-500 mt-2">\n\n              <i class="fas fa-share-nodes mr-1"></i>\n\n              Partagez aussi via :\n\n       ' +
+                  '       <a href="https://wa.me/?text='),
+              encodeURIComponent("Rejoignez LEADER avec mon lien : " + a),
+              '"\n\n                 target="_blank" class="text-green-400 hover:underline mx-1"><i class="fab fa-whatsapp"></i> WhatsApp</a>\n\n              <a ' +
+                'href="https://t.me/share/url?url=',
+              encodeURIComponent(a),
+              "&text=",
+              encodeURIComponent("Rejoignez LEADER !"),
+              '"\n\n                 target="_blank" class="text-blue-400 hover:underline mx-1"><i class="fab fa-telegram"></i> Telegram</a>\n\n            </p>'
+            ].join("")
+          : '\n            <div class="bg-orange-900/20 border border-orange-500/30 rounded-xl p-4 flex items-start gap-3 mt-2">\n              <i class="fas fa-lock ' +
+            'text-orange-400 mt-0.5"></i>\n              <div>\n                <p class="text-orange-300 font-medium text-sm">Lien de parrainage indisponible</p>\n   ' +
+            '             <p class="text-orange-400/70 text-xs mt-1">Activez votre licence Finstrategia pour obtenir votre lien de parrainage et inviter des ' +
+            'membres.</p>\n                <button onclick="showPage(\'license\')" class="mt-2 text-xs bg-rouge-500 text-dark-900 font-bold px-3 py-1.5 rounded-lg ' +
+            'hover:bg-rouge-500 transition">\n' +
+            '                  <i class="fas fa-key mr-1"></i>Activer ma licence\n                </button>\n              </div>\n            </div>',
+        '\n\n          </div>\n\n        </div>\n\n      </div>\n\n\n\n      <!-- Filleuls EN ATTENTE de placement -->\n\n      <div class="bg-dark-800 rounded-2xl border ' +
+          'border-dark-600 overflow-hidden">\n\n        <div class="px-5 py-4 border-b border-dark-600 flex items-center justify-between">\n\n          <h3 ' +
+          'class="font-semibold flex items-center gap-2">\n\n            <i class="fas fa-clock text-orange-400"></i>\n\n            En attente de placement\n\n        ' +
+          "    "
+      ].join("") +
       (s.length > 0
         ? '<span class="bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">' + s.length + "</span>"
         : "") +
@@ -15361,41 +15869,47 @@ async function renderReservoir(e) {
                 n = null !== t ? (t <= 3 ? "text-red-400" : t <= 7 ? "text-yellow-400" : "text-orange-400") : "text-orange-400",
                 a = null !== t && t <= 3;
               return (
-                '\n\n          <div class="p-4 flex items-center gap-3 flex-wrap sm:flex-nowrap ' +
-                (a ? "bg-red-900/10" : "") +
-                ('">\n\n            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white ' +
-                  'font-bold text-sm flex-shrink-0">\n\n              ') +
-                (e.first_name || "?")[0] +
-                (e.last_name || "?")[0] +
-                '\n\n            </div>\n\n            <div class="flex-1 min-w-0">\n\n              <div class="font-medium text-sm text-white">' +
-                e.first_name +
-                " " +
-                e.last_name +
-                '</div>\n\n              <div class="text-xs text-rouge-400 font-mono">' +
-                e.unique_id +
-                '</div>\n\n              <div class="text-xs text-gray-500 mt-0.5">' +
-                e.email +
-                "</div>\n\n              " +
-                (a
-                  ? '<div class="text-xs text-red-400 mt-1 font-medium"><i class="fas fa-exclamation-triangle mr-1"></i>Urgent ! L\'admin peut bientôt placer à votre place<' +
-                    "/div>"
-                  : "") +
-                '\n\n            </div>\n\n            <div class="flex items-center gap-3 flex-shrink-0">\n\n              <div class="text-right">\n\n                ' +
-                (null !== t
-                  ? '\n\n                  <div class="' +
-                    n +
-                    ' font-bold text-base">' +
-                    Math.max(0, t) +
-                    'j</div>\n\n                  <div class="text-[10px] text-gray-500">pour placer</div>\n\n                '
-                  : '\n                  <div class="text-xs text-orange-400 mb-1"><i class="fas fa-clock mr-1"></i>En attente</div>\n                ') +
-                '\n\n                <div class="text-[10px] text-gray-600">' +
-                fmtDate(e.created_at) +
-                "</div>\n\n              </div>\n\n              <button onclick=\"openPlacementModal('" +
-                e.id +
-                "','" +
-                e.first_name +
-                " " +
-                e.last_name +
+                [
+                  [
+                    [
+                      '\n\n          <div class="p-4 flex items-center gap-3 flex-wrap sm:flex-nowrap ',
+                      a ? "bg-red-900/10" : "",
+                      '">\n\n            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white ' +
+                        'font-bold text-sm flex-shrink-0">\n\n              ',
+                      (e.first_name || "?")[0],
+                      (e.last_name || "?")[0],
+                      '\n\n            </div>\n\n            <div class="flex-1 min-w-0">\n\n              <div class="font-medium text-sm text-white">',
+                      e.first_name,
+                      " ",
+                      e.last_name
+                    ].join(""),
+                    '</div>\n\n              <div class="text-xs text-rouge-400 font-mono">',
+                    e.unique_id,
+                    '</div>\n\n              <div class="text-xs text-gray-500 mt-0.5">',
+                    e.email,
+                    "</div>\n\n              ",
+                    a
+                      ? '<div class="text-xs text-red-400 mt-1 font-medium"><i class="fas fa-exclamation-triangle mr-1"></i>Urgent ! L\'admin peut bientôt placer à votre place<' +
+                        "/div>"
+                      : "",
+                    '\n\n            </div>\n\n            <div class="flex items-center gap-3 flex-shrink-0">\n\n              <div class="text-right">\n\n                ',
+                    null !== t
+                      ? '\n\n                  <div class="' +
+                        n +
+                        ' font-bold text-base">' +
+                        Math.max(0, t) +
+                        'j</div>\n\n                  <div class="text-[10px] text-gray-500">pour placer</div>\n\n                '
+                      : '\n                  <div class="text-xs text-orange-400 mb-1"><i class="fas fa-clock mr-1"></i>En attente</div>\n                '
+                  ].join(""),
+                  '\n\n                <div class="text-[10px] text-gray-600">',
+                  fmtDate(e.created_at),
+                  "</div>\n\n              </div>\n\n              <button onclick=\"openPlacementModal('",
+                  e.id,
+                  "','",
+                  e.first_name,
+                  " ",
+                  e.last_name
+                ].join("") +
                 "','" +
                 e.unique_id +
                 ('\')"\n\n                class="bg-orange-500 hover:bg-orange-400 text-white text-xs font-bold px-3 py-2 rounded-xl transition flex items-center gap-1.5 ' +
@@ -15413,32 +15927,35 @@ async function renderReservoir(e) {
           r.length +
           ' derniers)</span>\n\n          </h3>\n\n        </div>\n\n        <div class="divide-y divide-dark-600">\n\n          ' +
           r
-            .map(
-              (e) =>
-                '\n\n          <div class="p-4 flex items-center gap-4">\n\n            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-green-700 ' +
-                'flex items-center justify-center text-white font-bold text-sm flex-shrink-0">\n\n              ' +
-                (e.first_name || "?")[0] +
-                (e.last_name || "?")[0] +
-                '\n\n            </div>\n\n            <div class="flex-1 min-w-0">\n\n              <div class="font-medium text-sm text-white">' +
-                e.first_name +
-                " " +
-                e.last_name +
-                '</div>\n\n              <div class="text-xs text-rouge-400 font-mono">' +
-                e.unique_id +
-                '</div>\n\n              <div class="text-xs text-gray-500">' +
-                e.email +
-                ('</div>\n\n            </div>\n\n            <div class="text-right flex-shrink-0">\n\n              <div class="text-xs text-green-400 mb-1">\n\n              ' +
-                  '  <i class="fas fa-check mr-1"></i>Placé\n\n                ') +
-                (e.binary_position
+            .map((e) =>
+              [
+                [
+                  '\n\n          <div class="p-4 flex items-center gap-4">\n\n            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-green-700 ',
+                  'flex items-center justify-center text-white font-bold text-sm flex-shrink-0">\n\n              ',
+                  (e.first_name || "?")[0],
+                  (e.last_name || "?")[0],
+                  '\n\n            </div>\n\n            <div class="flex-1 min-w-0">\n\n              <div class="font-medium text-sm text-white">',
+                  e.first_name,
+                  " ",
+                  e.last_name,
+                  '</div>\n\n              <div class="text-xs text-rouge-400 font-mono">'
+                ].join(""),
+                e.unique_id,
+                '</div>\n\n              <div class="text-xs text-gray-500">',
+                e.email,
+                '</div>\n\n            </div>\n\n            <div class="text-right flex-shrink-0">\n\n              <div class="text-xs text-green-400 mb-1">\n\n              ' +
+                  '  <i class="fas fa-check mr-1"></i>Placé\n\n                ',
+                e.binary_position
                   ? '<span class="ml-1 text-' +
                     ("L" === e.binary_position ? "blue" : "green") +
                     '-400">(' +
                     ("L" === e.binary_position ? "Gauche" : "Droite") +
                     ")</span>"
-                  : "") +
-                '\n\n              </div>\n\n              <div class="text-[10px] text-gray-500">' +
-                fmtDate(e.created_at) +
+                  : "",
+                '\n\n              </div>\n\n              <div class="text-[10px] text-gray-500">',
+                fmtDate(e.created_at),
                 "</div>\n\n            </div>\n\n          </div>"
+              ].join("")
             )
             .join("") +
           "\n\n        </div>\n\n      </div>"
@@ -15489,40 +16006,48 @@ function svgCollectPlacement(e, t, n, a, s, r, i, l, d, o, c) {
       const x = (i || "").replace(/'/g, ""),
         p = (l || "").replace(/'/g, "");
       r.push(
-        '\n\n        <g class="svg-slot-place" onclick="confirmPlacement(\'' +
-          x +
-          "','" +
-          p +
-          "','" +
-          c +
-          '\')" style="cursor:pointer">\n\n          <rect x="' +
-          e +
-          '" y="' +
-          t +
-          '" width="154" height="108" rx="12"\n\n                fill="#111827" stroke="' +
-          s +
-          '44" stroke-width="1.5" stroke-dasharray="6,4"\n\n                class="svg-slot-rect-place"/>\n\n          <text x="' +
-          (e + 77) +
-          '" y="' +
-          (t + 32) +
-          '" text-anchor="middle" fill="' +
-          s +
-          '99" font-size="22" font-family="sans-serif">\u2295</text>\n\n          <text x="' +
-          (e + 77) +
-          '" y="' +
-          (t + 54) +
-          '" text-anchor="middle" fill="' +
-          s +
-          'dd" font-size="10" font-weight="700" font-family="sans-serif">Spot libre \u2014 ' +
-          n +
-          '</text>\n\n          <text x="' +
-          (e + 77) +
-          '" y="' +
-          (t + 70) +
-          '" text-anchor="middle" fill="' +
-          s +
-          ('88" font-size="9" font-family="sans-serif">Cliquer pour placer ici</text>\n\n          <!-- Zone hover invisible pour agrandir la cible de clic -->\n\n    ' +
-            '      <rect x="') +
+        [
+          [
+            [
+              [
+                '\n\n        <g class="svg-slot-place" onclick="confirmPlacement(\'',
+                x,
+                "','",
+                p,
+                "','",
+                c,
+                '\')" style="cursor:pointer">\n\n          <rect x="',
+                e,
+                '" y="'
+              ].join(""),
+              t,
+              '" width="154" height="108" rx="12"\n\n                fill="#111827" stroke="',
+              s,
+              '44" stroke-width="1.5" stroke-dasharray="6,4"\n\n                class="svg-slot-rect-place"/>\n\n          <text x="',
+              e + 77,
+              '" y="',
+              t + 32,
+              '" text-anchor="middle" fill="'
+            ].join(""),
+            s,
+            '99" font-size="22" font-family="sans-serif">\u2295</text>\n\n          <text x="',
+            e + 77,
+            '" y="',
+            t + 54,
+            '" text-anchor="middle" fill="',
+            s,
+            'dd" font-size="10" font-weight="700" font-family="sans-serif">Spot libre \u2014 '
+          ].join(""),
+          n,
+          '</text>\n\n          <text x="',
+          e + 77,
+          '" y="',
+          t + 70,
+          '" text-anchor="middle" fill="',
+          s,
+          '88" font-size="9" font-family="sans-serif">Cliquer pour placer ici</text>\n\n          <!-- Zone hover invisible pour agrandir la cible de clic -->\n\n    ' +
+            '      <rect x="'
+        ].join("") +
           e +
           '" y="' +
           t +
@@ -15536,15 +16061,17 @@ function svgCollectPlacement(e, t, n, a, s, r, i, l, d, o, c) {
   if ((null !== d && a.push('<path d="' + svgBezier(d, o + 108, x, p) + '" stroke="#374151" stroke-width="1.5" fill="none"/>'), null !== c)) {
     const e = "L" === c ? "#60A5FA" : "#34D399";
     s.push(
-      '<text x="' +
-        x +
-        '" y="' +
-        (p - 14) +
-        '" text-anchor="middle" fill="' +
-        e +
-        '" font-size="9" font-weight="700" font-family="sans-serif">' +
-        ("L" === c ? "G" : "D") +
+      [
+        '<text x="',
+        x,
+        '" y="',
+        p - 14,
+        '" text-anchor="middle" fill="',
+        e,
+        '" font-size="9" font-weight="700" font-family="sans-serif">',
+        "L" === c ? "G" : "D",
         "</text>"
+      ].join("")
     );
   }
   const m = e.in_holding_tank,
@@ -15577,71 +16104,87 @@ function svgCollectPlacement(e, t, n, a, s, r, i, l, d, o, c) {
       "",
     y = u[e.current_rank] || "#9CA3AF";
   (s.push(
-    '\n\n    <g class="svg-node-member">\n\n      <rect x="' +
-      e._x +
-      '" y="' +
-      p +
-      '" width="154" height="108" rx="12"\n\n            fill="' +
-      f +
-      '" stroke="' +
-      g +
-      '" stroke-width="' +
-      (m ? 2 : 1.5) +
-      '"/>\n\n      <circle cx="' +
-      x +
-      '" cy="' +
-      (p + 28) +
-      '" r="18" fill="#111827" stroke="' +
-      g +
-      '" stroke-width="1.5"/>\n\n      <text x="' +
-      x +
-      '" y="' +
-      (p + 33) +
-      '" text-anchor="middle" fill="' +
-      y +
-      '" font-size="11" font-weight="700" font-family="sans-serif">' +
-      b +
-      '</text>\n\n      <text x="' +
-      x +
-      '" y="' +
-      (p + 56) +
-      '" text-anchor="middle" fill="#F9FAFB" font-size="10" font-weight="600" font-family="sans-serif">' +
-      (e.first_name + " " + e.last_name).substring(0, 18) +
-      '</text>\n\n      <text x="' +
-      x +
-      '" y="' +
-      (p + 68) +
-      '" text-anchor="middle" fill="#9CA3AF" font-size="8.5" font-family="monospace">' +
-      e.unique_id +
-      '</text>\n\n      <rect x="' +
-      (x - 28) +
-      '" y="' +
-      (p + 73) +
-      '" width="56" height="13" rx="6" fill="' +
-      y +
-      '22"/>\n\n      <text x="' +
-      x +
-      '" y="' +
-      (p + 83) +
-      '" text-anchor="middle" fill="' +
-      y +
-      '" font-size="8" font-weight="700" font-family="sans-serif">' +
-      v +
-      '</text>\n\n      <text x="' +
-      x +
-      '" y="' +
-      (p + 93) +
-      '" text-anchor="middle" fill="#6B7280" font-size="8" font-family="sans-serif">' +
-      (e.member_status || "") +
-      '</text>\n\n      <text x="' +
-      (e._x + 8) +
-      '" y="' +
-      (p + 102) +
-      '" fill="#60A5FA" font-size="8" font-family="sans-serif">G:' +
-      fmtBV(e.left_bv_monthly) +
-      '</text>\n\n      <text x="' +
-      (e._x + 154 - 8) +
-      '" y="' +
+    [
+      [
+        [
+          [
+            [
+              [
+                [
+                  [
+                    '\n\n    <g class="svg-node-member">\n\n      <rect x="',
+                    e._x,
+                    '" y="',
+                    p,
+                    '" width="154" height="108" rx="12"\n\n            fill="',
+                    f,
+                    '" stroke="',
+                    g,
+                    '" stroke-width="'
+                  ].join(""),
+                  m ? 2 : 1.5,
+                  '"/>\n\n      <circle cx="',
+                  x,
+                  '" cy="',
+                  p + 28,
+                  '" r="18" fill="#111827" stroke="',
+                  g,
+                  '" stroke-width="1.5"/>\n\n      <text x="'
+                ].join(""),
+                x,
+                '" y="',
+                p + 33,
+                '" text-anchor="middle" fill="',
+                y,
+                '" font-size="11" font-weight="700" font-family="sans-serif">',
+                b,
+                '</text>\n\n      <text x="'
+              ].join(""),
+              x,
+              '" y="',
+              p + 56,
+              '" text-anchor="middle" fill="#F9FAFB" font-size="10" font-weight="600" font-family="sans-serif">',
+              (e.first_name + " " + e.last_name).substring(0, 18),
+              '</text>\n\n      <text x="',
+              x,
+              '" y="'
+            ].join(""),
+            p + 68,
+            '" text-anchor="middle" fill="#9CA3AF" font-size="8.5" font-family="monospace">',
+            e.unique_id,
+            '</text>\n\n      <rect x="',
+            x - 28,
+            '" y="',
+            p + 73,
+            '" width="56" height="13" rx="6" fill="'
+          ].join(""),
+          y,
+          '22"/>\n\n      <text x="',
+          x,
+          '" y="',
+          p + 83,
+          '" text-anchor="middle" fill="',
+          y,
+          '" font-size="8" font-weight="700" font-family="sans-serif">'
+        ].join(""),
+        v,
+        '</text>\n\n      <text x="',
+        x,
+        '" y="',
+        p + 93,
+        '" text-anchor="middle" fill="#6B7280" font-size="8" font-family="sans-serif">',
+        e.member_status || "",
+        '</text>\n\n      <text x="'
+      ].join(""),
+      e._x + 8,
+      '" y="',
+      p + 102,
+      '" fill="#60A5FA" font-size="8" font-family="sans-serif">G:',
+      fmtBV(e.left_bv_monthly),
+      '</text>\n\n      <text x="',
+      e._x + 154 - 8,
+      '" y="'
+    ].join("") +
       (p + 102) +
       '" text-anchor="end" fill="#34D399" font-size="8" font-family="sans-serif">D:' +
       fmtBV(e.right_bv_monthly) +
@@ -15668,17 +16211,19 @@ function renderPlacementSVG(e) {
     i = [];
   return (
     svgCollectPlacement(e, 0, t, s, r, i, null, null, null, null, null),
-    '<svg xmlns="http://www.w3.org/2000/svg" width="' +
-      Math.max(n + 36, 400) +
-      '" height="' +
-      a +
-      ('" style="display:block;overflow:visible">\n\n    <style>\n\n      .svg-slot-rect-place { transition: stroke 0.18s, fill 0.18s; }\n\n      ' +
+    [
+      '<svg xmlns="http://www.w3.org/2000/svg" width="',
+      Math.max(n + 36, 400),
+      '" height="',
+      a,
+      '" style="display:block;overflow:visible">\n\n    <style>\n\n      .svg-slot-rect-place { transition: stroke 0.18s, fill 0.18s; }\n\n      ' +
         ".svg-slot-place:hover .svg-slot-rect-place { stroke: #FB923C !important; fill: #431407 !important; }\n\n      .svg-slot-place:hover text { fill: #FB923C " +
-        '!important; }\n\n    </style>\n\n    <g transform="translate(18, 24)">\n\n      ') +
-      s.join("\n") +
-      "\n\n      " +
-      i.join("\n") +
-      "\n\n      " +
+        '!important; }\n\n    </style>\n\n    <g transform="translate(18, 24)">\n\n      ',
+      s.join("\n"),
+      "\n\n      ",
+      i.join("\n"),
+      "\n\n      "
+    ].join("") +
       r.join("\n") +
       "\n\n    </g>\n\n  </svg>"
   );
@@ -15707,32 +16252,36 @@ function renderPlacementNode(e, t, n = !1) {
         ? "ring-2 ring-gold-500/40 bg-dark-700 scale-105 shadow-lg shadow-black/40 cursor-default"
         : "cursor-pointer hover:border-rouge-500/60 hover:bg-dark-700 transition-all"),
     r =
-      '\n\n    <div class="w-9 h-9 rounded-full bg-dark-900 flex items-center justify-center mx-auto mb-2 text-xs font-bold ' +
-      ({
-        captain: "text-yellow-400",
-        commander: "text-purple-400",
-        admiral: "text-blue-400",
-        vice_admiral: "text-green-400",
-        ambassador: "text-orange-400",
-        diamond: "text-sky-400",
-        triple_diamond: "text-fuchsia-400",
-        crown: "text-red-400"
-      }[e.current_rank] || "text-rouge-400") +
-      '">\n\n      ' +
-      (e.first_name || "?")[0] +
-      (e.last_name || "?")[0] +
-      '\n\n    </div>\n\n    <div class="text-xs font-semibold text-white truncate">' +
-      e.first_name +
-      " " +
-      e.last_name +
-      '</div>\n\n    <div class="text-[10px] text-gray-400 font-mono">' +
-      e.unique_id +
-      '</div>\n\n    <div class="mt-1">' +
-      rankBadge(e.current_rank) +
-      "</div>\n\n    " +
-      a +
-      "\n\n    " +
-      (e.member_status ? '<div class="text-[9px] text-gray-400 mt-0.5">' + e.member_status + "</div>" : "") +
+      [
+        [
+          '\n\n    <div class="w-9 h-9 rounded-full bg-dark-900 flex items-center justify-center mx-auto mb-2 text-xs font-bold ',
+          {
+            captain: "text-yellow-400",
+            commander: "text-purple-400",
+            admiral: "text-blue-400",
+            vice_admiral: "text-green-400",
+            ambassador: "text-orange-400",
+            diamond: "text-sky-400",
+            triple_diamond: "text-fuchsia-400",
+            crown: "text-red-400"
+          }[e.current_rank] || "text-rouge-400",
+          '">\n\n      ',
+          (e.first_name || "?")[0],
+          (e.last_name || "?")[0],
+          '\n\n    </div>\n\n    <div class="text-xs font-semibold text-white truncate">',
+          e.first_name,
+          " ",
+          e.last_name
+        ].join(""),
+        '</div>\n\n    <div class="text-[10px] text-gray-400 font-mono">',
+        e.unique_id,
+        '</div>\n\n    <div class="mt-1">',
+        rankBadge(e.current_rank),
+        "</div>\n\n    ",
+        a,
+        "\n\n    ",
+        e.member_status ? '<div class="text-[9px] text-gray-400 mt-0.5">' + e.member_status + "</div>" : ""
+      ].join("") +
       '\n\n    <div class="mt-1 flex justify-center gap-2 text-[9px]">\n\n      <span class="text-blue-400">G:' +
       fmtBV(e.left_bv_monthly) +
       '</span>\n\n      <span class="text-green-400">D:' +
@@ -15748,24 +16297,28 @@ function renderPlacementNode(e, t, n = !1) {
     const a = "L" === n ? "Gauche" : "Droite",
       s = "L" === n ? "blue" : "green";
     return (
-      '<div class="tree-node">\n\n      <button onclick="confirmPlacement(\'' +
-      (e || "").replace(/'/g, "") +
-      "','" +
-      (t || "").replace(/'/g, "") +
-      "','" +
-      n +
-      '\')"\n\n        class="tree-node-card empty group cursor-pointer border-dashed border-' +
-      s +
-      '-500/40\n\n               hover:border-orange-400 hover:bg-orange-500/10 transition-all w-full text-left"\n\n        title="Placer ' +
-      (_placementMemberName || "le filleul") +
-      " ici (" +
-      a +
-      ')">\n\n        <div class="w-8 h-8 rounded-full border-2 border-dashed border-' +
-      s +
-      ('-600\n\n                    group-hover:border-orange-400 flex items-center justify-center mx-auto mb-2 transition-colors">\n\n          <i class="fas ' +
-        "fa-user-plus text-") +
-      s +
-      '-600 group-hover:text-orange-400 text-xs transition-colors"></i>\n\n        </div>\n\n        <div class="text-' +
+      [
+        [
+          '<div class="tree-node">\n\n      <button onclick="confirmPlacement(\'',
+          (e || "").replace(/'/g, ""),
+          "','",
+          (t || "").replace(/'/g, ""),
+          "','",
+          n,
+          '\')"\n\n        class="tree-node-card empty group cursor-pointer border-dashed border-',
+          s,
+          '-500/40\n\n               hover:border-orange-400 hover:bg-orange-500/10 transition-all w-full text-left"\n\n        title="Placer '
+        ].join(""),
+        _placementMemberName || "le filleul",
+        " ici (",
+        a,
+        ')">\n\n        <div class="w-8 h-8 rounded-full border-2 border-dashed border-',
+        s,
+        '-600\n\n                    group-hover:border-orange-400 flex items-center justify-center mx-auto mb-2 transition-colors">\n\n          <i class="fas ' +
+          "fa-user-plus text-",
+        s,
+        '-600 group-hover:text-orange-400 text-xs transition-colors"></i>\n\n        </div>\n\n        <div class="text-'
+      ].join("") +
       s +
       ('-500 group-hover:text-orange-300 text-[10px] font-medium transition-colors">Spot libre</div>\n\n        <div class="text-gray-600 ' +
         'group-hover:text-orange-400/70 text-[9px] mt-0.5 transition-colors">← Placer ici</div>\n\n      </button>\n\n    </div>')
@@ -15798,27 +16351,31 @@ function renderPlacementClassicInner() {
       )
       .join("");
   e.innerHTML =
-    '\n\n  <!-- Navigation placement -->\n\n  <div class="flex items-center gap-2 mb-3 flex-wrap sticky top-0 z-10 bg-dark-900/95 py-2 backdrop-blur rounded-xl ' +
-    'px-2">\n\n    <button onclick="placeGoHome()"\n\n      class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition\n\n            ' +
-    " " +
-    (t ? "bg-dark-700 text-gray-500 cursor-default" : "bg-dark-700 text-gray-300 hover:bg-dark-600 border border-dark-500") +
-    '"\n\n      ' +
-    (t ? "disabled" : "") +
-    ('>\n\n      <i class="fas fa-home text-[11px]"></i> Racine\n\n    </button>\n\n    <button onclick="placeGoBack()"\n\n      class="flex items-center gap-1.5 ' +
-      "px-3 py-1.5 rounded-lg text-xs font-medium transition\n\n             ") +
-    (n ? "bg-dark-700 text-gray-300 hover:bg-dark-600 border border-dark-500" : "bg-dark-700 text-gray-500 cursor-default") +
-    '"\n\n      ' +
-    (n ? "" : "disabled") +
-    ('>\n\n      <i class="fas fa-arrow-left text-[11px]"></i> Remonter\n\n    </button>\n\n    <div class="flex items-center gap-1 text-xs text-gray-500 ' +
-      'overflow-x-auto flex-1 min-w-0">\n\n      ') +
-    a +
-    '\n\n      <span class="text-rouge-400 font-semibold text-xs">' +
-    _placeFocus.first_name +
-    " " +
-    _placeFocus.last_name +
-    ('</span>\n\n    </div>\n\n    <span class="text-[10px] text-orange-400/70">\n\n      <i class="fas fa-user-plus mr-1"></i>Cliquer un slot orange pour placer\n\n' +
-      '    </span>\n\n  </div>\n\n\n\n  <!-- Arbre placement -->\n\n  <div class="flex justify-center w-full overflow-x-auto pb-4">\n\n    <div class="inline-flex ' +
-      'flex-col items-center text-center">\n\n      ') +
+    [
+      [
+        '\n\n  <!-- Navigation placement -->\n\n  <div class="flex items-center gap-2 mb-3 flex-wrap sticky top-0 z-10 bg-dark-900/95 py-2 backdrop-blur rounded-xl ',
+        'px-2">\n\n    <button onclick="placeGoHome()"\n\n      class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition\n\n            ',
+        " ",
+        t ? "bg-dark-700 text-gray-500 cursor-default" : "bg-dark-700 text-gray-300 hover:bg-dark-600 border border-dark-500",
+        '"\n\n      ',
+        t ? "disabled" : "",
+        '>\n\n      <i class="fas fa-home text-[11px]"></i> Racine\n\n    </button>\n\n    <button onclick="placeGoBack()"\n\n      class="flex items-center gap-1.5 ' +
+          "px-3 py-1.5 rounded-lg text-xs font-medium transition\n\n             ",
+        n ? "bg-dark-700 text-gray-300 hover:bg-dark-600 border border-dark-500" : "bg-dark-700 text-gray-500 cursor-default",
+        '"\n\n      '
+      ].join(""),
+      n ? "" : "disabled",
+      '>\n\n      <i class="fas fa-arrow-left text-[11px]"></i> Remonter\n\n    </button>\n\n    <div class="flex items-center gap-1 text-xs text-gray-500 ' +
+        'overflow-x-auto flex-1 min-w-0">\n\n      ',
+      a,
+      '\n\n      <span class="text-rouge-400 font-semibold text-xs">',
+      _placeFocus.first_name,
+      " ",
+      _placeFocus.last_name,
+      '</span>\n\n    </div>\n\n    <span class="text-[10px] text-orange-400/70">\n\n      <i class="fas fa-user-plus mr-1"></i>Cliquer un slot orange pour placer\n\n' +
+        '    </span>\n\n  </div>\n\n\n\n  <!-- Arbre placement -->\n\n  <div class="flex justify-center w-full overflow-x-auto pb-4">\n\n    <div class="inline-flex ' +
+        'flex-col items-center text-center">\n\n      '
+    ].join("") +
     renderPlacementNode(_placeFocus, 0, !0) +
     "\n\n    </div>\n\n  </div>";
 }
@@ -15864,15 +16421,17 @@ async function confirmPlacement(e, t, n) {
     (r.className =
       "sticky top-0 z-10 bg-orange-900/90 border border-orange-400/50 rounded-xl p-4 mb-4 flex items-center justify-between gap-4 backdrop-blur"),
     (r.innerHTML =
-      '\n\n    <div class="flex items-center gap-3">\n\n      <i class="fas fa-question-circle text-orange-400 text-xl flex-shrink-0"></i>\n\n      <div>\n\n        <' +
-      'div class="font-bold text-orange-200 text-sm">Confirmer le placement ?</div>\n\n        <div class="text-orange-300/80 text-xs mt-0.5">\n\n          <' +
-      "strong>" +
-      _placementMemberName +
-      "</strong> (" +
-      _placementMemberUid +
-      ") \u2192\n\n          sous <strong>" +
-      t +
-      "</strong> \u2014 " +
+      [
+        '\n\n    <div class="flex items-center gap-3">\n\n      <i class="fas fa-question-circle text-orange-400 text-xl flex-shrink-0"></i>\n\n      <div>\n\n        <',
+        'div class="font-bold text-orange-200 text-sm">Confirmer le placement ?</div>\n\n        <div class="text-orange-300/80 text-xs mt-0.5">\n\n          <',
+        "strong>",
+        _placementMemberName,
+        "</strong> (",
+        _placementMemberUid,
+        ") \u2192\n\n          sous <strong>",
+        t,
+        "</strong> \u2014 "
+      ].join("") +
       a +
       ('\n\n        </div>\n\n        <div class="text-orange-400/60 text-xs mt-0.5">[!] Cette action est irréversible.</div>\n\n      </div>\n\n    </div>\n\n    <div ' +
         'class="flex gap-2 flex-shrink-0">\n\n      <button id="btn-cancel-place" class="px-4 py-2 bg-dark-700 text-gray-300 rounded-xl text-sm hover:bg-dark-600 ' +
@@ -16018,87 +16577,97 @@ function mktgMemberCard(e) {
   const t = MKTG_MEMBER_TYPE_META[e.type] || MKTG_MEMBER_TYPE_META.link,
     n = e.category_color ? mktgCatPal(e.category_color) : null;
   return (
-    '\n\n  <div class="bg-dark-800 rounded-2xl border border-dark-600 hover:border-dark-500 transition-all duration-200 overflow-hidden flex flex-col group ' +
-    'hover:shadow-lg hover:shadow-black/30">\n\n    <!-- Placeholder / header coloré -->\n\n    ' +
-    (e.thumbnail_url
-      ? '\n\n    <div class="relative overflow-hidden h-32">\n\n      <img src="' +
-        e.thumbnail_url +
-        '" alt="' +
-        e.title +
-        ('" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">\n\n      <div class="absolute inset-0 bg-gradient-to-t ' +
-          'from-dark-900/80 to-transparent"></div>\n\n      <div class="absolute top-2 right-2">\n\n        <span class="text-xs ') +
-        t.bg +
-        " " +
-        t.text +
-        ' px-2 py-0.5 rounded-full backdrop-blur-sm border border-white/10 font-medium">\n\n          <i class="fas ' +
-        t.icon +
-        ' mr-1"></i>' +
-        t.label +
-        "\n\n        </span>\n\n      </div>\n\n      " +
-        (e.featured
-          ? '<div class="absolute top-2 left-2"><span class="bg-yellow-500/90 text-dark-900 text-xs font-bold px-2 py-0.5 rounded-full backdrop-blur-sm"><i ' +
-            'class="fas fa-star mr-1"></i>Une</span></div>'
-          : "") +
-        "\n\n    </div>"
-      : '\n\n    <div class="h-24 ' +
-        t.bg +
-        (' flex items-center justify-center relative overflow-hidden">\n\n      <div class="absolute inset-0 opacity-30" style="background: radial-gradient(circle ' +
-          'at 70% 30%, rgba(255,255,255,0.1), transparent)"></div>\n\n      <i class="fas ') +
-        t.icon +
-        " " +
-        t.text +
-        ' text-5xl opacity-40"></i>\n\n      <div class="absolute top-2 right-2">\n\n        <span class="text-xs bg-dark-900/70 ' +
-        t.text +
-        ' px-2 py-0.5 rounded-full backdrop-blur-sm font-medium">' +
-        t.label +
-        "</span>\n\n      </div>\n\n      " +
-        (e.featured
-          ? '<div class="absolute top-2 left-2"><span class="bg-yellow-500/90 text-dark-900 text-xs font-bold px-2 py-0.5 rounded-full"><i class="fas fa-star mr-1">' +
-            "</i>Une</span></div>"
-          : "") +
-        "\n\n    </div>") +
-    '\n\n\n\n    <!-- Corps -->\n\n    <div class="p-4 flex-1 flex flex-col">\n\n      <h3 class="font-semibold text-sm text-white leading-snug mb-1.5">' +
-    e.title +
-    "</h3>\n\n      " +
-    (e.description ? '<p class="text-xs text-gray-400 mb-2.5 line-clamp-2 leading-relaxed">' + e.description + "</p>" : "") +
-    '\n\n\n\n      <div class="flex items-center gap-1.5 mb-3 flex-wrap">\n\n        ' +
-    (e.category_name && n
-      ? '\n\n        <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border ' +
-        n.bg +
-        " " +
-        n.text +
-        " " +
-        n.border +
-        ' font-medium">\n\n          <i class="fas ' +
-        (e.category_icon || "fa-tag") +
-        ' text-[10px]"></i>' +
-        e.category_name +
-        "\n\n        </span>"
-      : "") +
-    "\n\n        " +
-    (e.file_size ? '<span class="text-xs text-gray-500">' + e.file_size + "</span>" : "") +
-    "\n\n        " +
-    (e.is_downloadable ? '<span class="text-xs text-green-500/70"><i class="fas fa-download mr-0.5 text-[10px]"></i>DL</span>' : "") +
-    "\n\n        " +
-    (e.views_count > 0
-      ? '<span class="text-xs text-gray-600 ml-auto"><i class="fas fa-eye mr-0.5 text-[10px]"></i>' + e.views_count + "</span>"
-      : "") +
-    '\n\n      </div>\n\n\n\n      <!-- Boutons -->\n\n      <div class="mt-auto flex gap-2">\n\n        ' +
-    ("pdf" === e.type || e.url.includes(".pdf")
-      ? "\n\n        <button onclick=\"openMktgViewer('" +
-        e.id +
-        "','" +
-        encodeURIComponent(e.url) +
-        "','" +
-        encodeURIComponent(e.title) +
-        ('\')"\n\n          class="flex-1 text-xs bg-blue-600/20 text-blue-400 border border-blue-600/30 px-3 py-2 rounded-xl hover:bg-blue-600/30 transition flex ' +
-          'items-center justify-center gap-1.5 font-medium">\n\n          <i class="fas fa-eye"></i> Consulter\n\n        </button>')
-      : '\n\n        <a href="' +
-        e.url +
-        '" target="_blank" onclick="trackMktgView(\'' +
-        e.id +
-        ('\')"\n\n          class="flex-1 text-xs bg-blue-600/20 text-blue-400 border border-blue-600/30 px-3 py-2 rounded-xl hover:bg-blue-600/30 transition flex ' +
-          'items-center justify-center gap-1.5 font-medium">\n\n          <i class="fas fa-external-link-alt"></i> Ouvrir\n\n        </a>')) +
+    [
+      [
+        '\n\n  <div class="bg-dark-800 rounded-2xl border border-dark-600 hover:border-dark-500 transition-all duration-200 overflow-hidden flex flex-col group ',
+        'hover:shadow-lg hover:shadow-black/30">\n\n    <!-- Placeholder / header coloré -->\n\n    ',
+        e.thumbnail_url
+          ? [
+              '\n\n    <div class="relative overflow-hidden h-32">\n\n      <img src="',
+              e.thumbnail_url,
+              '" alt="',
+              e.title,
+              '" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">\n\n      <div class="absolute inset-0 bg-gradient-to-t ' +
+                'from-dark-900/80 to-transparent"></div>\n\n      <div class="absolute top-2 right-2">\n\n        <span class="text-xs ',
+              t.bg,
+              " ",
+              t.text,
+              ' px-2 py-0.5 rounded-full backdrop-blur-sm border border-white/10 font-medium">\n\n          <i class="fas '
+            ].join("") +
+            t.icon +
+            ' mr-1"></i>' +
+            t.label +
+            "\n\n        </span>\n\n      </div>\n\n      " +
+            (e.featured
+              ? '<div class="absolute top-2 left-2"><span class="bg-yellow-500/90 text-dark-900 text-xs font-bold px-2 py-0.5 rounded-full backdrop-blur-sm"><i ' +
+                'class="fas fa-star mr-1"></i>Une</span></div>'
+              : "") +
+            "\n\n    </div>"
+          : [
+              '\n\n    <div class="h-24 ',
+              t.bg,
+              ' flex items-center justify-center relative overflow-hidden">\n\n      <div class="absolute inset-0 opacity-30" style="background: radial-gradient(circle ' +
+                'at 70% 30%, rgba(255,255,255,0.1), transparent)"></div>\n\n      <i class="fas ',
+              t.icon,
+              " ",
+              t.text,
+              ' text-5xl opacity-40"></i>\n\n      <div class="absolute top-2 right-2">\n\n        <span class="text-xs bg-dark-900/70 ',
+              t.text,
+              ' px-2 py-0.5 rounded-full backdrop-blur-sm font-medium">'
+            ].join("") +
+            t.label +
+            "</span>\n\n      </div>\n\n      " +
+            (e.featured
+              ? '<div class="absolute top-2 left-2"><span class="bg-yellow-500/90 text-dark-900 text-xs font-bold px-2 py-0.5 rounded-full"><i class="fas fa-star mr-1">' +
+                "</i>Une</span></div>"
+              : "") +
+            "\n\n    </div>",
+        '\n\n\n\n    <!-- Corps -->\n\n    <div class="p-4 flex-1 flex flex-col">\n\n      <h3 class="font-semibold text-sm text-white leading-snug mb-1.5">',
+        e.title,
+        "</h3>\n\n      ",
+        e.description ? '<p class="text-xs text-gray-400 mb-2.5 line-clamp-2 leading-relaxed">' + e.description + "</p>" : "",
+        '\n\n\n\n      <div class="flex items-center gap-1.5 mb-3 flex-wrap">\n\n        ',
+        e.category_name && n
+          ? [
+              '\n\n        <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border ',
+              n.bg,
+              " ",
+              n.text,
+              " ",
+              n.border,
+              ' font-medium">\n\n          <i class="fas ',
+              e.category_icon || "fa-tag",
+              ' text-[10px]"></i>'
+            ].join("") +
+            e.category_name +
+            "\n\n        </span>"
+          : ""
+      ].join(""),
+      "\n\n        ",
+      e.file_size ? '<span class="text-xs text-gray-500">' + e.file_size + "</span>" : "",
+      "\n\n        ",
+      e.is_downloadable ? '<span class="text-xs text-green-500/70"><i class="fas fa-download mr-0.5 text-[10px]"></i>DL</span>' : "",
+      "\n\n        ",
+      e.views_count > 0
+        ? '<span class="text-xs text-gray-600 ml-auto"><i class="fas fa-eye mr-0.5 text-[10px]"></i>' + e.views_count + "</span>"
+        : "",
+      '\n\n      </div>\n\n\n\n      <!-- Boutons -->\n\n      <div class="mt-auto flex gap-2">\n\n        ',
+      "pdf" === e.type || e.url.includes(".pdf")
+        ? "\n\n        <button onclick=\"openMktgViewer('" +
+          e.id +
+          "','" +
+          encodeURIComponent(e.url) +
+          "','" +
+          encodeURIComponent(e.title) +
+          ('\')"\n\n          class="flex-1 text-xs bg-blue-600/20 text-blue-400 border border-blue-600/30 px-3 py-2 rounded-xl hover:bg-blue-600/30 transition flex ' +
+            'items-center justify-center gap-1.5 font-medium">\n\n          <i class="fas fa-eye"></i> Consulter\n\n        </button>')
+        : '\n\n        <a href="' +
+          e.url +
+          '" target="_blank" onclick="trackMktgView(\'' +
+          e.id +
+          ('\')"\n\n          class="flex-1 text-xs bg-blue-600/20 text-blue-400 border border-blue-600/30 px-3 py-2 rounded-xl hover:bg-blue-600/30 transition flex ' +
+            'items-center justify-center gap-1.5 font-medium">\n\n          <i class="fas fa-external-link-alt"></i> Ouvrir\n\n        </a>')
+    ].join("") +
     "\n\n        " +
     (e.is_downloadable
       ? '\n\n        <a href="' +
@@ -16121,31 +16690,33 @@ async function renderMarketing(e) {
       i = window._memberMktgFilter || "all";
     let l = a;
     ("__featured__" === i ? (l = r) : "all" !== i && (l = a.filter((e) => e.category_id === i)),
-      (e.innerHTML =
-        '\n\n    <div class="space-y-5">\n\n\n\n      <!-- HEADER -->\n\n      <div class="flex items-center gap-3">\n\n        <div class="w-10 h-10 rounded-xl ' +
-        'bg-rouge-500/15 border border-rouge-500/25 flex items-center justify-center flex-shrink-0">\n\n          <i class="fas fa-bullhorn text-rouge-400"></i>\n\n' +
-        '        </div>\n\n        <div>\n\n          <h2 class="text-xl font-bold text-white">Espace Marketing</h2>\n\n          <p class="text-xs text-gray-400">' +
-        "Documents, outils et ressources pour développer votre réseau</p>\n" +
-        ('\n        </div>\n\n      </div>\n\n\n\n      <!-- LIEN DE PARRAINAGE — compact -->\n\n      <div class="bg-dark-800 rounded-2xl border border-rouge-500/20 ' +
+      (e.innerHTML = [
+        '\n\n    <div class="space-y-5">\n\n\n\n      <!-- HEADER -->\n\n      <div class="flex items-center gap-3">\n\n        <div class="w-10 h-10 rounded-xl ',
+        'bg-rouge-500/15 border border-rouge-500/25 flex items-center justify-center flex-shrink-0">\n\n          <i class="fas fa-bullhorn text-rouge-400"></i>\n\n',
+        '        </div>\n\n        <div>\n\n          <h2 class="text-xl font-bold text-white">Espace Marketing</h2>\n\n          <p class="text-xs text-gray-400">',
+        "Documents, outils et ressources pour développer votre réseau</p>\n",
+        '\n        </div>\n\n      </div>\n\n\n\n      <!-- LIEN DE PARRAINAGE — compact -->\n\n      <div class="bg-dark-800 rounded-2xl border border-rouge-500/20 ' +
           'p-4">\n\n        <div class="flex items-center gap-3 mb-3">\n\n          <i class="fas fa-share-alt text-rouge-400 text-sm"></i>\n\n          <span ' +
-          'class="font-semibold text-white text-sm">Mon lien de parrainage</span>\n\n        </div>\n\n        ') +
-        (n
-          ? '\n\n        <div class="flex gap-2 mb-3">\n\n          <input id="referral-link-input" type="text" value="' +
-            n +
-            ('" readonly\n\n            class="flex-1 bg-dark-700 border border-dark-600 rounded-xl px-3 py-2.5 text-rouge-400 text-xs font-mono focus:outline-none ' +
-              'min-w-0">\n\n          <button onclick="copyReferralLink()" class="bg-rouge-500 text-dark-900 font-bold px-3 py-2.5 rounded-xl hover:bg-rouge-500 ' +
-              'transition text-sm flex-shrink-0">\n\n            <i class="fas fa-copy"></i>\n\n          </button>\n\n        </div>\n\n        <div class="flex flex-wrap ' +
-              'gap-2">\n\n          <a href="https://wa.me/?text=') +
-            encodeURIComponent("Rejoignez LEADER : " + n) +
-            ('" target="_blank"\n\n            class="flex items-center gap-1.5 bg-green-600/20 text-green-400 border border-green-600/30 text-xs px-2.5 py-1.5 ' +
-              'rounded-lg hover:bg-green-600/30 transition">\n\n            <i class="fab fa-whatsapp"></i><span class="hidden sm:inline">WhatsApp</span>\n\n          <' +
-              '/a>\n\n          <a href="https://t.me/share/url?url=') +
-            encodeURIComponent(n) +
-            "&text=" +
-            encodeURIComponent("Rejoignez LEADER !") +
-            ('" target="_blank"\n\n            class="flex items-center gap-1.5 bg-blue-500/20 text-blue-400 border border-blue-500/30 text-xs px-2.5 py-1.5 ' +
-              'rounded-lg hover:bg-blue-500/30 transition">\n\n            <i class="fab fa-telegram"></i><span class="hidden sm:inline">Telegram</span>\n\n          </a>' +
-              '\n\n          <a href="mailto:?subject=') +
+          'class="font-semibold text-white text-sm">Mon lien de parrainage</span>\n\n        </div>\n\n        ',
+        n
+          ? [
+              '\n\n        <div class="flex gap-2 mb-3">\n\n          <input id="referral-link-input" type="text" value="',
+              n,
+              '" readonly\n\n            class="flex-1 bg-dark-700 border border-dark-600 rounded-xl px-3 py-2.5 text-rouge-400 text-xs font-mono focus:outline-none ' +
+                'min-w-0">\n\n          <button onclick="copyReferralLink()" class="bg-rouge-500 text-dark-900 font-bold px-3 py-2.5 rounded-xl hover:bg-rouge-500 ' +
+                'transition text-sm flex-shrink-0">\n\n            <i class="fas fa-copy"></i>\n\n          </button>\n\n        </div>\n\n        <div class="flex flex-wrap ' +
+                'gap-2">\n\n          <a href="https://wa.me/?text=',
+              encodeURIComponent("Rejoignez LEADER : " + n),
+              '" target="_blank"\n\n            class="flex items-center gap-1.5 bg-green-600/20 text-green-400 border border-green-600/30 text-xs px-2.5 py-1.5 ' +
+                'rounded-lg hover:bg-green-600/30 transition">\n\n            <i class="fab fa-whatsapp"></i><span class="hidden sm:inline">WhatsApp</span>\n\n          <' +
+                '/a>\n\n          <a href="https://t.me/share/url?url=',
+              encodeURIComponent(n),
+              "&text=",
+              encodeURIComponent("Rejoignez LEADER !"),
+              '" target="_blank"\n\n            class="flex items-center gap-1.5 bg-blue-500/20 text-blue-400 border border-blue-500/30 text-xs px-2.5 py-1.5 ' +
+                'rounded-lg hover:bg-blue-500/30 transition">\n\n            <i class="fab fa-telegram"></i><span class="hidden sm:inline">Telegram</span>\n\n          </a>' +
+                '\n\n          <a href="mailto:?subject='
+            ].join("") +
             encodeURIComponent("Rejoignez LEADER") +
             "&body=" +
             encodeURIComponent("Lien invitation : " + n) +
@@ -16163,53 +16734,57 @@ async function renderMarketing(e) {
             '/p>\n            <p class="text-orange-400/70 text-xs mt-0.5">Activez votre licence pour obtenir votre lien de parrainage.</p>\n          </div>\n        ' +
             '  <button onclick="showPage(\'license\')" class="text-xs bg-rouge-500 text-dark-900 font-bold px-3 py-1.5 rounded-lg hover:bg-rouge-500 transition ' +
             'flex-shrink-0">\n' +
-            '            <i class="fas fa-key mr-1"></i>Activer\n          </button>\n        </div>') +
-        "\n\n      </div>\n\n\n\n      " +
-        (0 === a.length
+            '            <i class="fas fa-key mr-1"></i>Activer\n          </button>\n        </div>',
+        "\n\n      </div>\n\n\n\n      ",
+        0 === a.length
           ? '\n      <div class="bg-dark-800 rounded-2xl border border-dark-600 p-12 text-center">\n        <i class="fas fa-folder-open text-gray-600 text-5xl mb-4">' +
             '</i>\n        <p class="text-gray-400 font-medium">Aucun document disponible</p>\n        <p class="text-gray-600 text-sm mt-1">Les ressources seront ' +
             "disponibles prochainement.</p>\n      </div>"
           : "\n\n\n\n      <!-- ══════════ NAVIGATION CATÉGORIES PREMIUM ══════════ " +
             "-->\n\n      " +
             (s.length > 0
-              ? '\n\n      <div class="space-y-2">\n\n        <!-- Scrollable tabs -->\n\n        <div class="flex gap-2 overflow-x-auto pb-1 scrollbar-hide" ' +
-                "style=\"scrollbar-width:none\">\n\n          <!-- Tab Tous -->\n\n          <button onclick=\"window._memberMktgFilter='all'; showPage('marketing')\"\n\n        " +
-                '    class="flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition whitespace-nowrap\n\n            ' +
-                ("all" === i
-                  ? "bg-rouge-500 text-dark-900 border-rouge-500 shadow-lg shadow-yellow-900/30"
-                  : "bg-dark-700 text-gray-400 border-dark-600 hover:text-white hover:border-dark-500") +
-                '">\n\n            <i class="fas fa-th text-xs"></i>\n\n            Tout (' +
-                a.length +
-                ")\n\n          </button>\n\n          <!-- Tab Featured -->\n\n          " +
-                (r.length > 0
-                  ? "\n\n          <button onclick=\"window._memberMktgFilter='__featured__'; showPage('marketing')\"\n\n            class=\"flex-shrink-0 flex items-center gap-2 " +
-                    "px-4 py-2.5 rounded-xl border text-sm font-medium transition whitespace-nowrap\n\n            " +
-                    ("__featured__" === i
-                      ? "bg-yellow-500 text-dark-900 border-yellow-500 shadow-lg shadow-yellow-900/30"
-                      : "bg-dark-700 text-yellow-600 border-yellow-900/40 hover:text-yellow-400 hover:border-yellow-600/40") +
-                    '">\n\n            <i class="fas fa-star text-xs"></i>\n\n            \xC0 la une (' +
-                    r.length +
-                    ")\n\n          </button>"
-                  : "") +
-                "\n\n          <!-- Tabs cat\xE9gories -->\n\n          " +
+              ? [
+                  '\n\n      <div class="space-y-2">\n\n        <!-- Scrollable tabs -->\n\n        <div class="flex gap-2 overflow-x-auto pb-1 scrollbar-hide" ',
+                  "style=\"scrollbar-width:none\">\n\n          <!-- Tab Tous -->\n\n          <button onclick=\"window._memberMktgFilter='all'; showPage('marketing')\"\n\n        ",
+                  '    class="flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition whitespace-nowrap\n\n            ',
+                  "all" === i
+                    ? "bg-rouge-500 text-dark-900 border-rouge-500 shadow-lg shadow-yellow-900/30"
+                    : "bg-dark-700 text-gray-400 border-dark-600 hover:text-white hover:border-dark-500",
+                  '">\n\n            <i class="fas fa-th text-xs"></i>\n\n            Tout (',
+                  a.length,
+                  ")\n\n          </button>\n\n          <!-- Tab Featured -->\n\n          ",
+                  r.length > 0
+                    ? "\n\n          <button onclick=\"window._memberMktgFilter='__featured__'; showPage('marketing')\"\n\n            class=\"flex-shrink-0 flex items-center gap-2 " +
+                      "px-4 py-2.5 rounded-xl border text-sm font-medium transition whitespace-nowrap\n\n            " +
+                      ("__featured__" === i
+                        ? "bg-yellow-500 text-dark-900 border-yellow-500 shadow-lg shadow-yellow-900/30"
+                        : "bg-dark-700 text-yellow-600 border-yellow-900/40 hover:text-yellow-400 hover:border-yellow-600/40") +
+                      '">\n\n            <i class="fas fa-star text-xs"></i>\n\n            \xC0 la une (' +
+                      r.length +
+                      ")\n\n          </button>"
+                    : "",
+                  "\n\n          <!-- Tabs cat\xE9gories -->\n\n          "
+                ].join("") +
                 s
                   .map((e) => {
                     const t = mktgCatPal(e.color),
                       n = a.filter((t) => t.category_id === e.id).length,
                       s = i === e.id;
                     return (
-                      "\n\n          <button onclick=\"window._memberMktgFilter='" +
-                      e.id +
-                      ("'; showPage('marketing')\"\n\n            class=\"flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition " +
-                        "whitespace-nowrap\n\n            ") +
-                      (s
-                        ? "" + t.activeBg + " " + t.activeText + " border-transparent shadow-lg"
-                        : "bg-dark-700 " + t.text + " " + t.border + " hover:opacity-80") +
-                      '">\n\n            <i class="fas ' +
-                      (e.icon || "fa-folder") +
-                      ' text-xs"></i>\n\n            ' +
-                      e.name +
-                      ' <span class="opacity-60 text-xs">(' +
+                      [
+                        "\n\n          <button onclick=\"window._memberMktgFilter='",
+                        e.id,
+                        "'; showPage('marketing')\"\n\n            class=\"flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition " +
+                          "whitespace-nowrap\n\n            ",
+                        s
+                          ? "" + t.activeBg + " " + t.activeText + " border-transparent shadow-lg"
+                          : "bg-dark-700 " + t.text + " " + t.border + " hover:opacity-80",
+                        '">\n\n            <i class="fas ',
+                        e.icon || "fa-folder",
+                        ' text-xs"></i>\n\n            ',
+                        e.name,
+                        ' <span class="opacity-60 text-xs">('
+                      ].join("") +
                       n +
                       ")</span>\n\n          </button>"
                     );
@@ -16221,33 +16796,37 @@ async function renderMarketing(e) {
                       const e = s.find((e) => e.id === i);
                       if (!e) return "";
                       const t = mktgCatPal(e.color);
-                      return (
-                        '\n\n        <div class="bg-gradient-to-r ' +
-                        t.gradient +
-                        " rounded-xl border " +
-                        t.border +
-                        ' p-3 flex items-center gap-3">\n\n          <div class="w-9 h-9 rounded-xl ' +
-                        t.bg +
-                        " border " +
-                        t.border +
-                        ' flex items-center justify-center flex-shrink-0">\n\n            <i class="fas ' +
-                        (e.icon || "fa-folder") +
-                        " " +
-                        t.text +
-                        '"></i>\n\n          </div>\n\n          <div>\n\n            <div class="font-semibold ' +
-                        t.text +
-                        ' text-sm">' +
-                        e.name +
-                        "</div>\n\n            " +
-                        (e.description ? '<div class="text-xs text-gray-400 mt-0.5">' + e.description + "</div>" : "") +
-                        '\n\n          </div>\n\n          <span class="' +
-                        t.text +
-                        ' text-xs ml-auto opacity-70">' +
-                        l.length +
-                        " doc" +
-                        (1 !== l.length ? "s" : "") +
+                      return [
+                        [
+                          [
+                            '\n\n        <div class="bg-gradient-to-r ',
+                            t.gradient,
+                            " rounded-xl border ",
+                            t.border,
+                            ' p-3 flex items-center gap-3">\n\n          <div class="w-9 h-9 rounded-xl ',
+                            t.bg,
+                            " border ",
+                            t.border,
+                            ' flex items-center justify-center flex-shrink-0">\n\n            <i class="fas '
+                          ].join(""),
+                          e.icon || "fa-folder",
+                          " ",
+                          t.text,
+                          '"></i>\n\n          </div>\n\n          <div>\n\n            <div class="font-semibold ',
+                          t.text,
+                          ' text-sm">',
+                          e.name,
+                          "</div>\n\n            "
+                        ].join(""),
+                        e.description ? '<div class="text-xs text-gray-400 mt-0.5">' + e.description + "</div>" : "",
+                        '\n\n          </div>\n\n          <span class="',
+                        t.text,
+                        ' text-xs ml-auto opacity-70">',
+                        l.length,
+                        " doc",
+                        1 !== l.length ? "s" : "",
                         "</span>\n\n        </div>"
-                      );
+                      ].join("");
                     })()
                   : "__featured__" === i
                     ? '\n        <div class="bg-gradient-to-r from-yellow-900/20 to-dark-800 rounded-xl border border-yellow-600/20 p-3 flex items-center gap-3">\n          <i ' +
@@ -16261,8 +16840,9 @@ async function renderMarketing(e) {
             (l.map((e) => mktgMemberCard(e)).join("") ||
               '\n        <div class="col-span-3 py-12 text-center text-gray-500">\n          <i class="fas fa-inbox text-4xl mb-3 text-gray-700"></i>\n          <p>' +
                 "Aucun document dans cette catégorie</p>\n        </div>") +
-            "\n\n      </div>\n\n      ") +
-        "\n\n\n\n    </div>"));
+            "\n\n      </div>\n\n      ",
+        "\n\n\n\n    </div>"
+      ].join("")));
   } catch (t) {
     e.innerHTML = '<div class="p-4 text-red-400">Erreur : ' + (t.error || t.message) + "</div>";
   }
@@ -16304,16 +16884,17 @@ function openMktgViewer(e, t, n) {
       "</div>";
   } else if (isAud) {
     body =
-      '<div class="flex-1 bg-gray-900 flex flex-col items-center justify-center gap-6 p-8">' +
-      '<div class="w-20 h-20 rounded-full bg-yellow-500/20 border border-yellow-500/30 flex items-center justify-center">' +
-      '<i class="fas fa-music text-yellow-400 text-3xl"></i></div>' +
-      '<p class="font-semibold text-white text-center">' +
-      title +
-      "</p>" +
-      '<audio src="' +
-      a +
-      '" controls class="w-full max-w-md"></audio>' +
-      "</div>";
+      [
+        '<div class="flex-1 bg-gray-900 flex flex-col items-center justify-center gap-6 p-8">',
+        '<div class="w-20 h-20 rounded-full bg-yellow-500/20 border border-yellow-500/30 flex items-center justify-center">',
+        '<i class="fas fa-music text-yellow-400 text-3xl"></i></div>',
+        '<p class="font-semibold text-white text-center">',
+        title,
+        "</p>",
+        '<audio src="',
+        a,
+        '" controls class="w-full max-w-md"></audio>'
+      ].join("") + "</div>";
   } else if (isDoc) {
     body =
       '<div class="flex-1 bg-gray-900 relative">' +
@@ -16331,33 +16912,39 @@ function openMktgViewer(e, t, n) {
       "</div>";
   }
   var html =
-    '<div class="flex flex-col" style="height:85vh;min-width:min(90vw,900px);">' +
-    '<div class="flex items-center justify-between px-5 py-3 border-b border-dark-600 bg-dark-800 flex-shrink-0">' +
-    '<div class="flex items-center gap-2 min-w-0">' +
-    '<i class="fas ' +
-    icon +
-    " " +
-    icol +
-    ' flex-shrink-0"></i>' +
-    '<span class="font-semibold text-white text-sm truncate">' +
-    title +
-    "</span>" +
-    "</div>" +
-    '<div class="flex items-center gap-2 flex-shrink-0 ml-3">' +
-    '<a href="' +
-    a +
-    ('" target="_blank" class="text-xs bg-blue-600/20 text-blue-400 border border-blue-600/30 px-3 py-1.5 rounded-lg hover:bg-blue-600/30 transition flex ' +
-      'items-center gap-1.5">') +
-    '<i class="fas fa-external-link-alt"></i> Nouvelle fen&#234;tre' +
-    "</a>" +
-    '<a href="' +
-    a +
-    ('" download target="_blank" class="text-xs bg-green-600/20 text-green-400 border border-green-600/30 px-3 py-1.5 rounded-lg hover:bg-green-600/30 ' +
-      'transition flex items-center gap-1.5">') +
-    '<i class="fas fa-download"></i> T&#233;l&#233;charger' +
-    "</a>" +
-    '<button onclick="closeModal()" class="text-gray-400 hover:text-white ml-2"><i class="fas fa-times"></i></button>' +
-    "</div>" +
+    [
+      [
+        [
+          '<div class="flex flex-col" style="height:85vh;min-width:min(90vw,900px);">',
+          '<div class="flex items-center justify-between px-5 py-3 border-b border-dark-600 bg-dark-800 flex-shrink-0">',
+          '<div class="flex items-center gap-2 min-w-0">',
+          '<i class="fas ',
+          icon,
+          " ",
+          icol,
+          ' flex-shrink-0"></i>',
+          '<span class="font-semibold text-white text-sm truncate">'
+        ].join(""),
+        title,
+        "</span>",
+        "</div>",
+        '<div class="flex items-center gap-2 flex-shrink-0 ml-3">',
+        '<a href="',
+        a,
+        '" target="_blank" class="text-xs bg-blue-600/20 text-blue-400 border border-blue-600/30 px-3 py-1.5 rounded-lg hover:bg-blue-600/30 transition flex ' +
+          'items-center gap-1.5">',
+        '<i class="fas fa-external-link-alt"></i> Nouvelle fen&#234;tre'
+      ].join(""),
+      "</a>",
+      '<a href="',
+      a,
+      '" download target="_blank" class="text-xs bg-green-600/20 text-green-400 border border-green-600/30 px-3 py-1.5 rounded-lg hover:bg-green-600/30 ' +
+        'transition flex items-center gap-1.5">',
+      '<i class="fas fa-download"></i> T&#233;l&#233;charger',
+      "</a>",
+      '<button onclick="closeModal()" class="text-gray-400 hover:text-white ml-2"><i class="fas fa-times"></i></button>',
+      "</div>"
+    ].join("") +
     "</div>" +
     body +
     "</div>";
@@ -16420,198 +17007,214 @@ async function renderCCWallet(e) {
         })[e] || e,
       c = r.some((e) => "pending" === e.status);
     e.innerHTML =
-      '\n\n    <div class="space-y-6">\n\n\n\n      <!-- En-tête -->\n\n      <div class="flex items-center justify-between flex-wrap gap-3">\n\n        <div>\n\n        ' +
-      '  <button onclick="showPage(\'wallet\')" class="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition mb-2"><i class="fas ' +
-      'fa-arrow-left text-[10px] mr-1"></i>Retour au wallet</button>\n\n          <h2 class="text-xl font-bold text-white flex items-center gap-2">\n\n           ' +
-      ' <i class="fas fa-seedling text-green-400"></i>\n\n            Crédit de Croissance\n' +
-      ('\n          </h2>\n\n          <p class="text-xs text-gray-500 mt-0.5">Bonus additionnel 20% sur vos primes — disponible M+1, valable 3 mois</p>\n\n        ' +
-        '</div>\n\n      </div>\n\n\n\n      <!-- Solde en 3 cartes -->\n\n      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">\n\n        <div class="stat-card ' +
-        'border-green-500/30">\n\n          <div class="flex items-center gap-2 mb-2">\n\n            <div class="w-8 h-8 rounded-lg bg-green-500/20 flex ' +
-        'items-center justify-center">\n\n              <i class="fas fa-circle-check text-green-400 text-sm"></i>\n') +
-      ('\n            </div>\n\n            <span class="text-xs text-gray-400 uppercase tracking-wider">Disponible</span>\n\n          </div>\n\n          <div ' +
-        'class="text-2xl font-bold text-green-400">') +
-      i(n.available) +
-      ('</div>\n\n          <div class="text-xs text-gray-500 mt-1">Utilisable pour remboursement</div>\n\n        </div>\n\n        <div class="stat-card ' +
-        'border-blue-500/30">\n\n          <div class="flex items-center gap-2 mb-2">\n\n            <div class="w-8 h-8 rounded-lg bg-blue-500/20 flex ' +
-        'items-center justify-center">\n\n              <i class="fas fa-lock text-blue-400 text-sm"></i>\n\n            </div>\n\n            <span class="text-xs ' +
-        'text-gray-400 uppercase tracking-wider">En attente</span>\n\n          </div>\n' +
-        '\n          <div class="text-2xl font-bold text-blue-400">') +
-      i(n.held) +
-      ('</div>\n\n          <div class="text-xs text-gray-500 mt-1">Libéré le 1er du mois suivant</div>\n\n        </div>\n\n        <div class="stat-card ' +
-        'border-rouge-500/25">\n\n          <div class="flex items-center gap-2 mb-2">\n\n            <div class="w-8 h-8 rounded-lg bg-rouge-500/15 flex ' +
-        'items-center justify-center">\n\n              <i class="fas fa-seedling text-rouge-400 text-sm"></i>\n\n            </div>\n\n            <span ' +
-        'class="text-xs text-gray-400 uppercase tracking-wider">Total actif</span>\n\n          </div>\n' +
-        '\n          <div class="text-2xl font-bold text-rouge-400">') +
-      i(n.total) +
-      ('</div>\n\n          <div class="text-xs text-gray-500 mt-1">Held + Available</div>\n\n        </div>\n\n      </div>\n\n\n\n      <!-- Formulaire demande de ' +
-        'remboursement -->\n\n      <div class="stat-card border-green-500/20 space-y-4" id="cc-withdrawal-form-card">\n\n        <div class="flex items-center ' +
-        'gap-2">\n\n          <i class="fas fa-file-invoice-dollar text-green-400"></i>\n\n          <h3 class="font-semibold text-white">Demande de remboursement<' +
-        '/h3>\n\n        </div>\n\n        <p class="text-xs text-gray-400">\n' +
-        ("\n          Le Crédit de Croissance peut être utilisé pour rembourser vos dépenses business (formation, marketing, abonnements...).\n\n          Chaque " +
-          "demande est examinée par un administrateur sous ")) +
-      cfg.processing_time +
-      ".\n\n        </p>\n\n        " +
-      (c
-        ? '<div class="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-3 text-xs text-yellow-300">\n               <i class="fas fa-clock mr-2"></i>Une ' +
-          "demande est déjà en cours de traitement.\n             </div>"
-        : n.available <= 0
-          ? '<div class="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 text-xs text-blue-300">\n               <i class="fas fa-lock mr-2"></i>Aucun ' +
-            "Crédit de Croissance disponible pour le moment.\n             </div>"
-          : '<div class="space-y-3">               <div><label class="text-xs text-gray-400 block mb-1">Montant (min ' +
-            cfg.min_amount +
-            "$ \u2014 max " +
-            i(Math.min(n.available, cfg.max_amount)) +
-            ')</label><input id="cc-wd-amount" type="number" min="' +
-            cfg.min_amount +
-            '" max="' +
-            Math.min(n.available, cfg.max_amount).toFixed(2) +
-            ('" step="0.01" placeholder="Ex : 150" class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-2.5 text-white text-sm ' +
-              'focus:border-green-500/60 focus:outline-none" /></div>               ') +
-            (cfg.fields?.description?.visible !== false
-              ? '<div>\n\n                 <label class="text-xs text-gray-400 block mb-1">' +
-                (cfg.fields?.description?.label || "Motif de la demande") +
-                (cfg.fields?.description?.required !== false ? '<span class=\\"text-red-400 ml-0.5\\">*</span>' : "") +
-                ('</label>\n\n                 <textarea id="cc-wd-desc" rows="3" placeholder="Ex : Abonnement outil CRM — janvier 2026"\n\n                   class="w-full ' +
-                  'bg-dark-700 border border-dark-600 rounded-xl px-4 py-2.5 text-white text-sm focus:border-green-500/60 focus:outline-none resize-none"></textarea>\n\n   ' +
-                  "              ") +
-                (cfg.desc_min_chars > 0 ? '<div class="text-xs text-gray-600 mt-1">' + cfg.desc_min_chars + " caract\xE8res minimum</div>" : "") +
-                "\n\n               </div>"
-              : "") +
-            "\n\n               " +
-            (cfg.fields?.justificatif?.visible !== false
-              ? '<div>\n\n                 <label class="text-xs text-gray-400 block mb-1">' +
-                (cfg.fields?.justificatif?.label || "Justificatif (PDF, JPG, PNG)") +
-                (cfg.fields?.justificatif?.required ? '<span class=\\"text-red-400 ml-0.5\\">*</span>' : "") +
-                ('</label>\n\n                 <div id="cc-wd-files-list" class="space-y-1.5 mb-2"></div><label for="cc-wd-file" class="flex items-center gap-3 ' +
-                  'cursor-pointer bg-dark-700 border border-dashed border-dark-500 hover:border-green-500/50 rounded-xl px-4 py-3 transition-all group"><div class="w-8 ' +
-                  'h-8 rounded-lg bg-green-500/15 flex items-center justify-center flex-shrink-0"><i class="fas fa-paperclip text-green-400 text-sm"></i></div><div ' +
-                  'class="flex-1 min-w-0"><div class="text-sm text-gray-400 group-hover:text-green-300 transition">Ajouter un justificatif</div><div class="text-xs ' +
-                  'text-gray-600 mt-0.5">PDF, JPG, PNG — plusieurs fichiers possibles</div></div><i class="fas fa-plus text-gray-600 group-hover:text-green-400 ' +
-                  'transition"></i></label><input id="cc-wd-file" type="file" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp" class="hidden" multiple ' +
-                  'onchange="_ccAddJustif(this)">\n' +
-                  "\n               </div>")
-              : "") +
-            "\n\n               " +
-            (cfg.fields?.custom1?.visible === true || cfg.fields?.custom1?.visible === "1"
-              ? '<div>\n\n                 <label class="text-xs text-gray-400 block mb-1">' +
-                (cfg.fields.custom1.label || "Information complémentaire 1") +
-                (cfg.fields.custom1.required ? '<span class=\\"text-red-400 ml-0.5\\">*</span>' : "") +
-                '</label>\n\n                 <input id="cc-wd-custom1" type="text" placeholder="' +
-                (cfg.fields.custom1.label || "") +
-                ('" class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-2.5 text-white text-sm focus:border-green-500/60 focus:outline-none">\n\n          ' +
-                  "     </div>")
-              : "") +
-            "\n\n               " +
-            (cfg.fields?.custom2?.visible === true || cfg.fields?.custom2?.visible === "1"
-              ? '<div>\n\n                 <label class="text-xs text-gray-400 block mb-1">' +
-                (cfg.fields.custom2.label || "Information complémentaire 2") +
-                (cfg.fields.custom2.required ? '<span class=\\"text-red-400 ml-0.5\\">*</span>' : "") +
-                '</label>\n\n                 <input id="cc-wd-custom2" type="text" placeholder="' +
-                (cfg.fields.custom2.label || "") +
-                ('" class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-2.5 text-white text-sm focus:border-green-500/60 focus:outline-none">\n\n          ' +
-                  "     </div>")
-              : "") +
-            "\n\n               " +
-            (cfg.fields?.custom3?.visible === true || cfg.fields?.custom3?.visible === "1"
-              ? '<div>\n\n                 <label class="text-xs text-gray-400 block mb-1">' +
-                (cfg.fields.custom3.label || "Information complémentaire 3") +
-                (cfg.fields.custom3.required ? '<span class=\\"text-red-400 ml-0.5\\">*</span>' : "") +
-                '</label>\n\n                 <input id="cc-wd-custom3" type="text" placeholder="' +
-                (cfg.fields.custom3.label || "") +
-                ('" class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-2.5 text-white text-sm focus:border-green-500/60 focus:outline-none">\n\n          ' +
-                  "     </div>")
-              : "") +
-            ('\n\n               <div id="cc-wd-error" class="hidden text-xs text-red-400"></div>\n\n               <button onclick="submitCCWithdrawal()" ' +
-              'id="cc-wd-btn"\n\n                 class="w-full bg-green-600 hover:bg-green-500 text-white font-semibold py-2.5 rounded-xl transition text-sm flex ' +
-              'items-center justify-center gap-2">\n\n                 <i class="fas fa-paper-plane"></i> Soumettre la demande\n\n               </button>\n\n             <' +
-              "/div>")) +
-      "\n\n      </div>\n\n\n\n      <!-- Cr\xE9dits actifs (entr\xE9es CC) avec progression et alertes -->\n\n      " +
-      (s.length > 0
-        ? '\n\n      <div class="stat-card space-y-3">\n\n        <h3 class="font-semibold text-white flex items-center gap-2">\n\n          <i class="fas ' +
-          'fa-list-check text-green-400 text-sm"></i>\n\n          Mes crédits actifs\n\n          <span class="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 ' +
-          'rounded-full">' +
-          s.filter((e) => "available" === e.status).length +
-          ' disponible(s)</span>\n\n        </h3>\n\n        <div class="space-y-3">\n\n          ' +
-          s
-            .map((e) => {
-              const t = e.remaining || e.amount - e.used_amount || 0,
-                n = e.amount > 0 ? Math.round(((e.amount - t) / e.amount) * 100) : 0,
-                a = Date.now(),
-                s = e.expires_at ? new Date(e.expires_at).getTime() : 0,
-                r = s ? Math.ceil((s - a) / 864e5) : 999,
-                d = "available" === e.status && r <= 7,
-                c = "available" === e.status && r <= 30,
-                x = d
-                  ? "border-red-500/40"
-                  : c
-                    ? "border-yellow-500/40"
-                    : "available" === e.status
-                      ? "border-green-500/30"
-                      : "held" === e.status
-                        ? "border-blue-500/30"
-                        : "border-dark-600",
-                p = e.available_at ? new Date(e.available_at) : null,
-                m = "held" === e.status,
-                u = m && p ? Math.ceil((p.getTime() - a) / 864e5) : 0;
-              return (
-                '\n\n            <div class="bg-dark-700 rounded-xl border ' +
-                x +
-                (' p-4">\n\n              <!-- En-tête -->\n\n              <div class="flex items-start justify-between gap-3 mb-3">\n\n                <div class="flex ' +
-                  'items-center gap-2 flex-wrap">\n\n                  ') +
-                o(e.status) +
-                '\n\n                  <span class="text-xs text-gray-400">P\xE9riode ' +
-                e.period +
-                "</span>\n\n                  " +
-                (d ? '<span class="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full animate-pulse">Expire dans ' + r + "j !</span>" : "") +
-                "\n\n                  " +
-                (c && !d ? '<span class="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full">Expire dans ' + r + "j</span>" : "") +
-                '\n\n                </div>\n\n                <div class="text-right flex-shrink-0">\n\n                  <div class="text-lg font-bold text-white">' +
-                i(t) +
-                '</div>\n\n                  <div class="text-xs text-gray-500">restant sur ' +
-                i(e.amount) +
-                "</div>\n\n                </div>\n\n              </div>\n\n\n\n              <!-- Barre d'utilisation -->\n\n              " +
-                (n > 0
-                  ? '\n\n              <div class="mb-3">\n\n                <div class="flex justify-between text-xs text-gray-500 mb-1">\n\n                  <span>Utilisation<' +
-                    "/span>\n\n                  <span>" +
-                    n +
-                    ('% utilisé</span>\n\n                </div>\n\n                <div class="h-1.5 rounded-full bg-dark-600 overflow-hidden">\n\n                  <div ' +
-                      'class="h-full rounded-full bg-gradient-to-r from-orange-500 to-orange-400" style="width:') +
-                    n +
-                    '%"></div>\n\n                </div>\n\n              </div>'
-                  : "") +
-                ('\n\n\n\n              <!-- Dates -->\n\n              <div class="grid grid-cols-2 gap-3 text-xs">\n\n                <div class="bg-dark-600 rounded-lg p-2">\n' +
-                  '\n                  <div class="text-gray-500 mb-0.5">\n\n                    ') +
-                (m ? "Disponible le" : "Disponible depuis") +
-                '\n\n                  </div>\n\n                  <div class="font-semibold ' +
-                (m ? "text-blue-400" : "text-green-400") +
-                '">\n\n                    ' +
-                l(e.available_at) +
-                "\n\n                    " +
-                (m && u > 0 ? '<span class="text-gray-500"> (dans ' + u + "j)</span>" : "") +
-                ('\n\n                  </div>\n\n                </div>\n\n                <div class="bg-dark-600 rounded-lg p-2">\n\n                  <div ' +
-                  'class="text-gray-500 mb-0.5">Expire le</div>\n\n                  <div class="font-semibold ') +
-                (d ? "text-red-400" : c ? "text-yellow-400" : "text-gray-300") +
-                '">\n\n                    ' +
-                l(e.expires_at) +
-                "\n\n                    " +
-                ("available" === e.status && r > 0 ? '<span class="text-gray-500"> (dans ' + r + "j)</span>" : "") +
-                "\n\n                  </div>\n\n                </div>\n\n              </div>\n\n\n\n              " +
-                (d
-                  ? '\n\n              <div class="mt-3 bg-red-500/10 border border-red-500/30 rounded-lg p-2 text-xs text-red-300">\n\n                <i class="fas ' +
-                    'fa-exclamation-triangle mr-1"></i>\n\n                Ce crédit expire dans <strong>' +
-                    r +
-                    " jour" +
-                    (r > 1 ? "s" : "") +
-                    "</strong> \u2014 soumettez une demande de remboursement maintenant pour ne pas le perdre !\n\n              </div>"
-                  : "") +
-                "\n\n            </div>"
-              );
-            })
-            .join("") +
-          "\n\n        </div>\n\n      </div>"
-        : '\n      <div class="stat-card text-center py-6">\n        <i class="fas fa-seedling text-gray-600 text-3xl mb-3 block"></i>\n        <p ' +
-          'class="text-gray-500 text-sm">Aucun Crédit de Croissance actif pour le moment.</p>\n        <p class="text-xs text-gray-600 mt-1">Le CC est attribué ' +
-          "chaque mois selon votre prime de Leadership.</p>\n      </div>") +
+      [
+        [
+          '\n\n    <div class="space-y-6">\n\n\n\n      <!-- En-tête -->\n\n      <div class="flex items-center justify-between flex-wrap gap-3">\n\n        <div>\n\n        ',
+          '  <button onclick="showPage(\'wallet\')" class="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition mb-2"><i class="fas ',
+          'fa-arrow-left text-[10px] mr-1"></i>Retour au wallet</button>\n\n          <h2 class="text-xl font-bold text-white flex items-center gap-2">\n\n           ',
+          ' <i class="fas fa-seedling text-green-400"></i>\n\n            Crédit de Croissance\n',
+          '\n          </h2>\n\n          <p class="text-xs text-gray-500 mt-0.5">Bonus additionnel 20% sur vos primes — disponible M+1, valable 3 mois</p>\n\n        ' +
+            '</div>\n\n      </div>\n\n\n\n      <!-- Solde en 3 cartes -->\n\n      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">\n\n        <div class="stat-card ' +
+            'border-green-500/30">\n\n          <div class="flex items-center gap-2 mb-2">\n\n            <div class="w-8 h-8 rounded-lg bg-green-500/20 flex ' +
+            'items-center justify-center">\n\n              <i class="fas fa-circle-check text-green-400 text-sm"></i>\n',
+          '\n            </div>\n\n            <span class="text-xs text-gray-400 uppercase tracking-wider">Disponible</span>\n\n          </div>\n\n          <div ' +
+            'class="text-2xl font-bold text-green-400">',
+          i(n.available),
+          '</div>\n\n          <div class="text-xs text-gray-500 mt-1">Utilisable pour remboursement</div>\n\n        </div>\n\n        <div class="stat-card ' +
+            'border-blue-500/30">\n\n          <div class="flex items-center gap-2 mb-2">\n\n            <div class="w-8 h-8 rounded-lg bg-blue-500/20 flex ' +
+            'items-center justify-center">\n\n              <i class="fas fa-lock text-blue-400 text-sm"></i>\n\n            </div>\n\n            <span class="text-xs ' +
+            'text-gray-400 uppercase tracking-wider">En attente</span>\n\n          </div>\n' +
+            '\n          <div class="text-2xl font-bold text-blue-400">',
+          i(n.held)
+        ].join(""),
+        '</div>\n\n          <div class="text-xs text-gray-500 mt-1">Libéré le 1er du mois suivant</div>\n\n        </div>\n\n        <div class="stat-card ' +
+          'border-rouge-500/25">\n\n          <div class="flex items-center gap-2 mb-2">\n\n            <div class="w-8 h-8 rounded-lg bg-rouge-500/15 flex ' +
+          'items-center justify-center">\n\n              <i class="fas fa-seedling text-rouge-400 text-sm"></i>\n\n            </div>\n\n            <span ' +
+          'class="text-xs text-gray-400 uppercase tracking-wider">Total actif</span>\n\n          </div>\n' +
+          '\n          <div class="text-2xl font-bold text-rouge-400">',
+        i(n.total),
+        '</div>\n\n          <div class="text-xs text-gray-500 mt-1">Held + Available</div>\n\n        </div>\n\n      </div>\n\n\n\n      <!-- Formulaire demande de ' +
+          'remboursement -->\n\n      <div class="stat-card border-green-500/20 space-y-4" id="cc-withdrawal-form-card">\n\n        <div class="flex items-center ' +
+          'gap-2">\n\n          <i class="fas fa-file-invoice-dollar text-green-400"></i>\n\n          <h3 class="font-semibold text-white">Demande de remboursement<' +
+          '/h3>\n\n        </div>\n\n        <p class="text-xs text-gray-400">\n' +
+          ("\n          Le Crédit de Croissance peut être utilisé pour rembourser vos dépenses business (formation, marketing, abonnements...).\n\n          Chaque " +
+            "demande est examinée par un administrateur sous "),
+        cfg.processing_time,
+        ".\n\n        </p>\n\n        ",
+        c
+          ? '<div class="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-3 text-xs text-yellow-300">\n               <i class="fas fa-clock mr-2"></i>Une ' +
+            "demande est déjà en cours de traitement.\n             </div>"
+          : n.available <= 0
+            ? '<div class="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 text-xs text-blue-300">\n               <i class="fas fa-lock mr-2"></i>Aucun ' +
+              "Crédit de Croissance disponible pour le moment.\n             </div>"
+            : [
+                [
+                  '<div class="space-y-3">               <div><label class="text-xs text-gray-400 block mb-1">Montant (min ',
+                  cfg.min_amount,
+                  "$ \u2014 max ",
+                  i(Math.min(n.available, cfg.max_amount)),
+                  ')</label><input id="cc-wd-amount" type="number" min="',
+                  cfg.min_amount,
+                  '" max="',
+                  Math.min(n.available, cfg.max_amount).toFixed(2),
+                  '" step="0.01" placeholder="Ex : 150" class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-2.5 text-white text-sm ' +
+                    'focus:border-green-500/60 focus:outline-none" /></div>               '
+                ].join(""),
+                cfg.fields?.description?.visible !== false
+                  ? '<div>\n\n                 <label class="text-xs text-gray-400 block mb-1">' +
+                    (cfg.fields?.description?.label || "Motif de la demande") +
+                    (cfg.fields?.description?.required !== false ? '<span class=\\"text-red-400 ml-0.5\\">*</span>' : "") +
+                    ('</label>\n\n                 <textarea id="cc-wd-desc" rows="3" placeholder="Ex : Abonnement outil CRM — janvier 2026"\n\n                   class="w-full ' +
+                      'bg-dark-700 border border-dark-600 rounded-xl px-4 py-2.5 text-white text-sm focus:border-green-500/60 focus:outline-none resize-none"></textarea>\n\n   ' +
+                      "              ") +
+                    (cfg.desc_min_chars > 0 ? '<div class="text-xs text-gray-600 mt-1">' + cfg.desc_min_chars + " caract\xE8res minimum</div>" : "") +
+                    "\n\n               </div>"
+                  : "",
+                "\n\n               ",
+                cfg.fields?.justificatif?.visible !== false
+                  ? '<div>\n\n                 <label class="text-xs text-gray-400 block mb-1">' +
+                    (cfg.fields?.justificatif?.label || "Justificatif (PDF, JPG, PNG)") +
+                    (cfg.fields?.justificatif?.required ? '<span class=\\"text-red-400 ml-0.5\\">*</span>' : "") +
+                    ('</label>\n\n                 <div id="cc-wd-files-list" class="space-y-1.5 mb-2"></div><label for="cc-wd-file" class="flex items-center gap-3 ' +
+                      'cursor-pointer bg-dark-700 border border-dashed border-dark-500 hover:border-green-500/50 rounded-xl px-4 py-3 transition-all group"><div class="w-8 ' +
+                      'h-8 rounded-lg bg-green-500/15 flex items-center justify-center flex-shrink-0"><i class="fas fa-paperclip text-green-400 text-sm"></i></div><div ' +
+                      'class="flex-1 min-w-0"><div class="text-sm text-gray-400 group-hover:text-green-300 transition">Ajouter un justificatif</div><div class="text-xs ' +
+                      'text-gray-600 mt-0.5">PDF, JPG, PNG — plusieurs fichiers possibles</div></div><i class="fas fa-plus text-gray-600 group-hover:text-green-400 ' +
+                      'transition"></i></label><input id="cc-wd-file" type="file" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp" class="hidden" multiple ' +
+                      'onchange="_ccAddJustif(this)">\n' +
+                      "\n               </div>")
+                  : "",
+                "\n\n               ",
+                cfg.fields?.custom1?.visible === true || cfg.fields?.custom1?.visible === "1"
+                  ? '<div>\n\n                 <label class="text-xs text-gray-400 block mb-1">' +
+                    (cfg.fields.custom1.label || "Information complémentaire 1") +
+                    (cfg.fields.custom1.required ? '<span class=\\"text-red-400 ml-0.5\\">*</span>' : "") +
+                    '</label>\n\n                 <input id="cc-wd-custom1" type="text" placeholder="' +
+                    (cfg.fields.custom1.label || "") +
+                    ('" class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-2.5 text-white text-sm focus:border-green-500/60 focus:outline-none">\n\n          ' +
+                      "     </div>")
+                  : "",
+                "\n\n               ",
+                cfg.fields?.custom2?.visible === true || cfg.fields?.custom2?.visible === "1"
+                  ? '<div>\n\n                 <label class="text-xs text-gray-400 block mb-1">' +
+                    (cfg.fields.custom2.label || "Information complémentaire 2") +
+                    (cfg.fields.custom2.required ? '<span class=\\"text-red-400 ml-0.5\\">*</span>' : "") +
+                    '</label>\n\n                 <input id="cc-wd-custom2" type="text" placeholder="' +
+                    (cfg.fields.custom2.label || "") +
+                    ('" class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-2.5 text-white text-sm focus:border-green-500/60 focus:outline-none">\n\n          ' +
+                      "     </div>")
+                  : "",
+                "\n\n               "
+              ].join("") +
+              (cfg.fields?.custom3?.visible === true || cfg.fields?.custom3?.visible === "1"
+                ? '<div>\n\n                 <label class="text-xs text-gray-400 block mb-1">' +
+                  (cfg.fields.custom3.label || "Information complémentaire 3") +
+                  (cfg.fields.custom3.required ? '<span class=\\"text-red-400 ml-0.5\\">*</span>' : "") +
+                  '</label>\n\n                 <input id="cc-wd-custom3" type="text" placeholder="' +
+                  (cfg.fields.custom3.label || "") +
+                  ('" class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-2.5 text-white text-sm focus:border-green-500/60 focus:outline-none">\n\n          ' +
+                    "     </div>")
+                : "") +
+              ('\n\n               <div id="cc-wd-error" class="hidden text-xs text-red-400"></div>\n\n               <button onclick="submitCCWithdrawal()" ' +
+                'id="cc-wd-btn"\n\n                 class="w-full bg-green-600 hover:bg-green-500 text-white font-semibold py-2.5 rounded-xl transition text-sm flex ' +
+                'items-center justify-center gap-2">\n\n                 <i class="fas fa-paper-plane"></i> Soumettre la demande\n\n               </button>\n\n             <' +
+                "/div>"),
+        "\n\n      </div>\n\n\n\n      <!-- Cr\xE9dits actifs (entr\xE9es CC) avec progression et alertes -->\n\n      ",
+        s.length > 0
+          ? '\n\n      <div class="stat-card space-y-3">\n\n        <h3 class="font-semibold text-white flex items-center gap-2">\n\n          <i class="fas ' +
+            'fa-list-check text-green-400 text-sm"></i>\n\n          Mes crédits actifs\n\n          <span class="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 ' +
+            'rounded-full">' +
+            s.filter((e) => "available" === e.status).length +
+            ' disponible(s)</span>\n\n        </h3>\n\n        <div class="space-y-3">\n\n          ' +
+            s
+              .map((e) => {
+                const t = e.remaining || e.amount - e.used_amount || 0,
+                  n = e.amount > 0 ? Math.round(((e.amount - t) / e.amount) * 100) : 0,
+                  a = Date.now(),
+                  s = e.expires_at ? new Date(e.expires_at).getTime() : 0,
+                  r = s ? Math.ceil((s - a) / 864e5) : 999,
+                  d = "available" === e.status && r <= 7,
+                  c = "available" === e.status && r <= 30,
+                  x = d
+                    ? "border-red-500/40"
+                    : c
+                      ? "border-yellow-500/40"
+                      : "available" === e.status
+                        ? "border-green-500/30"
+                        : "held" === e.status
+                          ? "border-blue-500/30"
+                          : "border-dark-600",
+                  p = e.available_at ? new Date(e.available_at) : null,
+                  m = "held" === e.status,
+                  u = m && p ? Math.ceil((p.getTime() - a) / 864e5) : 0;
+                return [
+                  [
+                    [
+                      [
+                        '\n\n            <div class="bg-dark-700 rounded-xl border ',
+                        x,
+                        ' p-4">\n\n              <!-- En-tête -->\n\n              <div class="flex items-start justify-between gap-3 mb-3">\n\n                <div class="flex ' +
+                          'items-center gap-2 flex-wrap">\n\n                  ',
+                        o(e.status),
+                        '\n\n                  <span class="text-xs text-gray-400">P\xE9riode ',
+                        e.period,
+                        "</span>\n\n                  ",
+                        d
+                          ? '<span class="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full animate-pulse">Expire dans ' + r + "j !</span>"
+                          : "",
+                        "\n\n                  "
+                      ].join(""),
+                      c && !d ? '<span class="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full">Expire dans ' + r + "j</span>" : "",
+                      '\n\n                </div>\n\n                <div class="text-right flex-shrink-0">\n\n                  <div class="text-lg font-bold text-white">',
+                      i(t),
+                      '</div>\n\n                  <div class="text-xs text-gray-500">restant sur ',
+                      i(e.amount),
+                      "</div>\n\n                </div>\n\n              </div>\n\n\n\n              <!-- Barre d'utilisation -->\n\n              ",
+                      n > 0
+                        ? '\n\n              <div class="mb-3">\n\n                <div class="flex justify-between text-xs text-gray-500 mb-1">\n\n                  <span>Utilisation<' +
+                          "/span>\n\n                  <span>" +
+                          n +
+                          ('% utilisé</span>\n\n                </div>\n\n                <div class="h-1.5 rounded-full bg-dark-600 overflow-hidden">\n\n                  <div ' +
+                            'class="h-full rounded-full bg-gradient-to-r from-orange-500 to-orange-400" style="width:') +
+                          n +
+                          '%"></div>\n\n                </div>\n\n              </div>'
+                        : "",
+                      '\n\n\n\n              <!-- Dates -->\n\n              <div class="grid grid-cols-2 gap-3 text-xs">\n\n                <div class="bg-dark-600 rounded-lg p-2">\n' +
+                        '\n                  <div class="text-gray-500 mb-0.5">\n\n                    '
+                    ].join(""),
+                    m ? "Disponible le" : "Disponible depuis",
+                    '\n\n                  </div>\n\n                  <div class="font-semibold ',
+                    m ? "text-blue-400" : "text-green-400",
+                    '">\n\n                    ',
+                    l(e.available_at),
+                    "\n\n                    ",
+                    m && u > 0 ? '<span class="text-gray-500"> (dans ' + u + "j)</span>" : "",
+                    '\n\n                  </div>\n\n                </div>\n\n                <div class="bg-dark-600 rounded-lg p-2">\n\n                  <div ' +
+                      'class="text-gray-500 mb-0.5">Expire le</div>\n\n                  <div class="font-semibold '
+                  ].join(""),
+                  d ? "text-red-400" : c ? "text-yellow-400" : "text-gray-300",
+                  '">\n\n                    ',
+                  l(e.expires_at),
+                  "\n\n                    ",
+                  "available" === e.status && r > 0 ? '<span class="text-gray-500"> (dans ' + r + "j)</span>" : "",
+                  "\n\n                  </div>\n\n                </div>\n\n              </div>\n\n\n\n              ",
+                  d
+                    ? '\n\n              <div class="mt-3 bg-red-500/10 border border-red-500/30 rounded-lg p-2 text-xs text-red-300">\n\n                <i class="fas ' +
+                      'fa-exclamation-triangle mr-1"></i>\n\n                Ce crédit expire dans <strong>' +
+                      r +
+                      " jour" +
+                      (r > 1 ? "s" : "") +
+                      "</strong> \u2014 soumettez une demande de remboursement maintenant pour ne pas le perdre !\n\n              </div>"
+                    : "",
+                  "\n\n            </div>"
+                ].join("");
+              })
+              .join("") +
+            "\n\n        </div>\n\n      </div>"
+          : '\n      <div class="stat-card text-center py-6">\n        <i class="fas fa-seedling text-gray-600 text-3xl mb-3 block"></i>\n        <p ' +
+            'class="text-gray-500 text-sm">Aucun Crédit de Croissance actif pour le moment.</p>\n        <p class="text-xs text-gray-600 mt-1">Le CC est attribué ' +
+            "chaque mois selon votre prime de Leadership.</p>\n      </div>"
+      ].join("") +
       "\n\n\n\n      <!-- Historique demandes de remboursement -->\n\n      " +
       (r.length > 0
         ? '\n\n      <div class="stat-card space-y-3">\n\n        <h3 class="font-semibold text-white flex items-center gap-2">\n\n          <i class="fas fa-receipt ' +
@@ -16624,15 +17227,17 @@ async function renderCCWallet(e) {
           r
             .map(
               (e) =>
-                '\n\n              <tr>\n\n                <td class="py-2 text-gray-400 text-xs">' +
-                l(e.created_at) +
-                '</td>\n\n                <td class="py-2 text-right font-semibold text-white">' +
-                i(e.amount) +
-                '</td>\n\n                <td class="py-2 pl-4 text-gray-300 text-xs max-w-xs truncate">' +
-                e.description +
-                '</td>\n\n                <td class="py-2 text-center">' +
-                d(e.status) +
-                '</td>\n\n                <td class="py-2 pl-4 text-xs text-gray-400">' +
+                [
+                  '\n\n              <tr>\n\n                <td class="py-2 text-gray-400 text-xs">',
+                  l(e.created_at),
+                  '</td>\n\n                <td class="py-2 text-right font-semibold text-white">',
+                  i(e.amount),
+                  '</td>\n\n                <td class="py-2 pl-4 text-gray-300 text-xs max-w-xs truncate">',
+                  e.description,
+                  '</td>\n\n                <td class="py-2 text-center">',
+                  d(e.status),
+                  '</td>\n\n                <td class="py-2 pl-4 text-xs text-gray-400">'
+                ].join("") +
                 (e.admin_note || "—") +
                 '</td>\n\n                <td class="py-2 text-center">' +
                 (e.justificatif_url
@@ -16666,15 +17271,17 @@ async function renderCCWallet(e) {
             .map((e) => {
               const t = "credit" === e.type;
               return (
-                '\n\n                     <tr>\n\n                       <td class="py-2 text-gray-400 text-xs">' +
-                l(e.created_at) +
-                '</td>\n\n                       <td class="py-2 text-right font-semibold ' +
-                (t ? "text-green-400" : "text-red-400") +
-                '">\n\n                         ' +
-                (t ? "+" : "-") +
-                i(e.amount) +
-                '\n\n                       </td>\n\n                       <td class="py-2 text-right text-gray-300">' +
-                i(e.balance_after) +
+                [
+                  '\n\n                     <tr>\n\n                       <td class="py-2 text-gray-400 text-xs">',
+                  l(e.created_at),
+                  '</td>\n\n                       <td class="py-2 text-right font-semibold ',
+                  t ? "text-green-400" : "text-red-400",
+                  '">\n\n                         ',
+                  t ? "+" : "-",
+                  i(e.amount),
+                  '\n\n                       </td>\n\n                       <td class="py-2 text-right text-gray-300">',
+                  i(e.balance_after)
+                ].join("") +
                 '</td>\n\n                       <td class="py-2 pl-4 text-gray-300 text-xs">' +
                 e.label +
                 "</td>\n\n                     </tr>"
@@ -16832,17 +17439,19 @@ async function renderNotifications(e, page, perPage) {
         ((t.notifications || [])
           .map(
             (e) =>
-              '\n\n        <div class="bg-dark-800 rounded-xl border border-dark-600 p-4 ' +
-              (e.is_read ? "" : "border-rouge-500/25") +
-              (' fade-in">\n\n          <div class="flex items-start gap-3">\n\n            <div class="w-8 h-8 rounded-full bg-rouge-500/15 flex items-center ' +
-                'justify-center flex-shrink-0 mt-0.5">\n\n              <i class="fas fa-bell text-rouge-400 text-xs"></i>\n\n            </div>\n\n            <div ' +
-                'class="flex-1">\n\n              <div class="font-medium text-sm ') +
-              (e.is_read ? "text-gray-300" : "text-white") +
-              '">' +
-              e.title +
-              '</div>\n\n              <div class="text-xs text-gray-400 mt-0.5">' +
-              e.message +
-              '</div>\n\n              <div class="text-xs text-gray-600 mt-1">' +
+              [
+                '\n\n        <div class="bg-dark-800 rounded-xl border border-dark-600 p-4 ',
+                e.is_read ? "" : "border-rouge-500/25",
+                ' fade-in">\n\n          <div class="flex items-start gap-3">\n\n            <div class="w-8 h-8 rounded-full bg-rouge-500/15 flex items-center ' +
+                  'justify-center flex-shrink-0 mt-0.5">\n\n              <i class="fas fa-bell text-rouge-400 text-xs"></i>\n\n            </div>\n\n            <div ' +
+                  'class="flex-1">\n\n              <div class="font-medium text-sm ',
+                e.is_read ? "text-gray-300" : "text-white",
+                '">',
+                e.title,
+                '</div>\n\n              <div class="text-xs text-gray-400 mt-0.5">',
+                e.message,
+                '</div>\n\n              <div class="text-xs text-gray-600 mt-1">'
+              ].join("") +
               fmtDatetime(e.created_at) +
               "</div>\n\n            </div>\n\n          </div>\n\n        </div>"
           )
