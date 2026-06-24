@@ -2170,10 +2170,7 @@ function memberHTML(opts: MemberHTMLOpts = {}, branding: BrandingPublic = { logo
         <span class="flex-1">Campus</span>
         <span class="text-[9px] bg-red-900/30 text-red-400 px-1.5 py-0.5 rounded font-semibold border border-red-900/40">NOUVEAU</span>
       </button>
-      <button onclick="showPage('subscription');closeSidebar()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="subscription">
-        <i class="fas fa-rotate w-5 text-center" style="color:#C03020"></i>
-        <span class="flex-1">Mes Abonnements</span>
-      </button>
+
       <button onclick="showPage('marketing');closeSidebar()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="marketing">
         <i class="fas fa-bullhorn w-5 text-center"></i> <span data-i18n="Marketing">Marketing</span>
       </button>

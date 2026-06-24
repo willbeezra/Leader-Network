@@ -2656,10 +2656,24 @@ window._wizardOpenForCourse = function (courseId, title, priceUsd) {
           var _brLabel = _brReg.status === 'registered' ? 'Inscrit, en attente du dépôt' : 'Dépôt reçu — activation en cours';
           return '<div class="w-full text-center py-3.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-300 text-sm font-semibold flex items-center justify-center gap-2"><i class="fas fa-clock"></i>' + _brLabel + '</div>';
         }
-        return '<button onclick="brokerRedirect(\'' + e.id + '\',\'' + encodeURIComponent(e.name) + '\',event)" class="w-full bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 text-white font-bold py-3.5 rounded-xl transition-all duration-200 text-sm shadow-lg flex items-center justify-center gap-2"><i class="fas fa-external-link-alt"></i>S&#39;inscrire chez Triomarkets</button>';
+        return '<button onclick="brokerRedirect(\'' + e.id + '\',\'' + encodeURIComponent(e.name) + '\',event)" class="w-full bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 text-white font-bold py-3.5 rounded-xl transition-all duration-200 text-sm shadow-lg flex items-center justify-center gap-2"><i class="fas fa-external-link-alt"></i>S&#39;inscrire chez le broker</button>';
+      }if (e.payment_mode === 'subscription' && sameOwned) {
+        var _subStatus = (window._memberSubscriptions || []).find(function(s){ return s.package_id === e.id; });
+        var _subAccess = _subStatus ? _subStatus.access_status : (sameOwned ? 'active' : null);
+        if (_subAccess === 'active' || _subAccess === 'grace') {
+          return '<div class="space-y-3">'
+            + '<div class="w-full text-center py-2 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm font-semibold flex items-center justify-center gap-2"><i class="fas fa-check-circle"></i>Abonnement actif</div>'
+            + '<div class="grid grid-cols-2 gap-2">'
+            + '<button onclick="serviceRedirect(\'synex-libre\',this)" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-semibold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-1.5"><i class="fas fa-external-link-alt"></i>Synex</button>'
+            + '<button onclick="serviceRedirect(\'kronex\',this)" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-semibold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-1.5"><i class="fas fa-external-link-alt"></i>Kronex</button>'
+            + '</div></div>';
+        } else if (_subAccess === 'suspended') {
+          return '<div class="w-full text-center py-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm font-semibold flex items-center justify-center gap-2"><i class="fas fa-ban"></i>Abonnement suspendu</div>';
+        }
+        return '<div class="w-full text-center py-3.5 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm font-semibold flex items-center justify-center gap-2"><i class="fas fa-check-circle"></i>Abonnement actif</div>';
       }if (sameOwned) {return '<div class="w-full text-center py-3.5 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm font-semibold flex items-center justify-center gap-2"><i class="fas fa-check-circle"></i>Package actif</div>';}if (superiorInCat) {return '<div class="w-full text-center py-3.5 rounded-xl bg-gray-700/50 border border-gray-600/40 text-gray-500 text-sm font-semibold flex items-center justify-center gap-2 cursor-not-allowed select-none"><i class="fas fa-lock mr-1"></i>Niveau d\'abord atteint — Upgrade requis</div>';}if (activeOrder) {return "<button onclick=\"wizardStart('".concat(e.id, "','").concat(encodeURIComponent(e.name), "',").concat(e.price_usd, ",").concat(e.bv_value, ",true,").concat(activeOrder.price_usd || 0, ",").concat(activeOrder.bv_value || 0, ")\" class=\"w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-xl transition-all duration-200 text-sm shadow-lg flex items-center justify-center gap-2\"><i class=\"fas fa-arrow-up\"></i>Upgrader depuis ").concat(activeOrder.package_name || 'mon package', "</button>");}return "<button onclick=\"wizardStart('".concat(e.id, "','").concat(encodeURIComponent(e.name), "',").concat(e.price_usd, ",").concat(e.bv_value, ",false,0,0)\" class=\"w-full ").concat(t.btnClass, " text-white font-bold py-3.5 rounded-xl transition-all duration-200 text-sm shadow-lg flex items-center justify-center gap-2\"><i class=\"fas fa-shopping-cart\"></i>").concat(s ? "S'abonner maintenant" : "Acquérir ce package", "</button>");})(), "\n\n    </div>\n\n  </div>");
 
-}async function renderPackages(e) {e.innerHTML = '<div class="flex items-center justify-center py-16"><div class="loader"></div></div>';try {const [t, _bsRes] = await Promise.all([api("GET", "/members/packages"), api("GET", "/broker/status").catch(() => ({ registrations: [] }))]);window._brokerRegs = _bsRes.registrations || [];_gw = _buildGw(t.gateways || {}), _adminFeeInfo = t.adminFee || { amount: 0, active: !1, paid: !0 };_licPriceForWizard = t.licensePrice || 97;const n = {},a = {};for (const e of t.packages || []) {const t = e.category_id || "_none";n[t] || (n[t] = [], a[t] = { name: e.category_name || "Packages", icon: e.category_icon || "[+]", desc: e.category_description || "", tag: e.category_tag || "" }), n[t].push(e);}window._pkgData = { pkgByCategory: n, categoryMeta: a, myOrders: t.myOrders || [] };const s = ["cat-synex", "cat-ezra", "cat-luxia", "cat-club", "cat-synex-triomarkets"].filter((e) => n[e]),r = Object.keys(n).filter((e) => !s.includes(e)),i = [...s, ...r].map((e) => {const t = n[e],s = a[e],r = CAT_THEME[e] || CAT_THEME._none,i = getCatMeta(e, a),l = Math.min(...t.map((e) => e.price_usd)),d = Math.max(...t.map((e) => e.price_usd)),o = t.some((e) => "monthly" === e.pricing_type || "subscription" === e.payment_mode),c = "EUR" === t[0]?.currency ? "€" : "$";return l === d ? Number(l).toLocaleString("fr-FR") : (Number(l).toLocaleString("fr-FR"), Number(d).toLocaleString("fr-FR")), "\n\n      <div onclick=\"showPackageCategory('".concat(
+}async function renderPackages(e) {e.innerHTML = '<div class="flex items-center justify-center py-16"><div class="loader"></div></div>';try {const [t, _bsRes, _subRes] = await Promise.all([api("GET", "/members/packages"), api("GET", "/broker/status").catch(() => ({ registrations: [] })), api("GET", "/members/subscription").catch(() => ({ subscriptions: [] }))]);window._brokerRegs = _bsRes.registrations || [];window._memberSubscriptions = (_subRes.subscriptions || []);_gw = _buildGw(t.gateways || {}), _adminFeeInfo = t.adminFee || { amount: 0, active: !1, paid: !0 };_licPriceForWizard = t.licensePrice || 97;const n = {},a = {};for (const e of t.packages || []) {const t = e.category_id || "_none";n[t] || (n[t] = [], a[t] = { name: e.category_name || "Packages", icon: e.category_icon || "[+]", desc: e.category_description || "", tag: e.category_tag || "" }), n[t].push(e);}window._pkgData = { pkgByCategory: n, categoryMeta: a, myOrders: t.myOrders || [] };const s = ["cat-synex", "cat-ezra", "cat-luxia", "cat-club", "cat-synex-triomarkets"].filter((e) => n[e]),r = Object.keys(n).filter((e) => !s.includes(e)),i = [...s, ...r].map((e) => {const t = n[e],s = a[e],r = CAT_THEME[e] || CAT_THEME._none,i = getCatMeta(e, a),l = Math.min(...t.map((e) => e.price_usd)),d = Math.max(...t.map((e) => e.price_usd)),o = t.some((e) => "monthly" === e.pricing_type || "subscription" === e.payment_mode),c = "EUR" === t[0]?.currency ? "€" : "$";return l === d ? Number(l).toLocaleString("fr-FR") : (Number(l).toLocaleString("fr-FR"), Number(d).toLocaleString("fr-FR")), "\n\n      <div onclick=\"showPackageCategory('".concat(
           e, "')\"\n\n        class=\"group cursor-pointer rounded-2xl border ").concat(
           r.border, " ").concat(r.catCardHover, "\n\n               bg-gradient-to-br ").concat(
           r.catCardBg, " p-7\n\n               hover:shadow-2xl hover:-translate-y-1 transition-all duration-300\">\n\n\n\n        <!-- Ic\xF4ne + nom -->\n\n        <div class=\"flex items-center gap-4 mb-4\">\n\n          <div class=\"w-14 h-14 rounded-2xl ").concat(
@@ -2761,15 +2775,35 @@ async function brokerRedirect(pkgId, pkgNameEnc, evt) {
       document.body.appendChild(a);
       a.click();
       setTimeout(function () {document.body.removeChild(a);}, 1000);
-      showToast('Redirection vers Triomarkets — votre inscription est suivie', 'success');
+      showToast('Redirection vers le broker — votre inscription est suivie', 'success');
       if (btn) {btn.disabled = false;btn.innerHTML = '<i class="fas fa-check mr-2"></i>Redirection ouverte';}
     } else {
       showToast('Erreur : URL de redirection manquante', 'error');
-      if (btn) {btn.disabled = false;btn.innerHTML = '<i class="fas fa-external-link-alt mr-2"></i>S&#39;inscrire chez Triomarkets';}
+      if (btn) {btn.disabled = false;btn.innerHTML = '<i class="fas fa-external-link-alt mr-2"></i>S&#39;inscrire chez le broker';}
     }
   } catch (err) {
     showToast(err && err.error || 'Erreur lors de la redirection broker', 'error');
-    if (btn) {btn.disabled = false;btn.innerHTML = '<i class="fas fa-external-link-alt mr-2"></i>S&#39;inscrire chez Triomarkets';}
+    if (btn) {btn.disabled = false;btn.innerHTML = '<i class="fas fa-external-link-alt mr-2"></i>S&#39;inscrire chez le broker';}
+  }
+}
+async function serviceRedirect(type, btnEl) {
+  if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Ouverture…'; }
+  try {
+    var r = await api('POST', '/broker/' + type + '/redirect', {});
+    if (r && r.url) {
+      var a = document.createElement('a');
+      a.href = r.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+      a.style.display = 'none'; document.body.appendChild(a); a.click();
+      setTimeout(function(){ document.body.removeChild(a); }, 1000);
+      showToast('Accès ' + (type === 'synex-libre' ? 'Synex' : 'Kronex') + ' ouvert', 'success');
+      if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = '<i class="fas fa-external-link-alt mr-1"></i>' + (type === 'synex-libre' ? 'Synex' : 'Kronex'); }
+    } else {
+      showToast('Erreur : lien non disponible', 'error');
+      if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = '<i class="fas fa-external-link-alt mr-1"></i>' + (type === 'synex-libre' ? 'Synex' : 'Kronex'); }
+    }
+  } catch(err) {
+    showToast(err && err.error || 'Erreur de redirection', 'error');
+    if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = '<i class="fas fa-external-link-alt mr-1"></i>' + (type === 'synex-libre' ? 'Synex' : 'Kronex'); }
   }
 }function renderMyOrders(e) {if (!e || 0 === e.length) return "";const t = { pending: "En attente de paiement", proof_submitted: "Preuve soumise — en vérification", validated: "Validé ✓", rejected: "Rejeté", active: "Actif" },n = { pending: "text-yellow-400 bg-yellow-500/10 border-yellow-500/30", proof_submitted: "text-blue-400 bg-blue-500/10 border-blue-500/30", validated: "text-green-400 bg-green-500/10 border-green-500/30", rejected: "text-red-400 bg-red-500/10 border-red-500/30", active: "text-green-400 bg-green-500/10 border-green-500/30" };return "\n\n  <div class=\"bg-dark-800 rounded-2xl border border-dark-600 overflow-hidden\">\n\n    <div class=\"px-6 py-4 border-b border-dark-600 flex items-center justify-between\">\n\n      <h3 class=\"font-semibold flex items-center gap-2\"><i class=\"fas fa-list text-rouge-400\"></i>Mes commandes</h3>\n\n      <span class=\"text-xs text-gray-500\">".concat(
 
@@ -10353,7 +10387,7 @@ async function renderSubscription(el) {
       <div class="bg-dark-800/60 border border-dark-600 rounded-xl p-4 text-xs text-gray-400 space-y-1">
         <div class="font-semibold text-gray-300 mb-2"><i class="fas fa-info-circle mr-1.5 text-blue-400"></i>Comment fonctionne le prélèvement mensuel ?</div>
         <div class="flex items-start gap-2"><span class="text-emerald-400 font-bold w-5 shrink-0">1.</span><span>Chaque 1er du mois, votre wallet principal est prélevé en priorité.</span></div>
-        <div class="flex items-start gap-2"><span class="text-blue-400 font-bold w-5 shrink-0">2.</span><span>Si votre wallet est insuffisant, un prélèvement est effectué sur votre dépôt Triomarkets (traité manuellement par l'équipe).</span></div>
+        <div class="flex items-start gap-2"><span class="text-blue-400 font-bold w-5 shrink-0">2.</span><span>Si votre wallet est insuffisant, un prélèvement est effectué sur votre dépôt broker (traité manuellement par l'équipe).</span></div>
         <div class="flex items-start gap-2"><span class="text-red-400 font-bold w-5 shrink-0">3.</span><span>Sans paiement sous 7 jours, l'abonnement est suspendu. Contactez le support pour le réactiver.</span></div>
       </div>
     </div>`;
