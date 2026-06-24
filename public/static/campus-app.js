@@ -429,6 +429,7 @@ window._campusAcquerirClick = function(btn, courseId, coursePrice, courseTitle) 
     return;
   }
   window._campusBuyLock = now;
+  // Timeout de sécurité — reset automatique après 4s quoi qu'il arrive
   setTimeout(function() { window._campusBuyLock = 0; }, 4000);
 
   console.log('[Campus] _campusAcquerirClick — id:', courseId, 'price:', coursePrice);
@@ -438,7 +439,15 @@ window._campusAcquerirClick = function(btn, courseId, coursePrice, courseTitle) 
     alert('Module de paiement indisponible. Rechargez la page.');
     return;
   }
-  window._wizardOpenForCourse(courseId, courseTitle || '', coursePrice);
+  try {
+    window._wizardOpenForCourse(courseId, courseTitle || '', coursePrice);
+  } catch(e) {
+    // En cas d'erreur (RangeError, etc.) : reset immédiat du lock
+    window._campusBuyLock = 0;
+    window._wizardOpenLock = 0;
+    window._wizardStep4Running = false;
+    console.error('[Campus] erreur _wizardOpenForCourse:', e);
+  }
 };
 
 // Compatibilité : _initCampusPricedDelegate ne fait plus rien (gardé pour ne pas casser d'éventuels appels)

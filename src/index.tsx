@@ -1013,12 +1013,8 @@ function registerHTML(opts: RegisterHTMLOpts): string {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${modeTitle}</title>
-  <script src="/static/tailwind.min.js"></script>
+  <link rel="stylesheet" href="/static/tailwind.compiled.css">
   <script>
-    tailwind.config = { theme: { extend: { colors: {
-      rouge: { 400:'#A02820', 500:'#791E15', 600:'#5A1510' },
-      dark: { 900:'#02072C', 800:'#040B24', 700:'#0A1240', 600:'#12185A' }
-    }}}}
     window.__REG__ = ${reg};
   </script>
   <script src="/static/axios.min.js"></script>
@@ -1841,12 +1837,8 @@ function memberHTML(opts: MemberHTMLOpts = {}, branding: BrandingPublic = { logo
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LEADER — Backoffice</title>
-  <script src="/static/tailwind.min.js"></script>
+  <link rel="stylesheet" href="/static/tailwind.compiled.css">
   <script>
-    tailwind.config = { theme: { extend: { colors: {
-      rouge: { 400:'#A02820', 500:'#791E15', 600:'#5A1510' },
-      dark: { 900:'#02072C', 800:'#040B24', 700:'#0A1240', 600:'#12185A' }
-    }}}}
     // Données d'inscription injectées côté serveur
     window.__REGISTRATION__ = ${registrationData};
   </script>
@@ -2425,13 +2417,7 @@ function adminHTML(branding: BrandingPublic = { logoUri: '', networkName: 'LEADE
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LEADER — Administration</title>
-  <script src="/static/tailwind.min.js"></script>
-  <script>
-    tailwind.config = { theme: { extend: { colors: {
-      rouge: { 400:'#A02820', 500:'#791E15', 600:'#5A1510' },
-      dark: { 900:'#02072C', 800:'#040B24', 700:'#0A1240', 600:'#12185A' }
-    }}}}
-  </script>
+  <link rel="stylesheet" href="/static/tailwind.compiled.css">
   <script src="/static/axios.min.js"></script>
   <script src="/static/chart.min.js"></script>
   <link rel="stylesheet" href="/static/style.css?v=${Date.now()}">
