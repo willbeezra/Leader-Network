@@ -171,10 +171,79 @@ async function recordPSPSession(db: D1Database, opts: {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// HELPER : Sauvegarde une carte CB dans member_saved_payments (Phase 3)
+// Appelé après paiement réussi d'un package abonnement via Stripe
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function saveStripeCard(
+  db: D1Database,
+  memberId: string,
+  stripeCustomerId: string,
+  stripePaymentMethodId: string,
+  secretKey: string
+): Promise<void> {
+  try {
+    // Récupérer les détails du PM pour stocker brand/last4/expiry
+    const pmRes = await fetch(`https://api.stripe.com/v1/payment_methods/${stripePaymentMethodId}`, {
+      headers: { 'Authorization': `Bearer ${secretKey}` }
+    })
+    const pm = await pmRes.json() as any
+    const brand = pm?.card?.brand || 'unknown'
+    const last4 = pm?.card?.last4 || '0000'
+    const expMonth = pm?.card?.exp_month || 0
+    const expYear = pm?.card?.exp_year || 0
+
+    await db.prepare(`
+      INSERT INTO member_saved_payments
+        (member_id, provider, stripe_customer_id, stripe_pm_id, card_brand, card_last4,
+         card_exp_month, card_exp_year, is_default, created_at, updated_at)
+      VALUES (?, 'stripe', ?, ?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))
+      ON CONFLICT(member_id, provider) DO UPDATE SET
+        stripe_customer_id = excluded.stripe_customer_id,
+        stripe_pm_id = excluded.stripe_pm_id,
+        card_brand = excluded.card_brand,
+        card_last4 = excluded.card_last4,
+        card_exp_month = excluded.card_exp_month,
+        card_exp_year = excluded.card_exp_year,
+        is_default = 1,
+        updated_at = datetime('now')
+    `).bind(memberId, stripeCustomerId, stripePaymentMethodId, brand, last4, expMonth, expYear).run()
+
+    console.log(`[Phase3-CB] Carte Stripe sauvegardée — member=${memberId} customer=${stripeCustomerId} pm=${stripePaymentMethodId} ${brand}****${last4}`)
+  } catch (err: any) {
+    console.error('[Phase3-CB] Erreur sauvegarde carte Stripe:', err?.message)
+  }
+}
+
+async function saveMollieMandate(
+  db: D1Database,
+  memberId: string,
+  mollieCustomerId: string,
+  mollieMandateId: string
+): Promise<void> {
+  try {
+    await db.prepare(`
+      INSERT INTO member_saved_payments
+        (member_id, provider, mollie_customer_id, mollie_mandate_id, is_default, created_at, updated_at)
+      VALUES (?, 'mollie', ?, ?, 1, datetime('now'), datetime('now'))
+      ON CONFLICT(member_id, provider) DO UPDATE SET
+        mollie_customer_id = excluded.mollie_customer_id,
+        mollie_mandate_id = excluded.mollie_mandate_id,
+        is_default = 1,
+        updated_at = datetime('now')
+    `).bind(memberId, mollieCustomerId, mollieMandateId).run()
+
+    console.log(`[Phase3-CB] Mandat Mollie sauvegardé — member=${memberId} customer=${mollieCustomerId} mandate=${mollieMandateId}`)
+  } catch (err: any) {
+    console.error('[Phase3-CB] Erreur sauvegarde mandat Mollie:', err?.message)
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // HELPER : Confirme un paiement PSP (topup → wallet ou order → activation)
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function confirmPSPPayment(db: D1Database, externalRef: string, amount: number, provider: string) {
+async function confirmPSPPayment(db: D1Database, externalRef: string, amount: number, provider: string, extraCtx?: { stripeSession?: any; stripeSecretKey?: string; mollieCustomerId?: string; mollieMandateId?: string }) {
   // 1. Chercher dans wallet_topups
   const topup = await db.prepare(
     `SELECT * FROM wallet_topups WHERE external_ref = ? AND status = 'pending'`
@@ -237,6 +306,41 @@ async function confirmPSPPayment(db: D1Database, externalRef: string, amount: nu
     }
     await createNotification(db, order.member_id, 'success', 'Paiement confirmé',
       `Votre paiement ${provider} de $${amount} a été confirmé. Commande activée.`)
+
+    // ── Phase 3 CB : Sauvegarder la carte si package abonnement ──────────────
+    try {
+      const pkg = await db.prepare(
+        `SELECT payment_mode FROM packages WHERE id = ?`
+      ).bind(order.package_id).first() as any
+
+      if (pkg?.payment_mode === 'subscription') {
+        if (provider === 'stripe' && extraCtx?.stripeSession && extraCtx?.stripeSecretKey) {
+          const sess = extraCtx.stripeSession
+          const customerId = sess.customer
+          const pmId = sess.payment_method || sess.payment_intent?.payment_method
+          if (customerId && pmId) {
+            await saveStripeCard(db, order.member_id, customerId, pmId, extraCtx.stripeSecretKey)
+          } else if (customerId) {
+            // Récupérer le PM depuis le customer via l'API
+            const pmListRes = await fetch(
+              `https://api.stripe.com/v1/payment_methods?customer=${customerId}&type=card`,
+              { headers: { 'Authorization': `Bearer ${extraCtx.stripeSecretKey}` } }
+            )
+            const pmList = await pmListRes.json() as any
+            const firstPm = pmList?.data?.[0]?.id
+            if (firstPm) {
+              await saveStripeCard(db, order.member_id, customerId, firstPm, extraCtx.stripeSecretKey)
+            }
+          }
+        }
+        if (provider === 'mollie' && extraCtx?.mollieCustomerId && extraCtx?.mollieMandateId) {
+          await saveMollieMandate(db, order.member_id, extraCtx.mollieCustomerId, extraCtx.mollieMandateId)
+        }
+      }
+    } catch (cbErr: any) {
+      console.error('[Phase3-CB] Erreur post-activation:', cbErr?.message)
+    }
+
     return { type: 'order', id: order.id }
   }
 
@@ -307,6 +411,15 @@ pspRouter.post('/initiate', async (c) => {
         if (order_id) metadata.order_id = order_id
         if (topup_id) metadata.topup_id = topup_id
 
+        // Phase 3 CB : détecter si c'est un package abonnement → sauvegarder la carte
+        let isSubscriptionPkg = false
+        if (order_id) {
+          const pkgOrder = await c.env.DB.prepare(
+            `SELECT p.payment_mode FROM package_orders po JOIN packages p ON p.id = po.package_id WHERE po.id = ?`
+          ).bind(order_id).first() as any
+          isSubscriptionPkg = pkgOrder?.payment_mode === 'subscription'
+        }
+
         const params = new URLSearchParams({
           'payment_method_types[]': 'card',
           'line_items[0][price_data][currency]': currency.toLowerCase(),
@@ -318,6 +431,11 @@ pspRouter.post('/initiate', async (c) => {
           'cancel_url': finalReturnUrl,
           'client_reference_id': memberId,
         })
+        // Phase 3 CB : si abonnement, créer un Customer Stripe et sauvegarder la carte
+        if (isSubscriptionPkg) {
+          params.set('customer_creation', 'always')
+          params.set('payment_intent_data[setup_future_usage]', 'off_session')
+        }
         Object.entries(metadata).forEach(([k, v]) => params.set(`metadata[${k}]`, v))
 
         const res = await fetch('https://api.stripe.com/v1/checkout/sessions', {
@@ -335,7 +453,7 @@ pspRouter.post('/initiate', async (c) => {
           memberId, paymentMethodId: payment_method_id, provider,
           amount, currency, externalRef: session.id,
           orderId: order_id, licenseId: license_id, topupId: topup_id, campusOrderId: campus_order_id,
-          metadata: { session_id: session.id }
+          metadata: { session_id: session.id, save_card: isSubscriptionPkg }
         })
 
         return c.json({ redirect_url: session.url, session_id: session.id, provider })
@@ -401,20 +519,74 @@ pspRouter.post('/initiate', async (c) => {
         if (order_id) metadata.order_id = order_id
         if (topup_id) metadata.topup_id = topup_id
 
+        // Phase 3 CB : si package abonnement → créer customer Mollie + sequenceType first
+        let mollieCustomerId: string | undefined
+        let isSubscriptionPkg = false
+        if (order_id) {
+          const pkgOrder = await c.env.DB.prepare(
+            `SELECT p.payment_mode FROM package_orders po JOIN packages p ON p.id = po.package_id WHERE po.id = ?`
+          ).bind(order_id).first() as any
+          isSubscriptionPkg = pkgOrder?.payment_mode === 'subscription'
+        }
+
+        if (isSubscriptionPkg) {
+          // Chercher si ce membre a déjà un customer Mollie sauvegardé
+          const savedPay = await c.env.DB.prepare(
+            `SELECT mollie_customer_id FROM member_saved_payments WHERE member_id = ? AND provider = 'mollie'`
+          ).bind(memberId).first() as any
+
+          if (savedPay?.mollie_customer_id) {
+            mollieCustomerId = savedPay.mollie_customer_id
+          } else {
+            // Créer un customer Mollie
+            const custRes = await fetch('https://api.mollie.com/v2/customers', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${config.api_key}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                name: `${member.first_name} ${member.last_name}`,
+                email: member.email,
+                metadata: { member_id: memberId }
+              })
+            })
+            const cust = await custRes.json() as any
+            if (custRes.ok && cust.id) {
+              mollieCustomerId = cust.id
+              // Pré-enregistrer pour la phase suivante
+              await c.env.DB.prepare(`
+                INSERT INTO member_saved_payments (member_id, provider, mollie_customer_id, is_default, created_at, updated_at)
+                VALUES (?, 'mollie', ?, 1, datetime('now'), datetime('now'))
+                ON CONFLICT(member_id, provider) DO UPDATE SET mollie_customer_id = excluded.mollie_customer_id, updated_at = datetime('now')
+              `).bind(memberId, mollieCustomerId).run()
+            }
+          }
+        }
+
+        const mollieBody: any = {
+          amount: { currency: currency.toUpperCase(), value: amount.toFixed(2) },
+          description: order_id ? 'Package LEADER' : 'Recharge portefeuille',
+          method: 'creditcard',
+          redirectUrl: `${callbackUrl}?type=mollie`,
+          webhookUrl: webhookUrl,
+          metadata: metadata
+        }
+
+        // Phase 3 CB : premier paiement d'une séquence d'abonnement
+        if (isSubscriptionPkg && mollieCustomerId) {
+          mollieBody.customerId = mollieCustomerId
+          mollieBody.sequenceType = 'first'
+          delete mollieBody.method  // Mollie exige pas de method pour sequenceType=first
+        }
+
         const res = await fetch('https://api.mollie.com/v2/payments', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${config.api_key}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({
-            amount: { currency: currency.toUpperCase(), value: amount.toFixed(2) },
-            description: order_id ? 'Package LEADER' : 'Recharge portefeuille',
-            method: 'creditcard',   // Force carte bancaire — Apple Pay nécessite validation domaine
-            redirectUrl: `${callbackUrl}?type=mollie`,
-            webhookUrl: webhookUrl,
-            metadata: metadata
-          })
+          body: JSON.stringify(mollieBody)
         })
         const payment = await res.json() as any
         if (!res.ok) return c.json({ error: payment.detail || 'Erreur Mollie' }, 400)
@@ -423,6 +595,7 @@ pspRouter.post('/initiate', async (c) => {
           memberId, paymentMethodId: payment_method_id, provider,
           amount, currency, externalRef: payment.id,
           orderId: order_id, licenseId: license_id, topupId: topup_id, campusOrderId: campus_order_id,
+          metadata: { mollie_customer_id: mollieCustomerId, save_mandate: isSubscriptionPkg }
         })
 
         const checkoutUrl = payment._links?.checkout?.href
@@ -930,7 +1103,10 @@ pspRouter.get('/callback/:provider', async (c) => {
 
         if (session.payment_status === 'paid') {
           // Chercher le topup/order via external_ref
-          await confirmPSPPayment(c.env.DB, sessionId, session.amount_total / 100, 'stripe')
+          await confirmPSPPayment(c.env.DB, sessionId, session.amount_total / 100, 'stripe', {
+            stripeSession: session,
+            stripeSecretKey: config.secret_key
+          })
           return c.redirect('/?payment=success&provider=stripe')
         }
         return c.redirect('/?payment=pending&provider=stripe')
@@ -1118,7 +1294,10 @@ pspRouter.post('/webhook/:provider', async (c) => {
         if (event.type === 'checkout.session.completed') {
           const session = event.data.object
           if (session.payment_status === 'paid') {
-            await confirmPSPPayment(c.env.DB, session.id, session.amount_total / 100, 'stripe')
+            await confirmPSPPayment(c.env.DB, session.id, session.amount_total / 100, 'stripe', {
+              stripeSession: session,
+              stripeSecretKey: config.secret_key
+            })
           }
         }
         if (event.type === 'payment_intent.succeeded') {
@@ -1217,7 +1396,30 @@ pspRouter.post('/webhook/:provider', async (c) => {
           const metadata = payment.metadata || {}
           const memberId = metadata.member_id
           const externalRef = paymentId
-          await confirmPSPPayment(c.env.DB, externalRef, parseFloat(payment.amount.value), 'mollie')
+
+          // Phase 3 CB : si sequenceType=first, récupérer le mandate créé
+          let mollieCustomerId: string | undefined
+          let mollieMandateId: string | undefined
+          if (payment.sequenceType === 'first' && payment.customerId) {
+            mollieCustomerId = payment.customerId
+            // Récupérer le dernier mandate valide de ce customer
+            try {
+              const mandateRes = await fetch(
+                `https://api.mollie.com/v2/customers/${payment.customerId}/mandates?limit=1`,
+                { headers: { 'Authorization': `Bearer ${config.api_key}` } }
+              )
+              const mandateData = await mandateRes.json() as any
+              const validMandate = mandateData._embedded?.mandates?.find((m: any) => m.status === 'valid')
+              if (validMandate) mollieMandateId = validMandate.id
+            } catch (mErr: any) {
+              console.error('[Phase3-CB] Erreur récup mandat Mollie:', mErr?.message)
+            }
+          }
+
+          await confirmPSPPayment(c.env.DB, externalRef, parseFloat(payment.amount.value), 'mollie', {
+            mollieCustomerId,
+            mollieMandateId
+          })
         }
         return c.text('OK', 200)
       }
