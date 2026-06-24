@@ -4157,8 +4157,8 @@ export async function checkSubscriptionAccess(
     : `AND p.payment_mode = 'subscription'`
 
   const bindings = packageId
-    ? [memberId, currentPeriod, packageId]
-    : [memberId, currentPeriod]
+    ? [memberId, packageId]
+    : [memberId]
 
   // Chercher un package_order abonnement validé ET actif (non suspendu)
   const activeOrder = await db.prepare(
