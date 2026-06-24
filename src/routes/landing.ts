@@ -169,16 +169,7 @@ function buildLandingHTML(cfg: Record<string, string>, services: any[], testimon
   <meta property="og:image" content="/static/og-leader.png">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%2302072C'/><path d='M10 10 L14 10 L14 21 L22 21 L22 24 L10 24 Z' fill='%23791E15'/><path d='M19 10 L22 10 L22 18 L19 18 Z' fill='%23791E15'/></svg>">
 
-  <script src="/static/tailwind.min.js"></script>
-  <script>
-    tailwind.config = {
-      theme: { extend: { colors: {
-        'rouge':     { DEFAULT:'#791E15', light:'#A02820', dark:'#5A1510' },
-        'bleu':      { nuit:'#02072C', medium:'#0A1240', clair:'#1A2560' },
-        'anthracite':{ DEFAULT:'#1D1D1B' },
-        'cream':     { DEFAULT:'#F5F0E8', muted:'#9A9080' },
-      }, fontFamily: { display: ['Georgia', 'serif'] } }}
-    }
+  <link rel="stylesheet" href="/static/tailwind.compiled.css">
   </script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
   <style>
@@ -1075,7 +1066,7 @@ landingPublic.get('/s/:slug', async (c) => {
 
     if (!row) {
       return c.html(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Service introuvable</title>
-      <script src="/static/tailwind.min.js"></script></head>
+      <link rel="stylesheet" href="/static/tailwind.compiled.css"></head>
       <body class="bg-gray-950 text-white min-h-screen flex items-center justify-center">
         <div class="text-center"><h1 class="text-2xl font-bold mb-4">Service introuvable</h1>
         <a href="/" style="color:#791E15">Retour à l'accueil</a></div>
@@ -1084,7 +1075,7 @@ landingPublic.get('/s/:slug', async (c) => {
 
     if (row.status === 'coming_soon' || !row.url) {
       return c.html(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${row.name} — Bientôt</title>
-      <script src="/static/tailwind.min.js"></script></head>
+      <link rel="stylesheet" href="/static/tailwind.compiled.css"></head>
       <body class="bg-gray-950 text-white min-h-screen flex items-center justify-center">
         <div class="text-center">
           <div class="text-5xl mb-6">🚀</div>
