@@ -61,7 +61,7 @@ async function loadBrandingConfig(){
   }catch(e){
     console.warn('loadBrandingConfig error:', e);
   }
-}async function loadAdminBadges(){try{const e=(await apiAdmin("GET","/dashboard")).stats;setBadge("admin-ht-badge",e.holdingTankCount),setBadge("admin-act-badge",e.pendingOrders),setBadge("admin-wd-badge",e.pendingWithdrawals),setBadge("admin-kyc-badge",e.pendingKYC),setBadge("admin-support-badge",e.openTickets||0),setBadge("admin-cc-badge",e.pendingCCWithdrawals||0),document.getElementById("admin-header-info").textContent=`${e.totalMembers} membres · ${e.activeAMI} AMI actifs · BV Queue: ${e.pendingBVQueue||0}`}catch{}}function setBadge(e,t){const n=document.getElementById(e);n&&(t>0?(n.textContent=t,n.classList.remove("hidden")):n.classList.add("hidden"))}function showAdminPage(e){document.querySelectorAll(".admin-nav-btn").forEach(t=>t.classList.toggle("active",t.dataset.page===e)),document.getElementById("admin-page-title").textContent={dashboard:"Dashboard",members:"Membres","binary-tree":"Arbre Binaire","holding-tank":"Holding Tank",activations:"Activations",withdrawals:"Retraits",kyc:"Vérification KYC",commissions:"Commissions & Compensation",wallets:"Wallets",bv:"Volumes BV",licenses:"Licences","admin-fee":"Frais d'administration",config:"Configuration MLM",packages:"Gestion des Packages",campus:"Campus","package-service-access":"Accès Services par Package","payment-gateway":"Passerelle de Paiement",topups:"Recharges Wallet",reports:"Rapports",marketing:"Assets Marketing",admins:"Administrateurs","audit-log":"Journal d'Audit","cc-withdrawals":"Crédit de Croissance — Remboursements",support:"Support Client",team:"Équipe & Rôles","ai-agent":"Leader IA",administration:"Administration","earnings-docs":"Earnings & Documents","member-cards":"Cartes de Membre",emails:"Emails",broker:"Broker Triomarkets",landing:"Landing Page","i18n-languages":"Langues & Traductions"}[e]||e;const t=document.getElementById("admin-page-content");t.className="p-4 md:p-6 fade-in";const n={dashboard:adminDashboard,members:adminMembers,"binary-tree":adminBinaryTree,"holding-tank":adminHoldingTank,activations:adminActivations,withdrawals:adminWithdrawals,kyc:adminKycPage,commissions:adminCommissions,wallets:adminWallets,bv:adminBV,licenses:adminLicenses,"admin-fee":adminAdminFee,config:adminConfig,packages:adminPackages,campus:showAdminCampus,"package-service-access":adminPackageServiceAccess,"payment-gateway":adminPaymentGateway,topups:adminTopups,reports:adminReports,marketing:adminMarketing,admins:adminAdmins,"audit-log":adminAuditLog,"cc-withdrawals":adminCCWithdrawals,support:adminSupportPage,team:adminTeamPage,"ai-agent":adminAiAgentPage,administration:adminAdministration,"earnings-docs":adminEarningsDocs,"member-cards":adminMemberCards,emails:adminEmailsPage,broker:adminBrokerPage,landing:adminLandingPage,"i18n-languages":adminI18nLanguages};return n[e]?Promise.resolve(n[e](t)).then(r=>{setTimeout(_applyMobileFixes,300);return r;}):(t.innerHTML='<p class="text-gray-400">Page en construction</p>',setTimeout(_applyMobileFixes,300),Promise.resolve())}
+}async function loadAdminBadges(){try{const e=(await apiAdmin("GET","/dashboard")).stats;setBadge("admin-ht-badge",e.holdingTankCount),setBadge("admin-act-badge",e.pendingOrders),setBadge("admin-wd-badge",e.pendingWithdrawals),setBadge("admin-kyc-badge",e.pendingKYC),setBadge("admin-support-badge",e.openTickets||0),setBadge("admin-cc-badge",e.pendingCCWithdrawals||0),document.getElementById("admin-header-info").textContent=`${e.totalMembers} membres · ${e.activeAMI} AMI actifs · BV Queue: ${e.pendingBVQueue||0}`}catch{}}function setBadge(e,t){const n=document.getElementById(e);n&&(t>0?(n.textContent=t,n.classList.remove("hidden")):n.classList.add("hidden"))}function showAdminPage(e){document.querySelectorAll(".admin-nav-btn").forEach(t=>t.classList.toggle("active",t.dataset.page===e)),document.getElementById("admin-page-title").textContent={dashboard:"Dashboard",members:"Membres","binary-tree":"Arbre Binaire","holding-tank":"Holding Tank",activations:"Activations",withdrawals:"Retraits",kyc:"Vérification KYC",commissions:"Commissions & Compensation",wallets:"Wallets",bv:"Volumes BV",licenses:"Licences","admin-fee":"Frais d'administration",config:"Configuration MLM",packages:"Gestion des Packages",campus:"Campus","package-service-access":"Accès Services par Package","payment-gateway":"Passerelle de Paiement",topups:"Recharges Wallet",reports:"Rapports",marketing:"Assets Marketing",admins:"Administrateurs","audit-log":"Journal d'Audit","cc-withdrawals":"Crédit de Croissance — Remboursements",support:"Support Client",team:"Équipe & Rôles","ai-agent":"Leader IA",administration:"Administration","earnings-docs":"Earnings & Documents","member-cards":"Cartes de Membre",emails:"Emails",broker:"Broker Triomarkets",subscriptions:"Abonnements Mensuels",landing:"Landing Page","i18n-languages":"Langues & Traductions"}[e]||e;const t=document.getElementById("admin-page-content");t.className="p-4 md:p-6 fade-in";const n={dashboard:adminDashboard,members:adminMembers,"binary-tree":adminBinaryTree,"holding-tank":adminHoldingTank,activations:adminActivations,withdrawals:adminWithdrawals,kyc:adminKycPage,commissions:adminCommissions,wallets:adminWallets,bv:adminBV,licenses:adminLicenses,"admin-fee":adminAdminFee,config:adminConfig,packages:adminPackages,campus:showAdminCampus,"package-service-access":adminPackageServiceAccess,"payment-gateway":adminPaymentGateway,topups:adminTopups,reports:adminReports,marketing:adminMarketing,admins:adminAdmins,"audit-log":adminAuditLog,"cc-withdrawals":adminCCWithdrawals,support:adminSupportPage,team:adminTeamPage,"ai-agent":adminAiAgentPage,administration:adminAdministration,"earnings-docs":adminEarningsDocs,"member-cards":adminMemberCards,emails:adminEmailsPage,broker:adminBrokerPage,subscriptions:adminSubscriptionsPage,landing:adminLandingPage,"i18n-languages":adminI18nLanguages};return n[e]?Promise.resolve(n[e](t)).then(r=>{setTimeout(_applyMobileFixes,300);return r;}):(t.innerHTML='<p class="text-gray-400">Page en construction</p>',setTimeout(_applyMobileFixes,300),Promise.resolve())}
 // ── Auto-refresh système ─────────────────────────────────────────────────
 function _currentPage(){var a=document.querySelector('.admin-nav-btn.active');return a?a.dataset.page:'dashboard';}
 async function _refreshCurrentPage(){try{await showAdminPage(_currentPage());}catch(e){}try{loadAdminBadges();}catch(e){}}
@@ -12860,4 +12860,351 @@ async function _campusCourseOrderAction(orderId, action) {
   } catch(e) {
     showToast('Erreur: ' + (e.error||e.message||''), 'error');
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PAGE ADMIN — ABONNEMENTS MENSUELS
+// ─────────────────────────────────────────────────────────────────────────────
+async function adminSubscriptionsPage(el) {
+  el.innerHTML = '<div class="flex justify-center py-16"><div class="loader"></div></div>';
+  const currentPeriod = new Date().toISOString().substring(0, 7);
+
+  // Onglets : Stats | Renouvellements | Liste Trio | Config
+  el.innerHTML = `
+    <div class="space-y-6">
+      <!-- Tabs -->
+      <div class="flex flex-wrap gap-2 border-b border-dark-600 pb-3">
+        ${['stats','renewals','trio','config'].map((t,i) => `
+          <button onclick="subTab('${t}')" id="sub-tab-${t}"
+                  class="px-4 py-2 rounded-t-lg text-sm font-semibold transition ${i===0?'bg-dark-700 text-white border border-dark-500':'text-gray-400 hover:text-white'}">
+            ${{stats:'📊 Statistiques',renewals:'🔄 Renouvellements',trio:'🏦 Liste Trio',config:'⚙️ Configuration'}[t]}
+          </button>`).join('')}
+      </div>
+      <div id="sub-panel"></div>
+    </div>`;
+
+  window.subTab = async function(tab) {
+    document.querySelectorAll('[id^="sub-tab-"]').forEach(b => {
+      b.className = 'px-4 py-2 rounded-t-lg text-sm font-semibold transition text-gray-400 hover:text-white';
+    });
+    const active = document.getElementById('sub-tab-' + tab);
+    if (active) active.className = 'px-4 py-2 rounded-t-lg text-sm font-semibold transition bg-dark-700 text-white border border-dark-500';
+    const panel = document.getElementById('sub-panel');
+    if (!panel) return;
+    panel.innerHTML = '<div class="flex justify-center py-8"><div class="loader"></div></div>';
+
+    if (tab === 'stats') {
+      const [statsRes, configRes] = await Promise.all([
+        apiAdmin('GET', '/broker/subscriptions/stats?period=' + currentPeriod),
+        apiAdmin('GET', '/broker/subscriptions/config')
+      ]);
+      const s = statsRes.renewals || {};
+      const cfg = configRes.config || {};
+      panel.innerHTML = `
+        <div class="space-y-6">
+          <!-- KPIs -->
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            ${[
+              {label:'Abonnements actifs', val: statsRes.active_subscriptions, color:'emerald', icon:'fa-crown'},
+              {label:'Prélevés wallet',     val: s.paid_wallet?.count||0,       color:'green',   icon:'fa-wallet'},
+              {label:'Trio en attente',     val: s.trio_pending?.count||0,       color:'yellow',  icon:'fa-clock'},
+              {label:'Suspendus',          val: s.suspended||0,                 color:'red',     icon:'fa-ban'},
+            ].map(k => `
+              <div class="stat-card">
+                <div class="flex justify-between items-center mb-2">
+                  <span class="text-xs text-gray-400">${k.label}</span>
+                  <i class="fas ${k.icon} text-${k.color}-400 text-sm"></i>
+                </div>
+                <div class="text-2xl font-bold text-${k.color}-400">${k.val}</div>
+              </div>`).join('')}
+          </div>
+          <!-- Revenus du mois -->
+          <div class="stat-card">
+            <h3 class="font-semibold text-white mb-3">Revenus — ${currentPeriod}</h3>
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div><div class="text-xs text-gray-400">Wallet</div><div class="text-lg font-bold text-emerald-400">${fmt$(s.paid_wallet?.revenue||0)}</div></div>
+              <div><div class="text-xs text-gray-400">CB</div><div class="text-lg font-bold text-blue-400">${fmt$(s.paid_cb?.revenue||0)}</div></div>
+              <div><div class="text-xs text-gray-400">Trio confirmé</div><div class="text-lg font-bold text-emerald-400">${fmt$(s.trio_confirmed?.revenue||0)}</div></div>
+              <div><div class="text-xs text-gray-400">Trio en attente</div><div class="text-lg font-bold text-yellow-400">${fmt$(s.trio_pending?.revenue||0)}</div></div>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    else if (tab === 'renewals') {
+      const period = (document.getElementById('sub-period')?.value) || currentPeriod;
+      const status = (document.getElementById('sub-status')?.value) || '';
+      const r = await apiAdmin('GET', `/broker/subscriptions/renewals?period=${period}&status=${status}&per_page=100`);
+      const rows = (r.renewals || []);
+
+      function sBadge(s) {
+        const m = {paid_wallet:'bg-emerald-500/20 text-emerald-400',paid_cb:'bg-blue-500/20 text-blue-400',trio_confirmed:'bg-emerald-500/20 text-emerald-400',trio_pending:'bg-yellow-500/20 text-yellow-400',suspended:'bg-red-500/20 text-red-400',failed:'bg-red-500/20 text-red-400',pending:'bg-gray-500/20 text-gray-400'};
+        return `<span class="text-xs px-2 py-0.5 rounded-full font-medium ${m[s]||'bg-gray-500/20 text-gray-400'}">${s}</span>`;
+      }
+
+      panel.innerHTML = `
+        <div class="space-y-4">
+          <div class="flex flex-wrap gap-3">
+            <input id="sub-period" type="month" value="${period}" class="form-input w-40" onchange="subTab('renewals')">
+            <select id="sub-status" class="form-input w-44" onchange="subTab('renewals')">
+              <option value="">Tous statuts</option>
+              <option value="paid_wallet">Wallet ✅</option>
+              <option value="trio_pending">Trio en attente 🕐</option>
+              <option value="trio_confirmed">Trio confirmé ✅</option>
+              <option value="suspended">Suspendu ❌</option>
+              <option value="failed">Échoué ❌</option>
+            </select>
+            <span class="text-gray-400 text-sm self-center">${rows.length} résultat(s)</span>
+          </div>
+          <div class="bg-dark-800 border border-dark-600 rounded-2xl overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="data-table">
+                <thead><tr><th>Membre</th><th>Package</th><th>Période</th><th>Montant</th><th>Statut</th><th>Méthode</th><th>Actions</th></tr></thead>
+                <tbody>
+                  ${rows.map(row => `
+                    <tr>
+                      <td><div class="font-medium text-sm">${row.first_name} ${row.last_name}</div><div class="text-xs text-gold-400">${row.unique_id||''}</div></td>
+                      <td class="text-xs text-gray-300">${row.package_name||''}</td>
+                      <td class="font-mono text-xs">${row.period}</td>
+                      <td class="text-emerald-400 font-bold">${fmt$(row.amount_due)}</td>
+                      <td>${sBadge(row.status)}</td>
+                      <td class="text-xs text-gray-400">${row.payment_method||'—'}</td>
+                      <td>
+                        ${['trio_pending','pending'].includes(row.status) ? `
+                          <button onclick="subConfirmTrio('${row.id}')" 
+                                  class="text-xs bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg hover:bg-emerald-600/30 transition">
+                            <i class="fas fa-check mr-1"></i>Confirmer Trio
+                          </button>` : ''}
+                      </td>
+                    </tr>`).join('') || '<tr><td colspan="7" class="text-center text-gray-500 py-8">Aucun renouvellement</td></tr>'}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>`;
+
+      window.subConfirmTrio = async function(id) {
+        const notes = prompt('Notes (optionnel) :');
+        if (notes === null) return;
+        try {
+          await apiAdmin('POST', '/broker/subscriptions/trio-confirm/' + id, { notes });
+          showToast('Renouvellement confirmé ✅', 'success');
+          subTab('renewals');
+        } catch(e) { showToast(e.error || 'Erreur', 'error'); }
+      };
+    }
+
+    else if (tab === 'trio') {
+      const period = currentPeriod;
+      const r = await apiAdmin('GET', `/broker/subscriptions/trio-list?period=${period}&format=json`);
+      const rows = r.renewals || [];
+
+      panel.innerHTML = `
+        <div class="space-y-4">
+          <div class="flex flex-wrap items-center gap-3">
+            <span class="text-white font-semibold">Liste Trio — ${period} (${rows.length} membre(s))</span>
+            <a href="/api/admin/broker/subscriptions/trio-list?period=${period}&format=csv"
+               class="flex items-center gap-2 text-xs bg-blue-600/20 text-blue-400 border border-blue-500/30 px-3 py-1.5 rounded-lg hover:bg-blue-600/30 transition"
+               download>
+              <i class="fas fa-download"></i>Exporter CSV
+            </a>
+            <button onclick="subImportCsv()" class="flex items-center gap-2 text-xs bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg hover:bg-emerald-600/30 transition">
+              <i class="fas fa-upload"></i>Import CSV retours Trio
+            </button>
+          </div>
+          <div class="bg-dark-800 border border-dark-600 rounded-2xl overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="data-table">
+                <thead><tr><th>Membre</th><th>Email</th><th>ID Backoffice</th><th>Package</th><th>Montant</th><th>Date listing</th><th>Action</th></tr></thead>
+                <tbody>
+                  ${rows.map(r => `
+                    <tr>
+                      <td class="font-medium text-sm">${r.first_name} ${r.last_name}</td>
+                      <td class="text-xs text-gray-400">${r.email}</td>
+                      <td class="text-xs text-gold-400 font-mono">${r.unique_id||''}</td>
+                      <td class="text-xs text-gray-300">${r.package_name||''}</td>
+                      <td class="text-emerald-400 font-bold">${fmt$(r.amount_due)}</td>
+                      <td class="text-xs text-gray-400">${fmtDate(r.trio_listed_at)}</td>
+                      <td>
+                        <button onclick="subConfirmTrio('${r.id}')"
+                                class="text-xs bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 px-2 py-1 rounded hover:bg-emerald-600/30 transition">
+                          <i class="fas fa-check mr-1"></i>Confirmé
+                        </button>
+                      </td>
+                    </tr>`).join('') || '<tr><td colspan="7" class="text-center text-gray-500 py-8">Aucun prélèvement Trio en attente</td></tr>'}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>`;
+
+      // Import CSV batch
+      window.subImportCsv = function() {
+        showModal(`
+          <div class="p-6 space-y-4">
+            <h3 class="text-lg font-bold text-white">Import CSV retours Triomarkets</h3>
+            <p class="text-gray-400 text-sm">Collez le JSON des confirmations ou uploadez le CSV exporté après confirmation par Triomarkets.</p>
+            <div>
+              <label class="text-xs text-gray-400 block mb-1">JSON batch (format : [{"id":"sren-...","amount_received":49},...] )</label>
+              <textarea id="trio-import-json" class="form-input w-full h-32 font-mono text-xs"
+                        placeholder='[{"id":"sren-xxxxx","amount_received":49},...]'></textarea>
+            </div>
+            <div class="flex gap-3">
+              <button onclick="subDoImport()" class="bg-emerald-600 text-white font-bold px-6 py-2.5 rounded-xl hover:bg-emerald-500 transition text-sm">
+                <i class="fas fa-check mr-2"></i>Importer
+              </button>
+              <button onclick="closeModal()" class="text-gray-400 hover:text-white px-4 py-2.5 rounded-xl border border-dark-600 text-sm">Annuler</button>
+            </div>
+          </div>`);
+        window.subDoImport = async function() {
+          try {
+            const raw = document.getElementById('trio-import-json').value.trim();
+            const confirmations = JSON.parse(raw);
+            const r = await apiAdmin('POST', '/broker/subscriptions/trio-import', { confirmations });
+            showToast(`Import : ${r.confirmed} confirmés, ${r.skipped} ignorés`, 'success');
+            closeModal();
+            subTab('trio');
+          } catch(e) { showToast(e.error || 'JSON invalide', 'error'); }
+        };
+      };
+
+      window.subConfirmTrio = async function(id) {
+        const notes = prompt('Notes (optionnel) :');
+        if (notes === null) return;
+        try {
+          await apiAdmin('POST', '/broker/subscriptions/trio-confirm/' + id, { notes });
+          showToast('Renouvellement confirmé ✅', 'success');
+          subTab('trio');
+        } catch(e) { showToast(e.error || 'Erreur', 'error'); }
+      };
+    }
+
+    else if (tab === 'config') {
+      const r = await apiAdmin('GET', '/broker/subscriptions/config');
+      const cfg = r.config || {};
+
+      function cfgVal(key, def='') { return cfg[key] !== undefined ? cfg[key] : def; }
+
+      panel.innerHTML = `
+        <div class="space-y-6 max-w-2xl">
+          <!-- Paramètres généraux -->
+          <div class="bg-dark-800 border border-dark-600 rounded-2xl p-5 space-y-4">
+            <h3 class="font-bold text-white flex items-center gap-2"><i class="fas fa-sliders text-rouge-400"></i>Paramètres généraux</h3>
+            <div class="grid grid-cols-2 gap-4">
+              <label class="block">
+                <span class="text-xs text-gray-400 block mb-1">Système activé</span>
+                <select id="cfg-subscription_enabled" class="form-input w-full">
+                  <option value="1" ${cfgVal('subscription_enabled','1')==='1'?'selected':''}>Oui</option>
+                  <option value="0" ${cfgVal('subscription_enabled','1')==='0'?'selected':''}>Non</option>
+                </select>
+              </label>
+              <label class="block">
+                <span class="text-xs text-gray-400 block mb-1">Délai de grâce (jours)</span>
+                <input type="number" id="cfg-subscription_grace_days" value="${cfgVal('subscription_grace_days','7')}" class="form-input w-full" min="1" max="30">
+              </label>
+              <label class="block">
+                <span class="text-xs text-gray-400 block mb-1">Jour de prélèvement (1-28)</span>
+                <input type="number" id="cfg-subscription_billing_day" value="${cfgVal('subscription_billing_day','1')}" class="form-input w-full" min="1" max="28">
+              </label>
+              <label class="block">
+                <span class="text-xs text-gray-400 block mb-1">Ordre de priorité</span>
+                <input type="text" id="cfg-subscription_payment_priority" value="${cfgVal('subscription_payment_priority','wallet,cb,trio')}" class="form-input w-full" placeholder="wallet,cb,trio">
+              </label>
+            </div>
+            <div class="grid grid-cols-3 gap-4 pt-2 border-t border-dark-600">
+              ${['wallet','cb','trio'].map(m => `
+                <label class="block">
+                  <span class="text-xs text-gray-400 block mb-1">Méthode ${m} active</span>
+                  <select id="cfg-subscription_method_${m}" class="form-input w-full">
+                    <option value="1" ${cfgVal('subscription_method_'+m,'1')==='1'?'selected':''}>Oui</option>
+                    <option value="0" ${cfgVal('subscription_method_'+m,'1')==='0'?'selected':''}>Non</option>
+                  </select>
+                </label>`).join('')}
+            </div>
+          </div>
+
+          <!-- Config Synex Libre -->
+          <div class="bg-dark-800 border border-dark-600 rounded-2xl p-5 space-y-4">
+            <h3 class="font-bold text-white flex items-center gap-2"><i class="fas fa-globe text-orange-400"></i>Synex Libre</h3>
+            <div class="grid grid-cols-2 gap-4">
+              <label class="block">
+                <span class="text-xs text-gray-400 block mb-1">Activé</span>
+                <select id="cfg-broker_synex_libre_enabled" class="form-input w-full">
+                  <option value="1" ${cfgVal('broker_synex_libre_enabled','1')==='1'?'selected':''}>Oui</option>
+                  <option value="0" ${cfgVal('broker_synex_libre_enabled','1')==='0'?'selected':''}>Non</option>
+                </select>
+              </label>
+              <label class="block">
+                <span class="text-xs text-gray-400 block mb-1">Nom affiché</span>
+                <input type="text" id="cfg-broker_synex_libre_name" value="${cfgVal('broker_synex_libre_name','Synex Libre')}" class="form-input w-full">
+              </label>
+              <label class="col-span-2 block">
+                <span class="text-xs text-gray-400 block mb-1">URL d'affiliation Synex Libre</span>
+                <input type="url" id="cfg-broker_synex_libre_url" value="${cfgVal('broker_synex_libre_url','')}" class="form-input w-full" placeholder="https://...">
+              </label>
+              <label class="col-span-2 block">
+                <span class="text-xs text-gray-400 block mb-1">Description (affichée au membre)</span>
+                <input type="text" id="cfg-broker_synex_libre_description" value="${cfgVal('broker_synex_libre_description','')}" class="form-input w-full">
+              </label>
+            </div>
+          </div>
+
+          <!-- Config Kronex -->
+          <div class="bg-dark-800 border border-dark-600 rounded-2xl p-5 space-y-4">
+            <h3 class="font-bold text-white flex items-center gap-2"><i class="fas fa-chart-line text-purple-400"></i>Kronex</h3>
+            <div class="grid grid-cols-2 gap-4">
+              <label class="block">
+                <span class="text-xs text-gray-400 block mb-1">Activé</span>
+                <select id="cfg-broker_kronex_enabled" class="form-input w-full">
+                  <option value="1" ${cfgVal('broker_kronex_enabled','1')==='1'?'selected':''}>Oui</option>
+                  <option value="0" ${cfgVal('broker_kronex_enabled','1')==='0'?'selected':''}>Non</option>
+                </select>
+              </label>
+              <label class="block">
+                <span class="text-xs text-gray-400 block mb-1">Nom affiché</span>
+                <input type="text" id="cfg-broker_kronex_name" value="${cfgVal('broker_kronex_name','Kronex')}" class="form-input w-full">
+              </label>
+              <label class="col-span-2 block">
+                <span class="text-xs text-gray-400 block mb-1">URL d'affiliation Kronex</span>
+                <input type="url" id="cfg-broker_kronex_url" value="${cfgVal('broker_kronex_url','')}" class="form-input w-full" placeholder="https://...">
+              </label>
+              <label class="col-span-2 block">
+                <span class="text-xs text-gray-400 block mb-1">Description (affichée au membre)</span>
+                <input type="text" id="cfg-broker_kronex_description" value="${cfgVal('broker_kronex_description','')}" class="form-input w-full">
+              </label>
+            </div>
+          </div>
+
+          <button onclick="subSaveConfig(this)" class="bg-rouge-500 text-dark-900 font-bold px-8 py-3 rounded-xl hover:bg-rouge-400 transition">
+            <i class="fas fa-save mr-2"></i>Enregistrer toute la configuration
+          </button>
+        </div>`;
+
+      window.subSaveConfig = async function(btn) {
+        const restore = btnSaving(btn);
+        const keys = [
+          'subscription_enabled','subscription_grace_days','subscription_billing_day',
+          'subscription_payment_priority',
+          'subscription_method_wallet','subscription_method_cb','subscription_method_trio',
+          'broker_synex_libre_enabled','broker_synex_libre_url',
+          'broker_synex_libre_name','broker_synex_libre_description',
+          'broker_kronex_enabled','broker_kronex_url',
+          'broker_kronex_name','broker_kronex_description',
+        ];
+        const body = {};
+        for (const k of keys) {
+          const el2 = document.getElementById('cfg-' + k);
+          if (el2) body[k] = el2.value;
+        }
+        try {
+          await apiAdmin('PUT', '/broker/subscriptions/config', body);
+          btnSaved(btn);
+          showToast('Configuration sauvegardée ✅', 'success');
+        } catch(e) { restore(); showToast(e.error || 'Erreur', 'error'); }
+      };
+    }
+  };
+
+  // Charger le premier onglet
+  subTab('stats');
 }

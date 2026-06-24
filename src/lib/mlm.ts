@@ -3462,7 +3462,18 @@ export async function orchestrateur(db: D1Database): Promise<any> {
     console.error('[orchestrateur] Libération RS échouée (non bloquant):', rsErr?.message || rsErr)
   }
 
-  return { bvResult, rankResult, dailyPaid, commResult, ccExpired, rsUnlocked, bvResetDone }
+  // ── ABONNEMENTS : prélèvement mensuel le 1er du mois ─────────
+  let subscriptionResult: any = null
+  if (isFirstOfMonth) {
+    try {
+      subscriptionResult = await processMonthlySubscriptions(db)
+      console.log(`[orchestrateur] Abonnements traités : ${JSON.stringify(subscriptionResult)}`)
+    } catch (subErr: any) {
+      console.error('[orchestrateur] Abonnements échoué (non bloquant):', subErr?.message || subErr)
+    }
+  }
+
+  return { bvResult, rankResult, dailyPaid, commResult, ccExpired, rsUnlocked, bvResetDone, subscriptionResult }
 }
 
 // ── OPÉRATIONS WALLET ─────────────────────────────────────────
@@ -4119,4 +4130,366 @@ export async function getCCBalance(db: D1Database, memberId: string): Promise<{
     available: row?.available ?? 0,
     held:      row?.held      ?? 0,
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ABONNEMENTS MENSUELS — processMonthlySubscriptions
+// Priorité : 1. Wallet principal  2. CB (Stripe/Mollie)  3. Triomarkets manuel
+// Tout est paramétrable via system_config (subscription_*)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Vérifie si un membre a un abonnement actif pour un package donné.
+ * Utilisé par broker.ts pour protéger les routes Synex Libre / Kronex.
+ * Un abonnement est actif si le dernier renouvellement du mois en cours
+ * est dans un état "payé" OU si c'est le mois de l'adhésion initiale.
+ */
+export async function checkSubscriptionAccess(
+  db: D1Database,
+  memberId: string,
+  packageId?: string   // si null : vérifie N'IMPORTE quel abonnement actif
+): Promise<{ active: boolean; reason: string; renewal?: any }> {
+  const currentPeriod = getMauritiusDateStr().substring(0, 7) // 'YYYY-MM'
+
+  // Construire la condition package
+  const pkgCondition = packageId
+    ? `AND po.package_id = ?`
+    : `AND p.payment_mode = 'subscription'`
+
+  const bindings = packageId
+    ? [memberId, currentPeriod, packageId]
+    : [memberId, currentPeriod]
+
+  // Chercher un package_order abonnement validé ET actif (non suspendu)
+  const activeOrder = await db.prepare(
+    `SELECT po.id, po.package_id, po.created_at,
+            p.price_monthly, p.name as pkg_name
+     FROM package_orders po
+     JOIN packages p ON p.id = po.package_id
+     WHERE po.member_id = ?
+       AND po.status = 'validated'
+       AND po.activation_done = 1
+       AND p.payment_mode = 'subscription'
+       AND p.pricing_type = 'monthly'
+       AND (po.subscription_suspended_at IS NULL)
+       ${pkgCondition}
+     ORDER BY po.created_at DESC
+     LIMIT 1`
+  ).bind(...bindings).first() as any
+
+  if (!activeOrder) {
+    return { active: false, reason: 'Aucun abonnement actif trouvé' }
+  }
+
+  // Vérifier le renouvellement du mois en cours
+  const renewal = await db.prepare(
+    `SELECT id, status, grace_expires_at
+     FROM subscription_renewals
+     WHERE member_id = ? AND period = ? AND package_id = ?
+     LIMIT 1`
+  ).bind(memberId, currentPeriod, activeOrder.package_id).first() as any
+
+  // Mois d'adhésion initiale (premier mois = toujours actif, pas encore de renouvellement)
+  const joinMonth = (activeOrder.created_at || '').substring(0, 7)
+  if (joinMonth === currentPeriod) {
+    return { active: true, reason: 'Mois d\'adhésion — pas encore de renouvellement', renewal: null }
+  }
+
+  if (!renewal) {
+    // Pas encore traité ce mois → considéré actif en attente (grace)
+    return { active: true, reason: 'Renouvellement en attente de traitement', renewal: null }
+  }
+
+  const paidStatuses = ['paid_wallet', 'paid_cb', 'trio_confirmed']
+  if (paidStatuses.includes(renewal.status)) {
+    return { active: true, reason: 'Abonnement renouvelé', renewal }
+  }
+
+  if (renewal.status === 'trio_pending') {
+    // En attente Trio → accès maintenu pendant la période de grâce
+    const graceExpiry = renewal.grace_expires_at ? new Date(renewal.grace_expires_at + 'Z') : null
+    if (graceExpiry && Date.now() < graceExpiry.getTime()) {
+      return { active: true, reason: 'Paiement Trio en attente (délai de grâce)', renewal }
+    }
+    return { active: false, reason: 'Délai de grâce expiré — abonnement suspendu', renewal }
+  }
+
+  if (renewal.status === 'suspended' || renewal.status === 'failed') {
+    return { active: false, reason: 'Abonnement suspendu pour non-paiement', renewal }
+  }
+
+  // Statut pending/trio_pending dans le délai → actif
+  const graceExpiry = renewal.grace_expires_at ? new Date(renewal.grace_expires_at + 'Z') : null
+  if (graceExpiry && Date.now() < graceExpiry.getTime()) {
+    return { active: true, reason: 'Dans le délai de grâce', renewal }
+  }
+
+  return { active: false, reason: 'Abonnement inactif', renewal }
+}
+
+/**
+ * processMonthlySubscriptions — Appelé le 1er de chaque mois par l'orchestrateur
+ *
+ * Pour chaque package_order abonnement actif :
+ *  1. Crée un subscription_renewal pour la période en cours (idempotent)
+ *  2. Tente le prélèvement selon la priorité configurée en DB :
+ *     Priorité 1 : wallet principal
+ *     Priorité 2 : CB sauvegardée (Stripe/Mollie)
+ *     Priorité 3 : liste Triomarkets manuel
+ *  3. Si J+grace_days sans paiement → suspension
+ */
+export async function processMonthlySubscriptions(db: D1Database): Promise<{
+  processed: number
+  paid_wallet: number
+  trio_pending: number
+  already_done: number
+  errors: number
+}> {
+  const period      = getMauritiusDateStr().substring(0, 7) // 'YYYY-MM'
+  const today       = getMauritiusDateStr()
+
+  // ── Lire la config complète depuis system_config ─────────────────────────
+  const cfgRows = await db.prepare(
+    `SELECT key, value FROM system_config
+     WHERE key LIKE 'subscription_%'`
+  ).all()
+  const cfg: Record<string, string> = {}
+  for (const r of (cfgRows.results || []) as any[]) cfg[r.key] = r.value
+
+  const enabled       = cfg.subscription_enabled !== '0'
+  if (!enabled) {
+    console.log('[processMonthlySubscriptions] Système désactivé via subscription_enabled=0')
+    return { processed: 0, paid_wallet: 0, trio_pending: 0, already_done: 0, errors: 0 }
+  }
+
+  const graceDays     = parseInt(cfg.subscription_grace_days     || '7', 10)
+  const methodWallet  = cfg.subscription_method_wallet            !== '0'
+  const methodTrio    = cfg.subscription_method_trio              !== '0'
+  // Priorité configurable : 'wallet,cb,trio' — on lit l'ordre
+  const priorityStr   = cfg.subscription_payment_priority         || 'wallet,cb,trio'
+  const priority      = priorityStr.split(',').map(s => s.trim())
+
+  // Date d'expiration de la grâce
+  const graceDate = new Date()
+  graceDate.setDate(graceDate.getDate() + graceDays)
+  const graceExpiry = graceDate.toISOString().replace('T', ' ').substring(0, 19)
+
+  // ── Récupérer tous les abonnements actifs à prélever ─────────────────────
+  const activeOrders = await db.prepare(
+    `SELECT po.id, po.member_id, po.package_id,
+            p.price_monthly, p.name as pkg_name,
+            m.first_name, m.last_name, m.email
+     FROM package_orders po
+     JOIN packages p ON p.id = po.package_id
+     JOIN members m  ON m.id = po.member_id
+     WHERE po.status = 'validated'
+       AND po.activation_done = 1
+       AND p.payment_mode = 'subscription'
+       AND p.pricing_type = 'monthly'
+       AND p.price_monthly > 0
+       AND (po.subscription_suspended_at IS NULL)
+       AND po.created_at < date(?) -- pas le mois d'adhésion
+     ORDER BY po.member_id`
+  ).bind(today.substring(0, 7) + '-01').all()
+
+  const orders = (activeOrders.results || []) as any[]
+  console.log(`[processMonthlySubscriptions] ${orders.length} abonnements actifs pour la période ${period}`)
+
+  let processed   = 0
+  let paidWallet  = 0
+  let trioPending = 0
+  let alreadyDone = 0
+  let errors      = 0
+
+  for (const order of orders) {
+    const memberId  = order.member_id
+    const packageId = order.package_id
+    const amountDue = order.price_monthly || 0
+    if (amountDue <= 0) continue
+
+    const renewalId = `sren-${memberId.replace(/-/g, '').substring(0, 8)}-${period.replace('-', '')}`
+
+    try {
+      // ── Idempotence : ne pas retraiter si déjà dans un état final ──────────
+      const existing = await db.prepare(
+        `SELECT id, status FROM subscription_renewals WHERE id = ?`
+      ).bind(renewalId).first() as any
+
+      if (existing) {
+        const finalStatuses = ['paid_wallet', 'paid_cb', 'trio_confirmed', 'suspended', 'failed']
+        if (finalStatuses.includes(existing.status)) {
+          alreadyDone++
+          continue
+        }
+        // Si trio_pending → vérifier si délai de grâce expiré
+        if (existing.status === 'trio_pending') {
+          const graceExp = existing.grace_expires_at
+            ? new Date(existing.grace_expires_at + 'Z') : null
+          if (graceExp && Date.now() > graceExp.getTime()) {
+            // Délai expiré → suspension
+            await db.prepare(
+              `UPDATE subscription_renewals
+               SET status='suspended', suspended_at=datetime('now'), updated_at=datetime('now')
+               WHERE id=?`
+            ).bind(renewalId).run()
+            await db.prepare(
+              `UPDATE package_orders
+               SET subscription_suspended_at=datetime('now'), updated_at=datetime('now')
+               WHERE id=?`
+            ).bind(order.id).run()
+            await createNotification(db, memberId,
+              '⛔ Abonnement suspendu',
+              `Votre abonnement ${order.pkg_name} a été suspendu pour défaut de paiement. Contactez le support pour le réactiver.`,
+              'error')
+            console.warn(`[processMonthlySubscriptions] Suspendu: member=${memberId} pkg=${packageId}`)
+          }
+          alreadyDone++
+          continue
+        }
+      }
+
+      // ── Créer le renewal s'il n'existe pas encore ───────────────────────────
+      if (!existing) {
+        await db.prepare(
+          `INSERT OR IGNORE INTO subscription_renewals
+             (id, member_id, package_order_id, package_id, period, amount_due,
+              status, grace_expires_at, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, datetime('now'), datetime('now'))`
+        ).bind(renewalId, memberId, order.id, packageId, period, amountDue, graceExpiry).run()
+      }
+
+      processed++
+      let paid = false
+
+      // ── Itérer sur la priorité configurée ────────────────────────────────
+      for (const method of priority) {
+
+        // ── PRIORITÉ 1 : Wallet principal ─────────────────────────────────
+        if (method === 'wallet' && methodWallet && !paid) {
+          const wallet = await db.prepare(
+            `SELECT balance FROM wallets WHERE member_id = ?`
+          ).bind(memberId).first() as any
+          const balance = wallet?.balance ?? 0
+
+          await db.prepare(
+            `UPDATE subscription_renewals
+             SET wallet_tried_at=datetime('now'), wallet_result=?,
+                 updated_at=datetime('now')
+             WHERE id=?`
+          ).bind(balance >= amountDue ? 'ok' : 'insufficient', renewalId).run()
+
+          if (balance >= amountDue) {
+            // Prélèvement wallet
+            const txId = `sub-wallet-${renewalId}`
+            await walletOperation(db, memberId, amountDue, 'debit',
+              'subscription_renewal',
+              `Renouvellement abonnement ${order.pkg_name} — ${period}`,
+              txId)
+
+            await db.prepare(
+              `UPDATE subscription_renewals
+               SET status='paid_wallet', payment_method='wallet',
+                   updated_at=datetime('now')
+               WHERE id=?`
+            ).bind(renewalId).run()
+
+            await createNotification(db, memberId,
+              '✅ Abonnement renouvelé',
+              `Votre abonnement ${order.pkg_name} a été renouvelé pour ${period} — ${amountDue}$ prélevés depuis votre wallet.`,
+              'success')
+
+            paidWallet++
+            paid = true
+            console.log(`[processMonthlySubscriptions] wallet OK: member=${memberId} amount=${amountDue}$`)
+          }
+        }
+
+        // ── PRIORITÉ 2 : CB (Stripe/Mollie) — marqué pour implémentation future ─
+        // Le prélèvement CB nécessite la Phase 3 (member_saved_payments + API Stripe)
+        // Pour l'instant on skip proprement et on passe à Trio
+        if (method === 'cb' && !paid) {
+          // Phase 3 — à implémenter : charge Stripe/Mollie via member_saved_payments
+          // Pour l'instant : on enregistre la tentative comme 'no_card' et on passe
+          await db.prepare(
+            `UPDATE subscription_renewals
+             SET cb_tried_at=datetime('now'), cb_result='phase3_not_implemented',
+                 updated_at=datetime('now')
+             WHERE id=?`
+          ).bind(renewalId).run()
+        }
+
+        // ── PRIORITÉ 3 : Triomarkets manuel ───────────────────────────────
+        if (method === 'trio' && methodTrio && !paid) {
+          await db.prepare(
+            `UPDATE subscription_renewals
+             SET status='trio_pending', trio_listed_at=datetime('now'),
+                 updated_at=datetime('now')
+             WHERE id=?`
+          ).bind(renewalId).run()
+
+          await createNotification(db, memberId,
+            '⏳ Renouvellement en attente',
+            `Votre abonnement ${order.pkg_name} (${amountDue}$) sera prélevé sur votre dépôt Triomarkets. Aucune action requise de votre part.`,
+            'warning')
+
+          trioPending++
+          console.log(`[processMonthlySubscriptions] trio_pending: member=${memberId} amount=${amountDue}$`)
+          break // on sort de la boucle priority, le cas est traité
+        }
+
+        // Si aucune méthode n'a fonctionné après la boucle
+        if (!paid && method === priority[priority.length - 1]) {
+          await db.prepare(
+            `UPDATE subscription_renewals
+             SET status='failed', updated_at=datetime('now')
+             WHERE id=?`
+          ).bind(renewalId).run()
+          await createNotification(db, memberId,
+            '⛔ Renouvellement impossible',
+            `Impossible de renouveler votre abonnement ${order.pkg_name}. Contactez le support.`,
+            'error')
+          errors++
+        }
+      }
+
+    } catch (err: any) {
+      console.error(`[processMonthlySubscriptions] Erreur member=${memberId}:`, err?.message || err)
+      errors++
+    }
+  }
+
+  // ── Vérification des suspensions sur les trio_pending en délai dépassé ───
+  // (cas où l'orchestrateur est appelé après le 1er mais les Trio ne sont pas confirmés)
+  try {
+    const expiredTrio = await db.prepare(
+      `SELECT sr.id, sr.member_id, sr.package_id, sr.package_order_id,
+              p.name as pkg_name
+       FROM subscription_renewals sr
+       JOIN packages p ON p.id = sr.package_id
+       WHERE sr.status = 'trio_pending'
+         AND sr.grace_expires_at < datetime('now')`
+    ).all()
+
+    for (const sr of (expiredTrio.results || []) as any[]) {
+      await db.prepare(
+        `UPDATE subscription_renewals
+         SET status='suspended', suspended_at=datetime('now'), updated_at=datetime('now')
+         WHERE id=?`
+      ).bind(sr.id).run()
+      await db.prepare(
+        `UPDATE package_orders
+         SET subscription_suspended_at=datetime('now'), updated_at=datetime('now')
+         WHERE id=?`
+      ).bind(sr.package_order_id).run()
+      await createNotification(db, sr.member_id,
+        '⛔ Abonnement suspendu',
+        `Votre abonnement ${sr.pkg_name} a été suspendu faute de paiement confirmé. Contactez le support.`,
+        'error')
+    }
+  } catch (suspErr: any) {
+    console.error('[processMonthlySubscriptions] Vérification suspensions échouée:', suspErr?.message)
+  }
+
+  console.log(`[processMonthlySubscriptions] Résultat période ${period}: processed=${processed} paid_wallet=${paidWallet} trio_pending=${trioPending} already_done=${alreadyDone} errors=${errors}`)
+  return { processed, paid_wallet: paidWallet, trio_pending: trioPending, already_done: alreadyDone, errors }
 }

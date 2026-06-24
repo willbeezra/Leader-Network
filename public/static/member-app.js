@@ -266,7 +266,7 @@ async function initRegistrationMode() {const e = window.__REGISTRATION__ || {},t
 
 
 }function pinConfirmOk() {document.getElementById("pin-confirmation").classList.add("hidden"), initApp();}async function doLogin() {const e = document.getElementById("login-email").value.trim(),t = document.getElementById("login-password").value,n = document.getElementById("login-error");n.classList.add("hidden");try {const n = await api("POST", "/auth/login", { email: e, password: t });memberToken = n.token, localStorage.setItem("leader_member_token", n.token), currentMember = n.member, initApp();} catch (e) {n.textContent = e.error || "Erreur de connexion", n.classList.remove("hidden");}}function doLogout() {localStorage.removeItem("leader_member_token"), memberToken = null, currentMember = null, document.getElementById("app").classList.add("hidden"), document.getElementById("auth-screen").classList.remove("hidden"), showLogin();}async function initApp() {if (memberToken) try {const e = await api("GET", "/members/me");currentMember = e.member, updateSidebar(), document.getElementById("auth-screen").classList.add("hidden"), document.getElementById("app").classList.remove("hidden"), showPage("dashboard"), loadNotifCount(), loadReservoirCount(), loadSupportUnread();} catch {doLogout();} else document.getElementById("auth-screen").classList.remove("hidden");}function updateSidebar() {const e = currentMember;if (!e) return;const t = ((e.first_name || "")[0] + (e.last_name || "")[0]).toUpperCase();document.getElementById("sidebar-avatar").textContent = t, document.getElementById("sidebar-name").textContent = "".concat(e.first_name, " ").concat(e.last_name), document.getElementById("sidebar-uid").textContent = e.unique_id;const n = document.getElementById("sidebar-status");n.textContent = e.member_status, n.className = "text-xs px-2 py-0.5 rounded-full font-medium ".concat({ AMI: "bg-rouge-500/15 text-rouge-400", Partenaire: "bg-green-500/20 text-green-400", Client: "bg-blue-500/20 text-blue-400", Membre: "bg-gray-500/20 text-gray-400" }[e.member_status] || ""), document.getElementById("sidebar-rank").textContent = "none" === e.current_rank ? "—" : e.current_rank;}async function loadNotifCount() {try {const e = ((await api("GET", "/members/notifications?per_page=100")).notifications || []).filter((e) => !e.is_read).length,t = document.getElementById("notif-badge"),n = document.getElementById("header-notif-badge");
-    e > 0 ? (t.textContent = e, t.classList.remove("hidden"), n.textContent = e, n.classList.remove("hidden")) : (t.classList.add("hidden"), n.classList.add("hidden"));} catch {}}async function loadReservoirCount() {try {const e = await api("GET", "/members/holding-tank"),t = document.getElementById("reservoir-badge");if (!t) return;(e.pending_count || 0) > 0 ? (t.textContent = e.pending_count, t.classList.remove("hidden")) : t.classList.add("hidden");} catch {}}function showPage(e) {window._prevPage = (typeof currentPage !== 'undefined' && currentPage !== e ? currentPage : window._prevPage) || 'wallet';currentPage = e, document.querySelectorAll(".nav-btn").forEach((t) => {t.classList.toggle("active", t.dataset.page === e);});const t = document.getElementById("page-content");t.className = "p-4 md:p-6 fade-in";const n = { dashboard: renderDashboard, team: renderTeam, tree: renderTree, bv: renderBV, commissions: renderCommissions, wallet: renderWallet, withdraw: renderWithdraw, transactions: renderTransactions, packages: renderPackages, license: renderLicense, kyc: renderKYC, marketing: renderMarketing, notifications: renderNotifications, profile: window.renderProfile, reservoir: renderReservoir, "cc-wallet": renderCCWallet, "reserve-strategique": renderReserveStrategique, "commissions-faq": renderCommissionsFAQ, support: window.renderSupport, earnings: window.renderEarnings, "member-card": window.renderMemberCard, services: renderServices, campus: showCampusPage };n[e] ? (n[e](t), setTimeout(_applyMemberMobileFixes, 300)) : t.innerHTML = "<p class=\"text-gray-400\">Page \"".concat(e, "\" non disponible</p>");}function refreshCurrentPage() {const btn = document.getElementById("header-refresh-btn");if (btn) {btn.style.pointerEvents = "none";btn.style.opacity = "0.5";const icon = btn.querySelector("i");if (icon) icon.style.transform = "rotate(360deg)";}showPage(currentPage || "dashboard");setTimeout(() => {if (btn) {btn.style.pointerEvents = "";btn.style.opacity = "";const icon = btn.querySelector("i");if (icon) icon.style.transform = "";}}, 800);} /* ── Mobile responsive fix — appliqué après chaque rendu de page membre ── */
+    e > 0 ? (t.textContent = e, t.classList.remove("hidden"), n.textContent = e, n.classList.remove("hidden")) : (t.classList.add("hidden"), n.classList.add("hidden"));} catch {}}async function loadReservoirCount() {try {const e = await api("GET", "/members/holding-tank"),t = document.getElementById("reservoir-badge");if (!t) return;(e.pending_count || 0) > 0 ? (t.textContent = e.pending_count, t.classList.remove("hidden")) : t.classList.add("hidden");} catch {}}function showPage(e) {window._prevPage = (typeof currentPage !== 'undefined' && currentPage !== e ? currentPage : window._prevPage) || 'wallet';currentPage = e, document.querySelectorAll(".nav-btn").forEach((t) => {t.classList.toggle("active", t.dataset.page === e);});const t = document.getElementById("page-content");t.className = "p-4 md:p-6 fade-in";const n = { dashboard: renderDashboard, team: renderTeam, tree: renderTree, bv: renderBV, commissions: renderCommissions, wallet: renderWallet, withdraw: renderWithdraw, transactions: renderTransactions, packages: renderPackages, license: renderLicense, kyc: renderKYC, marketing: renderMarketing, notifications: renderNotifications, profile: window.renderProfile, reservoir: renderReservoir, "cc-wallet": renderCCWallet, "reserve-strategique": renderReserveStrategique, "commissions-faq": renderCommissionsFAQ, support: window.renderSupport, earnings: window.renderEarnings, "member-card": window.renderMemberCard, services: renderServices, campus: showCampusPage, subscription: renderSubscription };n[e] ? (n[e](t), setTimeout(_applyMemberMobileFixes, 300)) : t.innerHTML = "<p class=\"text-gray-400\">Page \"".concat(e, "\" non disponible</p>");}function refreshCurrentPage() {const btn = document.getElementById("header-refresh-btn");if (btn) {btn.style.pointerEvents = "none";btn.style.opacity = "0.5";const icon = btn.querySelector("i");if (icon) icon.style.transform = "rotate(360deg)";}showPage(currentPage || "dashboard");setTimeout(() => {if (btn) {btn.style.pointerEvents = "";btn.style.opacity = "";const icon = btn.querySelector("i");if (icon) icon.style.transform = "";}}, 800);} /* ── Mobile responsive fix — appliqué après chaque rendu de page membre ── */
 function _applyMemberMobileFixes() {
   if (window.innerWidth >= 768) return;
   const content = document.getElementById('page-content');
@@ -10146,3 +10146,215 @@ async function renderNotifications(e, page, perPage) {page = page || window._not
       ).join("") || '<p class="text-gray-400 text-center py-8">Aucune notification</p>', "\n\n      </div>\n\n    </div><div id=\"notif-pagination\" class=\"py-3 border-t border-dark-600\"></div>");
 
     renderPagination("notif-pagination", t.total || 0, page, perPage, "(function(p){renderNotifications(document.getElementById('page-content'),p,window._notifPerPage)})", "(function(pp,p){renderNotifications(document.getElementById('page-content'),p,pp)})");} catch (t) {e.innerHTML = "<div class=\"p-4 text-red-400\">Erreur : ".concat(t.error, "</div>");}}
+// ─────────────────────────────────────────────────────────────────────────────
+// PAGE ABONNEMENTS — renderSubscription
+// ─────────────────────────────────────────────────────────────────────────────
+async function renderSubscription(el) {
+  el.innerHTML = '<div class="flex items-center justify-center py-16"><div class="loader"></div></div>';
+  let data;
+  try {
+    data = await api('GET', '/members/subscription');
+  } catch (e) {
+    el.innerHTML = '<div class="p-8 text-center text-red-400"><i class="fas fa-exclamation-triangle mr-2"></i>Impossible de charger vos abonnements</div>';
+    return;
+  }
+
+  const subs    = data.subscriptions || [];
+  const history = data.history || [];
+  const brokers = data.brokers || {};
+
+  function statusBadge(status) {
+    const map = {
+      active:    ['bg-emerald-500/15 text-emerald-400 border-emerald-500/30', 'fa-check-circle', 'Actif'],
+      grace:     ['bg-yellow-500/15 text-yellow-400 border-yellow-500/30',   'fa-hourglass-half','Délai de grâce'],
+      suspended: ['bg-red-500/15 text-red-400 border-red-500/30',            'fa-ban',           'Suspendu'],
+      pending:   ['bg-blue-500/15 text-blue-400 border-blue-500/30',         'fa-clock',         'En attente'],
+    };
+    const [cls, ico, lbl] = map[status] || map.pending;
+    return `<span class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border font-semibold ${cls}"><i class="fas ${ico}"></i>${lbl}</span>`;
+  }
+
+  function renewalBadge(status) {
+    const map = {
+      paid_wallet:    ['text-emerald-400', 'fa-wallet',       'Prélevé — wallet'],
+      paid_cb:        ['text-blue-400',    'fa-credit-card',  'Prélevé — CB'],
+      trio_confirmed: ['text-emerald-400', 'fa-bank',         'Trio confirmé'],
+      trio_pending:   ['text-yellow-400',  'fa-clock',        'Trio en attente'],
+      pending:        ['text-gray-400',    'fa-hourglass',    'En attente'],
+      suspended:      ['text-red-400',     'fa-ban',          'Suspendu'],
+      failed:         ['text-red-400',     'fa-times-circle', 'Échoué'],
+    };
+    const [cls, ico, lbl] = map[status] || ['text-gray-400', 'fa-question', status];
+    return `<span class="inline-flex items-center gap-1 text-xs ${cls}"><i class="fas ${ico}"></i>${lbl}</span>`;
+  }
+
+  async function redirectBroker(type, btnEl) {
+    if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Redirection…'; }
+    try {
+      const r = await api('POST', `/broker/${type}/redirect`, {});
+      if (r && r.url) {
+        const a = document.createElement('a');
+        a.href = r.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+        a.style.display = 'none'; document.body.appendChild(a); a.click();
+        setTimeout(() => document.body.removeChild(a), 1000);
+        showToast(`Redirection vers ${type === 'synex-libre' ? 'Synex Libre' : 'Kronex'} ouverte`, 'success');
+        if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = `<i class="fas fa-external-link-alt mr-2"></i>Ouvrir ${type === 'synex-libre' ? 'Synex Libre' : 'Kronex'}`; }
+      }
+    } catch (err) {
+      showToast(err && err.error || 'Erreur de redirection', 'error');
+      if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = `<i class="fas fa-external-link-alt mr-2"></i>${type === 'synex-libre' ? 'Synex Libre' : 'Kronex'}`; }
+    }
+  }
+  window._subRedirectBroker = redirectBroker;
+
+  // ── Cas : aucun abonnement ──────────────────────────────────────────────────
+  if (!subs.length) {
+    el.innerHTML = `
+      <div class="space-y-6 max-w-3xl mx-auto">
+        <div>
+          <h1 class="text-2xl font-bold text-white flex items-center gap-2">
+            <i class="fas fa-crown text-rouge-400"></i> Mes Abonnements
+          </h1>
+          <p class="text-gray-400 text-sm mt-1">Gérez votre abonnement mensuel et accédez aux brokers</p>
+        </div>
+        <div class="stat-card text-center py-14">
+          <i class="fas fa-crown text-gray-600 text-5xl mb-4"></i>
+          <p class="text-white font-semibold text-lg mb-2">Aucun abonnement actif</p>
+          <p class="text-gray-400 text-sm mb-6">Souscrivez à un package abonnement pour accéder aux services Synex Libre et Kronex.</p>
+          <button onclick="showPage('packages')" class="bg-rouge-500 text-dark-900 font-bold px-6 py-3 rounded-xl text-sm hover:bg-rouge-400 transition">
+            <i class="fas fa-arrow-right mr-2"></i>Voir les packages
+          </button>
+        </div>
+      </div>`;
+    return;
+  }
+
+  // ── Abonnements actifs ──────────────────────────────────────────────────────
+  const subCards = subs.map(sub => {
+    const isActive    = sub.access_status === 'active';
+    const isSuspended = sub.access_status === 'suspended';
+    const isGrace     = sub.access_status === 'grace';
+    const lr          = sub.last_renewal;
+
+    // Bloc brokers — affiché seulement si abonnement actif
+    const brokerBlock = (isActive || isGrace) ? `
+      <div class="mt-4 space-y-3">
+        <div class="text-xs text-gray-400 font-semibold uppercase tracking-wider">Accès brokers inclus</div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          ${brokers.synex_libre?.enabled !== false ? `
+          <div class="bg-dark-700 border border-dark-500 rounded-xl p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center">
+                <i class="fas fa-globe text-orange-400 text-sm"></i>
+              </div>
+              <div>
+                <div class="font-semibold text-white text-sm">${brokers.synex_libre?.name || 'Synex Libre'}</div>
+                <div class="text-xs text-gray-400">Dépôt libre • 0 BV</div>
+              </div>
+            </div>
+            <p class="text-xs text-gray-400 mb-3">${brokers.synex_libre?.description || 'Accès aux marchés financiers'}</p>
+            <button onclick="window._subRedirectBroker('synex-libre', this)"
+                    class="w-full bg-orange-600 hover:bg-orange-500 text-white font-semibold py-2.5 rounded-lg text-xs transition flex items-center justify-center gap-2">
+              <i class="fas fa-external-link-alt"></i>Ouvrir Synex Libre
+            </button>
+          </div>` : ''}
+          ${brokers.kronex?.enabled !== false ? `
+          <div class="bg-dark-700 border border-dark-500 rounded-xl p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                <i class="fas fa-chart-line text-purple-400 text-sm"></i>
+              </div>
+              <div>
+                <div class="font-semibold text-white text-sm">${brokers.kronex?.name || 'Kronex'}</div>
+                <div class="text-xs text-gray-400">Dépôt libre • 0 BV</div>
+              </div>
+            </div>
+            <p class="text-xs text-gray-400 mb-3">${brokers.kronex?.description || 'Accès aux marchés financiers'}</p>
+            <button onclick="window._subRedirectBroker('kronex', this)"
+                    class="w-full bg-purple-600 hover:bg-purple-500 text-white font-semibold py-2.5 rounded-lg text-xs transition flex items-center justify-center gap-2">
+              <i class="fas fa-external-link-alt"></i>Ouvrir Kronex
+            </button>
+          </div>` : ''}
+        </div>
+      </div>` : (isSuspended ? `
+      <div class="mt-4 bg-red-900/20 border border-red-500/30 rounded-xl p-4 text-sm text-red-300">
+        <i class="fas fa-ban mr-2"></i>Accès aux brokers suspendu — régularisez votre abonnement pour y accéder à nouveau.
+        Contactez le <button onclick="showPage('support')" class="underline">support</button>.
+      </div>` : '');
+
+    // Infos renouvellement
+    const renewalInfo = lr ? `
+      <div class="mt-3 pt-3 border-t border-dark-600 flex items-center justify-between text-xs text-gray-400">
+        <span>Dernier renouvellement — ${lr.period}</span>
+        ${renewalBadge(lr.status)}
+      </div>` : '';
+
+    return `
+      <div class="bg-dark-800 border ${isActive ? 'border-emerald-500/30' : isSuspended ? 'border-red-500/30' : 'border-yellow-500/30'} rounded-2xl overflow-hidden">
+        <div class="h-1 w-full ${isActive ? 'bg-gradient-to-r from-emerald-500 to-teal-400' : isSuspended ? 'bg-red-500' : 'bg-yellow-500'}"></div>
+        <div class="p-5">
+          <div class="flex items-center justify-between mb-1">
+            <h3 class="font-bold text-white text-lg">${sub.pkg_name}</h3>
+            ${statusBadge(sub.access_status)}
+          </div>
+          <div class="flex items-center gap-4 text-sm text-gray-400 mb-4">
+            <span><i class="fas fa-calendar-alt mr-1"></i>${sub.price_monthly}$/mois</span>
+            <span><i class="fas fa-clock mr-1"></i>Depuis ${new Date(sub.created_at).toLocaleDateString('fr-FR')}</span>
+          </div>
+          ${brokerBlock}
+          ${renewalInfo}
+        </div>
+      </div>`;
+  }).join('');
+
+  // ── Historique renouvellements ───────────────────────────────────────────────
+  const histRows = history.length ? history.map(h => `
+    <tr>
+      <td class="text-white font-medium">${h.period}</td>
+      <td class="text-gray-300 text-xs">${h.package_name}</td>
+      <td>${renewalBadge(h.status)}</td>
+      <td class="text-gray-300">${h.amount_due ? h.amount_due + '$' : '—'}</td>
+    </tr>`).join('') :
+    '<tr><td colspan="4" class="text-center text-gray-500 py-6">Aucun renouvellement enregistré</td></tr>';
+
+  el.innerHTML = `
+    <div class="space-y-6 max-w-3xl mx-auto">
+      <div class="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 class="text-2xl font-bold text-white flex items-center gap-2">
+            <i class="fas fa-crown text-rouge-400"></i> Mes Abonnements
+          </h1>
+          <p class="text-gray-400 text-sm mt-1">Gestion de votre abonnement mensuel et accès brokers</p>
+        </div>
+        <button onclick="renderSubscription(document.getElementById('page-content'))"
+                class="flex items-center gap-2 text-xs text-gray-400 hover:text-white border border-dark-600 hover:border-rouge-500/40 px-3 py-1.5 rounded-lg transition">
+          <i class="fas fa-sync-alt"></i>Actualiser
+        </button>
+      </div>
+
+      <!-- Abonnements actifs -->
+      <div class="space-y-4">${subCards}</div>
+
+      <!-- Historique -->
+      <div class="bg-dark-800 border border-dark-600 rounded-2xl overflow-hidden">
+        <div class="px-5 py-4 border-b border-dark-600 flex items-center gap-2">
+          <i class="fas fa-history text-gray-400"></i>
+          <h3 class="font-semibold text-white">Historique des renouvellements</h3>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="data-table">
+            <thead><tr><th>Période</th><th>Package</th><th>Statut</th><th>Montant</th></tr></thead>
+            <tbody>${histRows}</tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Info paiement -->
+      <div class="bg-dark-800/60 border border-dark-600 rounded-xl p-4 text-xs text-gray-400 space-y-1">
+        <div class="font-semibold text-gray-300 mb-2"><i class="fas fa-info-circle mr-1.5 text-blue-400"></i>Comment fonctionne le prélèvement mensuel ?</div>
+        <div class="flex items-start gap-2"><span class="text-emerald-400 font-bold w-5 shrink-0">1.</span><span>Chaque 1er du mois, votre wallet principal est prélevé en priorité.</span></div>
+        <div class="flex items-start gap-2"><span class="text-blue-400 font-bold w-5 shrink-0">2.</span><span>Si votre wallet est insuffisant, un prélèvement est effectué sur votre dépôt Triomarkets (traité manuellement par l'équipe).</span></div>
+        <div class="flex items-start gap-2"><span class="text-red-400 font-bold w-5 shrink-0">3.</span><span>Sans paiement sous 7 jours, l'abonnement est suspendu. Contactez le support pour le réactiver.</span></div>
+      </div>
+    </div>`;
+}

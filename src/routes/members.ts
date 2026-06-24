@@ -5197,4 +5197,103 @@ members.get('/physical-card/my-order', async (c) => {
   }
 })
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ABONNEMENTS MENSUELS — Routes membre
+// ─────────────────────────────────────────────────────────────────────────────
+
+// GET /api/members/subscription — Statut abonnement + historique renouvellements
+members.get('/subscription', async (c) => {
+  const memberId = c.get('memberId' as any)
+  const db = c.env.DB
+
+  // Abonnements actifs (ou suspendus) du membre
+  const orders = await db.prepare(
+    `SELECT po.id, po.package_id, po.created_at, po.subscription_suspended_at,
+            p.name as pkg_name, p.price_monthly, p.price_usd, p.features,
+            p.description
+     FROM package_orders po
+     JOIN packages p ON p.id = po.package_id
+     WHERE po.member_id = ? AND po.status = 'validated' AND po.activation_done = 1
+       AND p.payment_mode = 'subscription' AND p.pricing_type = 'monthly'
+     ORDER BY po.created_at DESC`
+  ).bind(memberId).all()
+
+  const subscriptions = (orders.results || []) as any[]
+
+  // Pour chaque abonnement, calculer le statut d'accès et le dernier renouvellement
+  const currentPeriod = new Date().toISOString().substring(0, 7)
+
+  const enriched = await Promise.all(subscriptions.map(async (sub) => {
+    const lastRenewal = await db.prepare(
+      `SELECT period, status, payment_method, amount_due,
+              wallet_result, trio_listed_at, trio_confirmed_at, grace_expires_at,
+              suspended_at, created_at
+       FROM subscription_renewals
+       WHERE member_id = ? AND package_id = ?
+       ORDER BY period DESC LIMIT 1`
+    ).bind(memberId, sub.package_id).first() as any
+
+    const isSuspended = !!sub.subscription_suspended_at
+    const joinMonth   = (sub.created_at || '').substring(0, 7)
+    const isJoinMonth = joinMonth === currentPeriod
+
+    let accessStatus = 'active'
+    if (isSuspended) {
+      accessStatus = 'suspended'
+    } else if (!isJoinMonth && lastRenewal) {
+      const paidStatuses = ['paid_wallet', 'paid_cb', 'trio_confirmed']
+      if (paidStatuses.includes(lastRenewal.status)) accessStatus = 'active'
+      else if (lastRenewal.status === 'trio_pending') {
+        const graceExpiry = lastRenewal.grace_expires_at
+          ? new Date(lastRenewal.grace_expires_at + 'Z') : null
+        accessStatus = (graceExpiry && Date.now() < graceExpiry.getTime()) ? 'grace' : 'suspended'
+      } else if (['suspended', 'failed'].includes(lastRenewal.status)) {
+        accessStatus = 'suspended'
+      } else {
+        accessStatus = 'pending'
+      }
+    }
+
+    return { ...sub, access_status: accessStatus, last_renewal: lastRenewal || null }
+  }))
+
+  // Historique des 6 derniers renouvellements
+  const history = await db.prepare(
+    `SELECT sr.period, sr.status, sr.payment_method, sr.amount_due,
+            sr.trio_confirmed_at, sr.grace_expires_at, sr.created_at,
+            p.name as package_name
+     FROM subscription_renewals sr
+     JOIN packages p ON p.id = sr.package_id
+     WHERE sr.member_id = ?
+     ORDER BY sr.period DESC
+     LIMIT 6`
+  ).bind(memberId).all()
+
+  // Config broker pour afficher les boutons Synex Libre / Kronex
+  const cfgRows = await db.prepare(
+    `SELECT key, value FROM system_config
+     WHERE key LIKE 'broker_synex_libre_%' OR key LIKE 'broker_kronex_%'`
+  ).all()
+  const brkCfg: Record<string, string> = {}
+  for (const r of (cfgRows.results || []) as any[]) brkCfg[r.key] = r.value
+
+  return c.json({
+    subscriptions: enriched,
+    history: history.results || [],
+    current_period: currentPeriod,
+    brokers: {
+      synex_libre: {
+        enabled:     brkCfg.broker_synex_libre_enabled !== '0',
+        name:        brkCfg.broker_synex_libre_name        || 'Synex Libre',
+        description: brkCfg.broker_synex_libre_description || '',
+      },
+      kronex: {
+        enabled:     brkCfg.broker_kronex_enabled !== '0',
+        name:        brkCfg.broker_kronex_name        || 'Kronex',
+        description: brkCfg.broker_kronex_description || '',
+      },
+    }
+  })
+})
+
 export { members }

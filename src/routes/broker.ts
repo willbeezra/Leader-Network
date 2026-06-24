@@ -5,7 +5,7 @@
 // ============================================================
 import { Hono } from 'hono'
 import { verifyJWT, generateId } from '../lib/auth.js'
-import { activateAndReward, createNotification } from '../lib/mlm.js'
+import { activateAndReward, createNotification, checkSubscriptionAccess, walletOperation } from '../lib/mlm.js'
 
 // ── Utilitaire interne : crée un package_order validated + appelle activateAndReward ──
 // activateAndReward attend un orderId (pas un memberId) — il faut créer la commande d'abord.
@@ -705,6 +705,463 @@ brokerAdmin.get('/packages', async (c) => {
      ORDER BY price_usd ASC`
   ).all()
   return c.json({ packages: rows.results || [] })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ROUTES MEMBRE — Synex Libre + Kronex (brokers sans BV)
+// Accès conditionnel : le membre doit avoir un abonnement actif
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── POST /api/broker/synex-libre/redirect ─────────────────────────────────────
+broker.post('/synex-libre/redirect', memberAuth, async (c) => {
+  const memberId = c.get('memberId')
+  const db = c.env.DB
+
+  // Vérifier que le membre a un abonnement actif
+  const access = await checkSubscriptionAccess(db, memberId)
+  if (!access.active) {
+    return c.json({ error: 'Accès refusé — ' + access.reason }, 403)
+  }
+
+  // Lire la config Synex Libre depuis system_config
+  const rows = await db.prepare(
+    `SELECT key, value FROM system_config WHERE key LIKE 'broker_synex_libre_%'`
+  ).all()
+  const cfg: Record<string, string> = {}
+  for (const r of (rows.results || []) as any[]) {
+    cfg[r.key.replace('broker_synex_libre_', '')] = r.value
+  }
+
+  if (cfg.enabled === '0') {
+    return c.json({ error: 'Synex Libre est temporairement désactivé' }, 403)
+  }
+  if (!cfg.url) {
+    return c.json({ error: 'Lien Synex Libre non configuré — contactez l\'administrateur' }, 503)
+  }
+
+  // Créer/mettre à jour l'entrée broker_registrations (traçabilité, no_bv)
+  const member = await db.prepare(`SELECT id, first_name, last_name, email FROM members WHERE id=?`).bind(memberId).first() as any
+  if (!member) return c.json({ error: 'Membre introuvable' }, 404)
+
+  // Package abonnement actif du membre (pour lier la registration)
+  const activeOrder = await db.prepare(
+    `SELECT po.package_id FROM package_orders po
+     JOIN packages p ON p.id = po.package_id
+     WHERE po.member_id = ? AND po.status = 'validated' AND po.activation_done = 1
+       AND p.payment_mode = 'subscription' AND p.pricing_type = 'monthly'
+     ORDER BY po.created_at DESC LIMIT 1`
+  ).bind(memberId).first() as any
+  const packageId = activeOrder?.package_id || 'pkg-synex-libre-essentiel'
+
+  // Idempotence : vérifier si déjà une registration active pour synex-libre
+  const existing = await db.prepare(
+    `SELECT id, status FROM broker_registrations
+     WHERE member_id=? AND broker='synex_libre' AND status NOT IN ('failed','cancelled')
+     ORDER BY created_at DESC LIMIT 1`
+  ).bind(memberId).first() as any
+
+  let regId = existing?.id
+  if (!existing) {
+    regId = `bsl-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    await db.prepare(
+      `INSERT INTO broker_registrations
+         (id, member_id, package_id, broker, broker_type, status, created_at, updated_at)
+       VALUES (?, ?, ?, 'synex_libre', 'no_bv', 'pending', datetime('now'), datetime('now'))`
+    ).bind(regId, memberId, packageId).run()
+  }
+
+  // Construire l'URL avec click_id pour traçabilité
+  const baseUrl = cfg.url
+  const sep = baseUrl.includes('?') ? '&' : '?'
+  const redirectUrl = `${baseUrl}${sep}click_id=${regId}&utm_source=leader_network&utm_medium=synex_libre`
+
+  return c.json({ url: redirectUrl, registration_id: regId })
+})
+
+// ── POST /api/broker/kronex/redirect ─────────────────────────────────────────
+broker.post('/kronex/redirect', memberAuth, async (c) => {
+  const memberId = c.get('memberId')
+  const db = c.env.DB
+
+  // Vérifier que le membre a un abonnement actif
+  const access = await checkSubscriptionAccess(db, memberId)
+  if (!access.active) {
+    return c.json({ error: 'Accès refusé — ' + access.reason }, 403)
+  }
+
+  // Lire la config Kronex depuis system_config
+  const rows = await db.prepare(
+    `SELECT key, value FROM system_config WHERE key LIKE 'broker_kronex_%'`
+  ).all()
+  const cfg: Record<string, string> = {}
+  for (const r of (rows.results || []) as any[]) {
+    cfg[r.key.replace('broker_kronex_', '')] = r.value
+  }
+
+  if (cfg.enabled === '0') {
+    return c.json({ error: 'Kronex est temporairement désactivé' }, 403)
+  }
+  if (!cfg.url) {
+    return c.json({ error: 'Lien Kronex non configuré — contactez l\'administrateur' }, 503)
+  }
+
+  const member = await db.prepare(`SELECT id, first_name, last_name, email FROM members WHERE id=?`).bind(memberId).first() as any
+  if (!member) return c.json({ error: 'Membre introuvable' }, 404)
+
+  const activeOrder = await db.prepare(
+    `SELECT po.package_id FROM package_orders po
+     JOIN packages p ON p.id = po.package_id
+     WHERE po.member_id = ? AND po.status = 'validated' AND po.activation_done = 1
+       AND p.payment_mode = 'subscription' AND p.pricing_type = 'monthly'
+     ORDER BY po.created_at DESC LIMIT 1`
+  ).bind(memberId).first() as any
+  const packageId = activeOrder?.package_id || 'pkg-synex-libre-essentiel'
+
+  const existing = await db.prepare(
+    `SELECT id, status FROM broker_registrations
+     WHERE member_id=? AND broker='kronex' AND status NOT IN ('failed','cancelled')
+     ORDER BY created_at DESC LIMIT 1`
+  ).bind(memberId).first() as any
+
+  let regId = existing?.id
+  if (!existing) {
+    regId = `bkx-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    await db.prepare(
+      `INSERT INTO broker_registrations
+         (id, member_id, package_id, broker, broker_type, status, created_at, updated_at)
+       VALUES (?, ?, ?, 'kronex', 'no_bv', 'pending', datetime('now'), datetime('now'))`
+    ).bind(regId, memberId, packageId).run()
+  }
+
+  const baseUrl = cfg.url
+  const sep = baseUrl.includes('?') ? '&' : '?'
+  const redirectUrl = `${baseUrl}${sep}click_id=${regId}&utm_source=leader_network&utm_medium=kronex`
+
+  return c.json({ url: redirectUrl, registration_id: regId })
+})
+
+// ── GET /api/broker/subscription/status ───────────────────────────────────────
+// Retourne le statut d'abonnement du membre + liens Synex Libre / Kronex si actif
+broker.get('/subscription/status', memberAuth, async (c) => {
+  const memberId = c.get('memberId')
+  const db = c.env.DB
+
+  const access = await checkSubscriptionAccess(db, memberId)
+
+  // Lire les configs des 2 brokers
+  const cfgRows = await db.prepare(
+    `SELECT key, value FROM system_config
+     WHERE key LIKE 'broker_synex_libre_%' OR key LIKE 'broker_kronex_%'`
+  ).all()
+  const cfg: Record<string, string> = {}
+  for (const r of (cfgRows.results || []) as any[]) cfg[r.key] = r.value
+
+  // Lire l'abonnement actif
+  const activeOrder = await db.prepare(
+    `SELECT po.id, po.package_id, po.created_at, po.subscription_suspended_at,
+            p.name as pkg_name, p.price_monthly, p.price_usd
+     FROM package_orders po
+     JOIN packages p ON p.id = po.package_id
+     WHERE po.member_id = ? AND po.status = 'validated' AND po.activation_done = 1
+       AND p.payment_mode = 'subscription' AND p.pricing_type = 'monthly'
+     ORDER BY po.created_at DESC LIMIT 1`
+  ).bind(memberId).first() as any
+
+  // Dernier renouvellement
+  const currentPeriod = new Date().toISOString().substring(0, 7)
+  const lastRenewal = activeOrder ? await db.prepare(
+    `SELECT period, status, payment_method, amount_due,
+            wallet_result, cb_result, trio_listed_at, trio_confirmed_at, grace_expires_at
+     FROM subscription_renewals
+     WHERE member_id = ? AND package_id = ?
+     ORDER BY period DESC LIMIT 1`
+  ).bind(memberId, activeOrder.package_id).first() : null
+
+  return c.json({
+    active:          access.active,
+    reason:          access.reason,
+    subscription:    activeOrder || null,
+    last_renewal:    lastRenewal || null,
+    current_period:  currentPeriod,
+    synex_libre: {
+      enabled:     cfg.broker_synex_libre_enabled !== '0',
+      name:        cfg.broker_synex_libre_name        || 'Synex Libre',
+      description: cfg.broker_synex_libre_description || '',
+    },
+    kronex: {
+      enabled:     cfg.broker_kronex_enabled !== '0',
+      name:        cfg.broker_kronex_name        || 'Kronex',
+      description: cfg.broker_kronex_description || '',
+    },
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADMIN — Gestion abonnements mensuels
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── GET /api/admin/broker/subscriptions/config ────────────────────────────────
+brokerAdmin.get('/subscriptions/config', async (c) => {
+  const rows = await c.env.DB.prepare(
+    `SELECT key, value FROM system_config
+     WHERE key LIKE 'subscription_%'
+        OR key LIKE 'broker_synex_libre_%'
+        OR key LIKE 'broker_kronex_%'`
+  ).all()
+  const config: Record<string, string> = {}
+  for (const r of (rows.results || []) as any[]) config[r.key] = r.value
+  return c.json({ config })
+})
+
+// ── PUT /api/admin/broker/subscriptions/config ────────────────────────────────
+brokerAdmin.put('/subscriptions/config', async (c) => {
+  const body = await c.req.json() as Record<string, string>
+  // Toutes les clés subscription_* et broker_synex_libre_* et broker_kronex_* sont autorisées
+  const allowedPrefixes = ['subscription_', 'broker_synex_libre_', 'broker_kronex_']
+  for (const [key, value] of Object.entries(body)) {
+    if (allowedPrefixes.some(p => key.startsWith(p))) {
+      await c.env.DB.prepare(
+        `INSERT INTO system_config (key, value) VALUES (?, ?)
+         ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=datetime('now')`
+      ).bind(key, String(value)).run()
+    }
+  }
+  return c.json({ success: true })
+})
+
+// ── GET /api/admin/broker/subscriptions/renewals ─────────────────────────────
+// Liste des renouvellements — filtrable par période, statut
+brokerAdmin.get('/subscriptions/renewals', async (c) => {
+  const period = c.req.query('period') || ''  // 'YYYY-MM'
+  const status = c.req.query('status') || ''
+  const page   = parseInt(c.req.query('page') || '1')
+  const perPage = parseInt(c.req.query('per_page') || '50')
+  const offset  = (page - 1) * perPage
+
+  const conditions: string[] = []
+  const params: any[] = []
+  if (period) { conditions.push('sr.period = ?'); params.push(period) }
+  if (status) { conditions.push('sr.status = ?'); params.push(status) }
+  const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : ''
+
+  const total = await c.env.DB.prepare(
+    `SELECT COUNT(*) as cnt FROM subscription_renewals sr ${where}`
+  ).bind(...params).first() as any
+
+  const rows = await c.env.DB.prepare(
+    `SELECT sr.*,
+            m.first_name, m.last_name, m.email, m.unique_id,
+            p.name as package_name, p.price_monthly
+     FROM subscription_renewals sr
+     JOIN members m  ON m.id  = sr.member_id
+     JOIN packages p ON p.id = sr.package_id
+     ${where}
+     ORDER BY sr.period DESC, sr.created_at DESC
+     LIMIT ? OFFSET ?`
+  ).bind(...params, perPage, offset).all()
+
+  return c.json({
+    renewals: rows.results || [],
+    total: (total as any)?.cnt || 0,
+    page, per_page: perPage
+  })
+})
+
+// ── GET /api/admin/broker/subscriptions/trio-list ─────────────────────────────
+// Liste des prélèvements Trio en attente — export CSV pour Triomarkets
+brokerAdmin.get('/subscriptions/trio-list', async (c) => {
+  const period = c.req.query('period') || new Date().toISOString().substring(0, 7)
+  const format = c.req.query('format') || 'json'  // 'json' | 'csv'
+
+  const rows = await c.env.DB.prepare(
+    `SELECT sr.id, sr.member_id, sr.period, sr.amount_due,
+            sr.trio_listed_at, sr.grace_expires_at,
+            m.first_name, m.last_name, m.email, m.unique_id,
+            p.name as package_name
+     FROM subscription_renewals sr
+     JOIN members m  ON m.id  = sr.member_id
+     JOIN packages p ON p.id = sr.package_id
+     WHERE sr.period = ? AND sr.status = 'trio_pending'
+     ORDER BY sr.created_at ASC`
+  ).bind(period).all()
+
+  const data = (rows.results || []) as any[]
+
+  if (format === 'csv') {
+    const header = 'ID,Prénom,Nom,Email,ID Membre,Package,Montant,Période,Date listing\n'
+    const lines = data.map(r =>
+      `"${r.id}","${r.first_name}","${r.last_name}","${r.email}","${r.unique_id}","${r.package_name}",${r.amount_due},"${r.period}","${r.trio_listed_at}"`
+    ).join('\n')
+    return new Response(header + lines, {
+      headers: {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': `attachment; filename="trio-prelevements-${period}.csv"`
+      }
+    })
+  }
+
+  return c.json({ renewals: data, period, count: data.length })
+})
+
+// ── POST /api/admin/broker/subscriptions/trio-confirm/:id ─────────────────────
+// Confirme manuellement un paiement Triomarkets pour un renouvellement
+brokerAdmin.post('/subscriptions/trio-confirm/:id', async (c) => {
+  const renewalId = c.req.param('id')
+  const adminId   = (c as any).get?.('adminId') || 'admin'
+  const body      = await c.req.json().catch(() => ({})) as any
+  const amountReceived = body.amount_received || null
+  const notes          = body.notes || null
+
+  const renewal = await c.env.DB.prepare(
+    `SELECT sr.*, m.first_name, m.last_name, p.name as pkg_name
+     FROM subscription_renewals sr
+     JOIN members m ON m.id = sr.member_id
+     JOIN packages p ON p.id = sr.package_id
+     WHERE sr.id = ?`
+  ).bind(renewalId).first() as any
+
+  if (!renewal) return c.json({ error: 'Renouvellement introuvable' }, 404)
+  if (renewal.status === 'trio_confirmed') return c.json({ error: 'Déjà confirmé' }, 409)
+  if (!['trio_pending', 'pending'].includes(renewal.status)) {
+    return c.json({ error: `Statut ${renewal.status} — confirmation impossible` }, 400)
+  }
+
+  await c.env.DB.prepare(
+    `UPDATE subscription_renewals
+     SET status='trio_confirmed', payment_method='trio_manual',
+         trio_confirmed_at=datetime('now'), trio_confirmed_by=?,
+         trio_amount_received=?, notes=?,
+         updated_at=datetime('now')
+     WHERE id=?`
+  ).bind(adminId, amountReceived, notes, renewalId).run()
+
+  // Notification membre
+  await createNotification(c.env.DB, renewal.member_id,
+    '✅ Abonnement renouvelé',
+    `Votre paiement Triomarkets pour l'abonnement ${renewal.pkg_name} (${renewal.amount_due}$) a été confirmé pour la période ${renewal.period}.`,
+    'success')
+
+  return c.json({ success: true, renewal_id: renewalId })
+})
+
+// ── POST /api/admin/broker/subscriptions/trio-import ──────────────────────────
+// Import CSV batch — confirme plusieurs renouvellements Trio en une fois
+// Body JSON : { confirmations: [{ id: 'sren-...', amount_received: 49 }, ...] }
+brokerAdmin.post('/subscriptions/trio-import', async (c) => {
+  const adminId = (c as any).get?.('adminId') || 'admin'
+  const body    = await c.req.json() as { confirmations: Array<{ id: string; amount_received?: number; notes?: string }> }
+
+  if (!body.confirmations?.length) return c.json({ error: 'confirmations[] requis' }, 400)
+
+  let confirmed = 0
+  let skipped   = 0
+  const errors: string[] = []
+
+  for (const item of body.confirmations) {
+    try {
+      const renewal = await c.env.DB.prepare(
+        `SELECT id, status, member_id, package_id, amount_due FROM subscription_renewals WHERE id = ?`
+      ).bind(item.id).first() as any
+
+      if (!renewal) { errors.push(`${item.id}: introuvable`); skipped++; continue }
+      if (renewal.status === 'trio_confirmed') { skipped++; continue }
+      if (!['trio_pending', 'pending'].includes(renewal.status)) {
+        errors.push(`${item.id}: statut ${renewal.status} invalide`); skipped++; continue
+      }
+
+      await c.env.DB.prepare(
+        `UPDATE subscription_renewals
+         SET status='trio_confirmed', payment_method='trio_manual',
+             trio_confirmed_at=datetime('now'), trio_confirmed_by=?,
+             trio_amount_received=?, notes=?,
+             updated_at=datetime('now')
+         WHERE id=?`
+      ).bind(adminId, item.amount_received || renewal.amount_due, item.notes || 'Import CSV', item.id).run()
+
+      await createNotification(c.env.DB, renewal.member_id,
+        '✅ Abonnement renouvelé',
+        `Paiement Triomarkets confirmé pour votre abonnement — période ${renewal.id.slice(-6)}.`,
+        'success')
+
+      confirmed++
+    } catch (err: any) {
+      errors.push(`${item.id}: ${err.message}`)
+      skipped++
+    }
+  }
+
+  return c.json({ confirmed, skipped, errors })
+})
+
+// ── POST /api/admin/broker/subscriptions/reactivate/:member_id ───────────────
+// Réactive un abonnement suspendu (admin uniquement)
+brokerAdmin.post('/subscriptions/reactivate/:member_id', async (c) => {
+  const targetMemberId = c.req.param('member_id')
+  const adminId        = (c as any).get?.('adminId') || 'admin'
+  const body           = await c.req.json().catch(() => ({})) as any
+  const notes          = body.notes || 'Réactivation manuelle admin'
+
+  // Trouver l'abonnement suspendu
+  const order = await c.env.DB.prepare(
+    `SELECT po.id, po.package_id, p.name as pkg_name
+     FROM package_orders po
+     JOIN packages p ON p.id = po.package_id
+     WHERE po.member_id = ? AND po.status = 'validated' AND po.activation_done = 1
+       AND p.payment_mode = 'subscription' AND p.pricing_type = 'monthly'
+       AND po.subscription_suspended_at IS NOT NULL
+     ORDER BY po.created_at DESC LIMIT 1`
+  ).bind(targetMemberId).first() as any
+
+  if (!order) return c.json({ error: 'Aucun abonnement suspendu trouvé' }, 404)
+
+  await c.env.DB.prepare(
+    `UPDATE package_orders
+     SET subscription_suspended_at=NULL, updated_at=datetime('now')
+     WHERE id=?`
+  ).bind(order.id).run()
+
+  await createNotification(c.env.DB, targetMemberId,
+    '✅ Abonnement réactivé',
+    `Votre abonnement ${order.pkg_name} a été réactivé par l'équipe. Bienvenue de retour !`,
+    'success')
+
+  return c.json({ success: true, package_name: order.pkg_name, notes })
+})
+
+// ── GET /api/admin/broker/subscriptions/stats ─────────────────────────────────
+brokerAdmin.get('/subscriptions/stats', async (c) => {
+  const period = c.req.query('period') || new Date().toISOString().substring(0, 7)
+
+  const [total, paidW, paidCb, trioPending, trioConfirmed, suspended, failed, activeAbos] = await Promise.all([
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM subscription_renewals WHERE period=?`).bind(period).first(),
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt, COALESCE(SUM(amount_due),0) as total FROM subscription_renewals WHERE period=? AND status='paid_wallet'`).bind(period).first(),
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt, COALESCE(SUM(amount_due),0) as total FROM subscription_renewals WHERE period=? AND status='paid_cb'`).bind(period).first(),
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt, COALESCE(SUM(amount_due),0) as total FROM subscription_renewals WHERE period=? AND status='trio_pending'`).bind(period).first(),
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt, COALESCE(SUM(amount_due),0) as total FROM subscription_renewals WHERE period=? AND status='trio_confirmed'`).bind(period).first(),
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM subscription_renewals WHERE period=? AND status='suspended'`).bind(period).first(),
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM subscription_renewals WHERE period=? AND status='failed'`).bind(period).first(),
+    c.env.DB.prepare(
+      `SELECT COUNT(*) as cnt FROM package_orders po
+       JOIN packages p ON p.id=po.package_id
+       WHERE po.status='validated' AND po.activation_done=1
+         AND p.payment_mode='subscription' AND p.pricing_type='monthly'
+         AND po.subscription_suspended_at IS NULL`
+    ).first(),
+  ])
+
+  return c.json({
+    period,
+    active_subscriptions: (activeAbos as any)?.cnt || 0,
+    renewals: {
+      total:          (total as any)?.cnt || 0,
+      paid_wallet:    { count: (paidW as any)?.cnt || 0,    revenue: (paidW as any)?.total || 0 },
+      paid_cb:        { count: (paidCb as any)?.cnt || 0,   revenue: (paidCb as any)?.total || 0 },
+      trio_pending:   { count: (trioPending as any)?.cnt || 0,   revenue: (trioPending as any)?.total || 0 },
+      trio_confirmed: { count: (trioConfirmed as any)?.cnt || 0, revenue: (trioConfirmed as any)?.total || 0 },
+      suspended:      (suspended as any)?.cnt || 0,
+      failed:         (failed as any)?.cnt || 0,
+    }
+  })
 })
 
 export { broker as default, brokerAdmin }
