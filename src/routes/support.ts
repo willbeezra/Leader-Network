@@ -284,8 +284,8 @@ Tu signes tes réponses "L'équipe Support LEADER".
 Tu as accès au CONTEXTE_MEMBRE complet ci-dessous avec TOUTES les données réelles du compte.
 Tu DOIS exploiter ces données pour répondre avec une précision chirurgicale.
 
-❌ INTERDIT : Donner des explications génériques si les données sont disponibles dans le contexte.
-✅ OBLIGATOIRE : Citer les montants exacts, les dates exactes, les statuts exacts du compte.
+ INTERDIT : Donner des explications génériques si les données sont disponibles dans le contexte.
+ OBLIGATOIRE : Citer les montants exacts, les dates exactes, les statuts exacts du compte.
 
 EXEMPLES DE BONNE RÉPONSE :
 - "Votre solde actuel est de 247.50 USD disponible + 89.00 USD en cours de versement journalier."
@@ -430,8 +430,8 @@ async function _escaladeAdmin(
   await db.prepare(`
     INSERT INTO support_messages
       (ticket_id, sender_type, sender_id, sender_name, content, is_internal)
-    VALUES (?, 'admin', 'ai-support', '🤖 IA — Escalade requise', ?, 1)
-  `).bind(ticketId, `⚠️ Ce ticket nécessite une intervention humaine.\n\n${raison}\n\nMerci de prendre en charge ce ticket et de répondre directement au membre.`).run()
+    VALUES (?, 'admin', 'ai-support', ' IA — Escalade requise', ?, 1)
+  `).bind(ticketId, `️ Ce ticket nécessite une intervention humaine.\n\n${raison}\n\nMerci de prendre en charge ce ticket et de répondre directement au membre.`).run()
 
   // 2. Taguer needs_human (idempotent)
   await db.prepare(
@@ -712,7 +712,7 @@ support.post('/tickets', async (c) => {
       `SELECT * FROM support_tickets WHERE id=?`
     ).bind(ticketId).first()
 
-    // 🤖 Déclencher la réponse IA en arrière-plan (fire-and-forget)
+    //  Déclencher la réponse IA en arrière-plan (fire-and-forget)
     // On n'attend pas la réponse GPT pour ne pas bloquer la réponse HTTP
     c.executionCtx?.waitUntil(
       _aiSupportReply(c.env.DB, ticketId, memberId, c.env)
@@ -793,7 +793,7 @@ support.post('/tickets/:id/messages', async (c) => {
 
     await touchTicket(c.env.DB, ticketId, 'member')
 
-    // 🤖 Déclencher la réponse IA en arrière-plan (fire-and-forget)
+    //  Déclencher la réponse IA en arrière-plan (fire-and-forget)
     c.executionCtx?.waitUntil(
       _aiSupportReply(c.env.DB, ticketId, memberId, c.env)
     )
@@ -823,7 +823,7 @@ support.patch('/tickets/:id/resolve', async (c) => {
     // Message interne pour l'admin
     await c.env.DB.prepare(`
       INSERT INTO support_messages (ticket_id, sender_type, sender_id, sender_name, content, is_internal, created_at)
-      VALUES (?, 'admin', 'system', 'Système', '✅ Le membre a confirmé que son problème est résolu.', 1, datetime('now'))
+      VALUES (?, 'admin', 'system', 'Système', ' Le membre a confirmé que son problème est résolu.', 1, datetime('now'))
     `).bind(ticketId).run()
 
     return c.json({ success: true })

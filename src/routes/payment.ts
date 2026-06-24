@@ -672,7 +672,7 @@ async function preValidateOrder(db: D1Database, orderId: string, score: number, 
 
   // Notifier le membre
   await createNotification(db, order.member_id, 'success',
-    '✅ Paiement pré-validé par IA',
+    ' Paiement pré-validé par IA',
     `Votre preuve de paiement a été analysée et jugée authentique (confiance : ${score}%). Votre commande est activée. La confirmation finale sera effectuée à réception des fonds.`)
 }
 
@@ -691,7 +691,7 @@ async function preValidateTopup(db: D1Database, topupId: string, score: number, 
   `).bind(topupId).run()
 
   await createNotification(db, topup.member_id, 'success',
-    '✅ Recharge pré-validée par IA',
+    ' Recharge pré-validée par IA',
     `Votre recharge de $${topup.amount_requested} a été analysée et pré-validée. Votre wallet a été crédité. Confirmation finale à réception des fonds.`)
 }
 
@@ -856,7 +856,7 @@ paymentAdminRouter.post('/methods', async (c) => {
     VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, 99)
   `).bind(
     id, body.category, body.provider, body.display_name,
-    body.description || '', body.logo_emoji || '💳',
+    body.description || '', body.logo_emoji || '',
     body.requires_proof ? 1 : 0,
     body.is_automatic ? 1 : 0,
     body.instructions || '',
@@ -965,7 +965,7 @@ paymentAdminRouter.post('/topups/:id/confirm', async (c) => {
   `).bind(adminId, topupId).run()
 
   await createNotification(c.env.DB, topup.member_id, 'success',
-    '✅ Recharge confirmée',
+    ' Recharge confirmée',
     `Votre recharge de $${topup.amount_requested} a été confirmée définitivement.`)
 
   return c.json({ success: true })
@@ -986,11 +986,11 @@ paymentAdminRouter.post('/topups/:id/reject', async (c) => {
     await walletOperation(c.env.DB, topup.member_id, topup.amount_requested, 'debit', 'debit_topup_rollback',
       `Annulation recharge (rejetée par admin)`, topupId)
     await createNotification(c.env.DB, topup.member_id, 'warning',
-      '⚠️ Recharge annulée',
+      '️ Recharge annulée',
       `Votre recharge de $${topup.amount_requested} pré-validée par IA a été annulée : ${reason || 'fonds non reçus'}. Le montant a été retiré de votre wallet.`)
   } else {
     await createNotification(c.env.DB, topup.member_id, 'error',
-      '❌ Recharge rejetée',
+      ' Recharge rejetée',
       `Votre demande de recharge de $${topup.amount_requested} a été rejetée : ${reason || 'preuve invalide'}.`)
   }
 
@@ -1256,7 +1256,7 @@ export async function performOrderRollback(
       // Notification de downgrade
       if (getRankIndex(newRank) < getRankIndex(oldRank)) {
         await createNotification(db, affectedMemberId, 'warning',
-          '⚠️ Changement de rang',
+          '️ Changement de rang',
           `Suite à l'annulation d'une commande, votre rang a été recalculé : ${oldRank} → ${newRank}. Contactez votre upline pour plus d'informations.`)
       }
     }
@@ -1282,7 +1282,7 @@ export async function performOrderRollback(
 
   // Notifier le membre principal
   await createNotification(db, order.member_id, 'error',
-    '❌ Commande annulée — Rollback complet',
+    ' Commande annulée — Rollback complet',
     `Votre commande a été annulée (${reason}). BV retirés, commissions annulées. Contactez l'administration si vous pensez qu'il s'agit d'une erreur.`)
 }
 

@@ -138,7 +138,7 @@ function renderServiceLogo(service: any): string {
 // ─────────────────────────────────────────────────────────────
 function renderStars(rating: number): string {
   return Array.from({ length: 5 }, (_, i) =>
-    `<span style="color:${i < rating ? '#791E15' : '#4B5563'}">★</span>`
+    `<span style="color:${i < rating ? '#791E15' : '#4B5563'}"></span>`
   ).join('')
 }
 
@@ -408,7 +408,7 @@ ${heroActive ? `
         <span style="color:rgba(245,240,232,0.85);font-size:0.8rem;font-weight:600">${cfg.stats_countries || '47'} pays</span>
       </div>
       <div class="flex items-center gap-2 px-4 py-2 rounded-full" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12)">
-        <span style="color:#F5A623;font-size:0.75rem">★★★★★</span>
+        <span style="color:#F5A623;font-size:0.75rem"></span>
         <span style="color:rgba(245,240,232,0.85);font-size:0.8rem;font-weight:600">${cfg.stats_rating || '4.9'}/5 · ${cfg.stats_reviews || '237'} avis</span>
       </div>
       <div class="flex items-center gap-2 px-4 py-2 rounded-full" style="background:rgba(121,30,21,0.15);border:1px solid rgba(121,30,21,0.35)">
@@ -419,7 +419,7 @@ ${heroActive ? `
 
     <!-- Slogan viral -->
     <div class="mt-8 mb-4 fade-in-up" style="animation-delay:0.65s">
-      <p class="text-base md:text-lg font-semibold tracking-widest uppercase" style="color:rgba(121,30,21,0.9);letter-spacing:0.2em">✦ ${cfg.slogan || 'Ensemble, faisons une différence'} ✦</p>
+      <p class="text-base md:text-lg font-semibold tracking-widest uppercase" style="color:rgba(121,30,21,0.9);letter-spacing:0.2em"> ${cfg.slogan || 'Ensemble, faisons une différence'} </p>
     </div>
 
     <!-- Scroll indicator -->
@@ -565,7 +565,7 @@ ${aboutActive ? `
         { num:'03', icon:'shield-alt',      title:'Garder sa richesse',     desc:'Apprendre à gérer, protéger et structurer ce qui a été construit.',                                                                color:'#791E15' },
         { num:'04', icon:'chart-line',      title:'Multiplier sa richesse', desc:'Faire grandir ses ressources avec méthode, stratégie et intelligence.',                                                            color:'#791E15' },
         { num:'05', icon:'smile-beam',      title:'Profiter de sa richesse',desc:'Utiliser ses ressources pour améliorer sa vie, sa liberté et ses expériences.',                                                    color:'#791E15' },
-        { num:'06', icon:'hands-helping',   title:'Partager',               desc:'Transmettre, inspirer et contribuer à faire une différence autour de soi.\n✦ Ensemble, faisons une différence ✦',                 color:'#A02820' },
+        { num:'06', icon:'hands-helping',   title:'Partager',               desc:'Transmettre, inspirer et contribuer à faire une différence autour de soi.\n Ensemble, faisons une différence ',                 color:'#A02820' },
       ].map((p, idx) => `
       <div class="glass-dark rounded-2xl p-7 flex flex-col gap-3 reveal pilier-card" style="border:1px solid rgba(121,30,21,0.18);transition:all 0.35s cubic-bezier(0.4,0,0.2,1);animation-delay:${idx * 0.08}s;position:relative;overflow:hidden">
         <!-- Numéro watermark -->
@@ -802,7 +802,7 @@ ${ctaFinalActive ? `
              onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
         <span style="display:none;font-size:1.6rem;letter-spacing:0.2em;font-weight:900;color:#FFFFFF">LEADER</span>
         <p class="text-sm italic" style="color:rgba(245,240,232,0.35)" data-i18n="${cfg.footer_tagline || 'Révéler. Prospérer. Inspirer.'}">${cfg.footer_tagline || 'Révéler. Prospérer. Inspirer.'}</p>
-        <p class="text-xs font-bold tracking-widest uppercase" style="color:rgba(121,30,21,0.8)">✦ ${cfg.slogan || 'Ensemble, faisons une différence'} ✦</p>
+        <p class="text-xs font-bold tracking-widest uppercase" style="color:rgba(121,30,21,0.8)"> ${cfg.slogan || 'Ensemble, faisons une différence'} </p>
         <!-- Badges confiance -->
         <div class="flex flex-wrap gap-2 mt-2">
           <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:4px 9px;font-size:0.68rem;color:rgba(245,240,232,0.45)"><i class="fas fa-lock" style="color:#791E15;font-size:0.65rem"></i>RGPD conforme</span>
@@ -865,7 +865,7 @@ ${ctaFinalActive ? `
     <div class="section-divider mb-6"></div>
     <div class="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs" style="color:rgba(245,240,232,0.22)">
       <span>© ${new Date().getFullYear()} LEADER. Tous droits réservés.</span>
-      <span class="italic">✦ ${cfg.slogan || 'Ensemble, faisons une différence'} ✦</span>
+      <span class="italic"> ${cfg.slogan || 'Ensemble, faisons une différence'} </span>
       <span>Club privé d'éducation financière · ${cfg.stats_countries || '47'} pays</span>
     </div>
   </div>
@@ -1078,7 +1078,7 @@ landingPublic.get('/s/:slug', async (c) => {
       <link rel="stylesheet" href="/static/tailwind.compiled.css"></head>
       <body class="bg-gray-950 text-white min-h-screen flex items-center justify-center">
         <div class="text-center">
-          <div class="text-5xl mb-6">🚀</div>
+          <div class="text-5xl mb-6"></div>
           <h1 class="text-3xl font-black mb-2">${row.name}</h1>
           <p style="color:#791E15" class="font-semibold mb-6">Bientôt disponible</p>
           <p class="text-gray-400 mb-8">Ce service sera bientôt accessible aux membres LEADER.</p>

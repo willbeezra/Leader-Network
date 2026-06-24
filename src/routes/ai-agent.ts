@@ -181,7 +181,7 @@ ${PLAN_COMPENSATION}
 INSTRUCTIONS TECHNIQUES
 ═══════════════════════════════════════════════════════════════
 
-⚠️ BASE DE DONNÉES : SQLite (PAS MySQL, PAS PostgreSQL)
+️ BASE DE DONNÉES : SQLite (PAS MySQL, PAS PostgreSQL)
 Fonctions de date SQLite OBLIGATOIRES :
 - Date du jour : date('now')
 - Mois en cours (format YYYY-MM) : strftime('%Y-%m', 'now')
@@ -387,17 +387,17 @@ Avant de formuler ta réponse, parcours méthodiquement chaque tableau de donné
 Génère TOUJOURS 2 à 4 actions pertinentes selon le contexte :
 
 Si anomalie détectée ET correction SQL possible :
-  → { id:"fix", label:"Appliquer la correction", icon:"🔧", type:"fix_db", payload:{} }
-  → { id:"ticket", label:"Répondre au ticket de [Prénom]", icon:"✉️", type:"reply_ticket", payload:{ member_name:"[Prénom Nom]", draft:"[texte complet du message à envoyer au membre, professionnel, bienveillant, en français, expliquant la situation et ce qu'on va faire]" } }
-  → { id:"dismiss", label:"C'est bon, merci", icon:"✅", type:"dismiss", payload:{} }
+  → { id:"fix", label:"Appliquer la correction", icon:"", type:"fix_db", payload:{} }
+  → { id:"ticket", label:"Répondre au ticket de [Prénom]", icon:"️", type:"reply_ticket", payload:{ member_name:"[Prénom Nom]", draft:"[texte complet du message à envoyer au membre, professionnel, bienveillant, en français, expliquant la situation et ce qu'on va faire]" } }
+  → { id:"dismiss", label:"C'est bon, merci", icon:"", type:"dismiss", payload:{} }
 
 Si tout est correct (aucune anomalie) :
-  → { id:"ticket", label:"Répondre au ticket de [Prénom]", icon:"✉️", type:"reply_ticket", payload:{ member_name:"[Prénom Nom]", draft:"[texte complet rassurant, expliquant pourquoi tout est normal avec les chiffres clés]" } }
-  → { id:"dismiss", label:"C'est bon, merci", icon:"✅", type:"dismiss", payload:{} }
+  → { id:"ticket", label:"Répondre au ticket de [Prénom]", icon:"️", type:"reply_ticket", payload:{ member_name:"[Prénom Nom]", draft:"[texte complet rassurant, expliquant pourquoi tout est normal avec les chiffres clés]" } }
+  → { id:"dismiss", label:"C'est bon, merci", icon:"", type:"dismiss", payload:{} }
 
 Si bug de code détecté (requires_code_fix=true) :
-  → { id:"ticket", label:"Répondre au ticket de [Prénom]", icon:"✉️", type:"reply_ticket", payload:{ member_name:"[Prénom Nom]", draft:"[texte expliquant qu'on a identifié un problème technique et qu'on le règle dans les plus brefs délais]" } }
-  → { id:"dismiss", label:"Noté, je vais corriger le code", icon:"🛠️", type:"dismiss", payload:{} }
+  → { id:"ticket", label:"Répondre au ticket de [Prénom]", icon:"️", type:"reply_ticket", payload:{ member_name:"[Prénom Nom]", draft:"[texte expliquant qu'on a identifié un problème technique et qu'on le règle dans les plus brefs délais]" } }
+  → { id:"dismiss", label:"Noté, je vais corriger le code", icon:"️", type:"dismiss", payload:{} }
 
 IMPORTANT pour reply_ticket :
 - "draft" = texte COMPLET prêt à envoyer au membre (pas un résumé, un vrai message)
@@ -497,7 +497,7 @@ aiAgent.post('/chat', requirePermission('members.view'), async (c) => {
         // ════════════════════════════════════════════════════════
         // PHASE 1 : GPT planifie quelles requêtes SQL exécuter
         // ════════════════════════════════════════════════════════
-        send('step', { icon: '🧠', label: 'Planification de l\'analyse…', status: 'running' })
+        send('step', { icon: '', label: 'Planification de l\'analyse…', status: 'running' })
 
         let phase1: any = {}
         let totalTokens = 0
@@ -517,7 +517,7 @@ aiAgent.post('/chat', requirePermission('members.view'), async (c) => {
 
         const plannedQueries: any[] = Array.isArray(phase1.sql_queries) ? phase1.sql_queries : []
 
-        send('step', { icon: '🧠', label: `Plan établi — ${plannedQueries.length} requête(s) à exécuter ✓`, status: 'done' })
+        send('step', { icon: '', label: `Plan établi — ${plannedQueries.length} requête(s) à exécuter`, status: 'done' })
 
         // ════════════════════════════════════════════════════════
         // PHASE 1.5 : Exécution des SELECT planifiés
@@ -538,7 +538,7 @@ aiAgent.post('/chat', requirePermission('members.view'), async (c) => {
             .replace(/GETDATE\(\)/gi, "date('now')")
 
           send('step', {
-            icon: '🔍',
+            icon: '',
             label: `Interrogation DB : ${q.description || `étape ${q.step}`}`,
             status: 'running',
             sql_preview: sql.substring(0, 120)
@@ -550,14 +550,14 @@ aiAgent.post('/chat', requirePermission('members.view'), async (c) => {
             queryResults.push({ step: q.step, description: q.description || '', sql, rows })
 
             send('step', {
-              icon: '🔍',
-              label: `${q.description || `Étape ${q.step}`} — ${rows.length} ligne(s) ✓`,
+              icon: '',
+              label: `${q.description || `Étape ${q.step}`} — ${rows.length} ligne(s)`,
               status: 'done'
             })
           } catch (err: any) {
             queryResults.push({ step: q.step, description: q.description || '', sql, rows: [], error: err?.message })
             send('step', {
-              icon: '⚠️',
+              icon: '️',
               label: `Erreur SQL "${q.description}" : ${err?.message}`,
               status: 'error'
             })
@@ -567,7 +567,7 @@ aiAgent.post('/chat', requirePermission('members.view'), async (c) => {
         // ════════════════════════════════════════════════════════
         // PHASE 2 : GPT analyse les données réelles et répond
         // ════════════════════════════════════════════════════════
-        send('step', { icon: '🤖', label: 'Analyse des données par l\'IA…', status: 'running' })
+        send('step', { icon: '', label: 'Analyse des données par l\'IA…', status: 'running' })
 
         // Construire le contexte avec les résultats réels
         const dataContext = queryResults.map(r => {
@@ -603,7 +603,7 @@ Analyse ces données et réponds à l'admin de façon claire et complète.`
           return
         }
 
-        send('step', { icon: '🤖', label: 'Analyse terminée ✓', status: 'done' })
+        send('step', { icon: '', label: 'Analyse terminée', status: 'done' })
 
         // Valider les requêtes d'écriture proposées par GPT phase 2
         const writeQueries: any[] = Array.isArray(phase2.sql_queries)
@@ -613,7 +613,7 @@ Analyse ces données et réponds à l'admin de façon claire et complète.`
         if (writeQueries.length > 0) {
           const validation = validateSQLPlan(writeQueries)
           if (!validation.ok) {
-            phase2.message = (phase2.message || '') + `\n\n⛔ **Plan bloqué** : ${validation.reason}`
+            phase2.message = (phase2.message || '') + `\n\n **Plan bloqué** : ${validation.reason}`
             phase2.needs_execution = false
             phase2.sql_queries = []
           }
@@ -736,8 +736,8 @@ aiAgent.post('/execute', requirePermission('members.edit'), async (c) => {
 
     if (session_id) {
       const summary = hasError
-        ? `⚠️ Exécution partielle — erreur à l'étape ${results.find((r: any) => !r.success)?.step}`
-        : `✅ ${results.filter((r: any) => r.success).length} requête(s) exécutée(s) avec succès`
+        ? `️ Exécution partielle — erreur à l'étape ${results.find((r: any) => !r.success)?.step}`
+        : ` ${results.filter((r: any) => r.success).length} requête(s) exécutée(s) avec succès`
       await c.env.DB.prepare(
         `INSERT INTO ai_agent_logs (id, admin_id, session_id, role, content, sql_executed, sql_result)
          VALUES (?, ?, ?, 'assistant', ?, 1, ?)`

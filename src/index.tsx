@@ -780,8 +780,8 @@ function cardVerifyHTML(
     valid: '#10B981', expired: '#E05040', revoked: '#EF4444', not_found: '#6B7280', invalid: '#6B7280',
   }
   const statusLabels: Record<string, string> = {
-    valid: '✓ CARTE VALIDE', expired: 'LICENCE EXPIREE', revoked: '✗ CARTE RÉVOQUÉE',
-    not_found: '✗ CARTE INTROUVABLE', invalid: '✗ CODE INVALIDE',
+    valid: 'CARTE VALIDE', expired: 'LICENCE EXPIREE', revoked: 'CARTE RÉVOQUÉE',
+    not_found: 'CARTE INTROUVABLE', invalid: 'CODE INVALIDE',
   }
   const statusMessages: Record<string, string> = {
     valid:     'Cette carte de membre est authentique et en cours de validité.',
@@ -791,7 +791,7 @@ function cardVerifyHTML(
     invalid:   'Code QR invalide ou corrompu.',
   }
   const color = statusColors[result] || '#6B7280'
-  const label = statusLabels[result] || '✗ INCONNU'
+  const label = statusLabels[result] || 'INCONNU'
   const msg   = statusMessages[result] || ''
 
   // Lien d'inscription M3 (visible uniquement si carte valide)
@@ -883,7 +883,7 @@ function cardVerifyHTML(
     ${photoHtml}
 
     <!-- Statut -->
-    <div class="badge">${isValid ? '✓' : '✗'} ${label.replace('✓ ','').replace('✗ ','').replace('EXPIREE ','')}</div>
+    <div class="badge">${isValid ? '' : ''} ${label.replace('','').replace('','').replace('EXPIREE ','')}</div>
     <p class="msg">${msg}</p>
 
     <!-- Bloc titulaire -->
@@ -907,7 +907,7 @@ function cardVerifyHTML(
     if (!url) return;
     navigator.clipboard.writeText(url).then(() => {
       const btn = event.target;
-      btn.textContent = '✓ Copié !';
+      btn.textContent = 'Copié !';
       btn.style.background = '#10b981';
       setTimeout(() => { btn.textContent = 'Copier'; btn.style.background = '#f59e0b'; }, 2000);
     }).catch(() => {
@@ -915,7 +915,7 @@ function cardVerifyHTML(
       const ta = document.createElement('textarea');
       ta.value = url; document.body.appendChild(ta); ta.select();
       document.execCommand('copy'); document.body.removeChild(ta);
-      event.target.textContent = '✓ Copié !';
+      event.target.textContent = 'Copié !';
       setTimeout(() => { event.target.textContent = 'Copier'; }, 2000);
     });
   }

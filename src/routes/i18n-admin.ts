@@ -65,7 +65,7 @@ i18nAdmin.post('/languages', async (c) => {
     ).bind(
       codeClean,
       String(name).trim(),
-      String(flag || '🌐').trim(),
+      String(flag || '').trim(),
       is_active !== undefined ? (is_active ? 1 : 0) : 1,
       Number(sort_order) || 100
     ).run()

@@ -465,7 +465,7 @@ export async function processRankQueue(db: D1Database): Promise<{ processed: num
         await upgradePrimeLeadership(db, item.member_id, newRank, period)
         await createNotification(
           db, item.member_id, 'success',
-          `🏆 Félicitations ! Nouveau rang atteint`,
+          ` Félicitations ! Nouveau rang atteint`,
           `Vous venez d'atteindre le rang ${newRank} ! Votre prime de leadership a été créditée.`
         )
       } else {
@@ -1088,7 +1088,7 @@ export async function upgradePrimeLeadership(
     ? ` | ${rsAmt.toFixed(2)}$ prélevés en Réserve Stratégique + abondement compagnie (libération dans 3 ans)` : ''
   await createNotification(
     db, memberId, 'commission',
-    `💰 Prime de Leadership — ${newRank}`,
+    ` Prime de Leadership — ${newRank}`,
     `Félicitations ! Votre prime nette est de ${targetPrime.toFixed(2)}$${ccNotif}${rsNotif}.`
   )
 }
@@ -1131,7 +1131,7 @@ export async function forceRecalcAllRanks(
           await upgradePrimeLeadership(db, member.id, newRank, period)
           await createNotification(
             db, member.id, 'success',
-            `🏆 Félicitations ! Nouveau rang atteint`,
+            ` Félicitations ! Nouveau rang atteint`,
             `Vous venez d'atteindre le rang ${newRank} ! Votre prime de leadership a été créditée.`
           )
         } else {
@@ -2273,9 +2273,9 @@ export async function creditPendingWallet(
 
   // eligible_date = le plus tard des deux
   // - Si la commission est créée suffisamment tôt dans le mois M (ex: 1er mai),
-  //   commPlus14 = 15 mai < 1er juin → eligible_date = 1er juin (M+1) ✓
+  //   commPlus14 = 15 mai < 1er juin → eligible_date = 1er juin (M+1)
   // - Si la commission est créée fin du mois M (ex: 26 mai),
-  //   commPlus14 = 9 juin > 1er juin → eligible_date = 9 juin ✓
+  //   commPlus14 = 9 juin > 1er juin → eligible_date = 9 juin
   const eligibleDate = commPlus14 > m1Date ? commPlus14 : m1Date
   const eligibleStr  = eligibleDate.toISOString().substring(0, 10)
 
@@ -2320,7 +2320,7 @@ export async function creditPendingWallet(
  *  7. Total versé sur le mois M+1 = 100% de la commission
  */
 export async function processDailyPayments(db: D1Database): Promise<number> {
-  // ⚠️ Toujours utiliser l'heure de Maurice (UTC+4) comme référence
+  // ️ Toujours utiliser l'heure de Maurice (UTC+4) comme référence
   const todayStr = getMauritiusDateStr()
 
   // ── VERROU GLOBAL : une seule exécution par jour (clé système) ────────────
@@ -2582,7 +2582,7 @@ export async function processDailyPayments(db: D1Database): Promise<number> {
       }
       const label = typeLabels[entry.commission_type] || entry.commission_type
       await createNotification(db, entry.member_id, 'commission',
-        '✅ Commission entièrement libérée',
+        ' Commission entièrement libérée',
         `Votre ${label} de ${entry.total_amount?.toFixed(2)}$ a été intégralement versée dans votre portefeuille disponible. Vous pouvez maintenant retirer ce montant.`
       )
     }
@@ -2598,7 +2598,7 @@ export async function processDailyPayments(db: D1Database): Promise<number> {
       }
       const label3 = typeLabels3[entry.commission_type] || entry.commission_type
       await createNotification(db, entry.member_id, 'commission',
-        '🔓 Libération commencée',
+        ' Libération commencée',
         `Votre ${label3} de ${entry.total_amount?.toFixed(2)}$ commence à être libérée. Vous recevrez ${entry.amount_per_day?.toFixed(2)}$/jour pendant ${entry.days_in_month} jours.`
       )
     }
@@ -2617,7 +2617,7 @@ export async function processDailyPayments(db: D1Database): Promise<number> {
       const label2   = typeLabels2[entry.commission_type] || entry.commission_type
       const rattrapage = (nbJoursVersesAujourd * entry.amount_per_day).toFixed(2)
       await createNotification(db, entry.member_id, 'commission',
-        '💰 Rattrapage de commission versé',
+        ' Rattrapage de commission versé',
         `Votre ${label2} était en attente pendant ${nbJoursVersesAujourd - 1} jour(s). Un rattrapage de ${rattrapage}$ (${nbJoursVersesAujourd} jours × ${entry.amount_per_day?.toFixed(2)}$/j) vient d'être versé dans votre portefeuille disponible.`
       )
     }
@@ -3875,7 +3875,7 @@ export async function releaseAvailableCC(db: D1Database): Promise<void> {
     const expiryDate = entry.expires_at ? entry.expires_at.substring(0,10) : '—'
     await createNotification(
       db, entry.member_id, 'commission',
-      '💰 Crédit de Croissance disponible !',
+      ' Crédit de Croissance disponible !',
       `Votre Crédit de Croissance de ${Number(entry.amount).toFixed(2)}$ (${monthLabel}) est maintenant disponible. Utilisez-le avant le ${expiryDate} pour rembourser vos dépenses business.`
     )
   }
@@ -3915,7 +3915,7 @@ export async function releaseMaturedRS(db: D1Database): Promise<number> {
   for (const rs of alertJ30.results as any[]) {
     await createNotification(
       db, rs.member_id, 'info',
-      '📅 Réserve Stratégique — libération dans 30 jours',
+      ' Réserve Stratégique — libération dans 30 jours',
       `Votre Réserve Stratégique de ${Number(rs.amount).toFixed(2)}$ (période ${rs.period}) sera libérée le ${rs.locked_until}. Préparez-vous à utiliser ces fonds ! [ref:${rs.id}]`
     )
   }
@@ -3942,7 +3942,7 @@ export async function releaseMaturedRS(db: D1Database): Promise<number> {
   for (const rs of alertJ7.results as any[]) {
     await createNotification(
       db, rs.member_id, 'warning',
-      '🔔 Réserve Stratégique — libération dans 7 jours !',
+      ' Réserve Stratégique — libération dans 7 jours !',
       `Dans 7 jours, votre Réserve Stratégique de ${Number(rs.amount).toFixed(2)}$ (période ${rs.period}) sera automatiquement versée sur votre wallet principal. [ref:${rs.id}]`
     )
   }
@@ -3968,7 +3968,7 @@ export async function releaseMaturedRS(db: D1Database): Promise<number> {
     const monthLabel = getMonthName(cc.period + '-01')
     await createNotification(
       db, cc.member_id, 'warning',
-      '⚠️ Crédit de Croissance expirant bientôt !',
+      '️ Crédit de Croissance expirant bientôt !',
       `Votre Crédit de Croissance de ${Number(cc.residual).toFixed(2)}$ (${monthLabel}) expire dans 7 jours (${cc.expires_at?.substring(0,10)}). Soumettez une demande de remboursement avant qu'il ne soit perdu. [ref:${cc.id}]`
     )
   }
@@ -4012,7 +4012,7 @@ export async function releaseMaturedRS(db: D1Database): Promise<number> {
     // Notification de libération
     await createNotification(
       db, rs.member_id, 'commission',
-      '🎉 Réserve Stratégique libérée !',
+      ' Réserve Stratégique libérée !',
       `Votre Réserve Stratégique de ${amount.toFixed(2)}$ (période ${rs.period}) a été versée sur votre wallet principal. Félicitations pour votre engagement de 3 ans !`
     )
 
@@ -4362,7 +4362,7 @@ export async function processMonthlySubscriptions(db: D1Database): Promise<{
                WHERE id=?`
             ).bind(order.id).run()
             await createNotification(db, memberId,
-              '⛔ Abonnement suspendu',
+              ' Abonnement suspendu',
               `Votre abonnement ${order.pkg_name} a été suspendu pour défaut de paiement. Contactez le support pour le réactiver.`,
               'error')
             console.warn(`[processMonthlySubscriptions] Suspendu: member=${memberId} pkg=${packageId}`)
@@ -4418,7 +4418,7 @@ export async function processMonthlySubscriptions(db: D1Database): Promise<{
             ).bind(renewalId).run()
 
             await createNotification(db, memberId,
-              '✅ Abonnement renouvelé',
+              ' Abonnement renouvelé',
               `Votre abonnement ${order.pkg_name} a été renouvelé pour ${period} — ${amountDue}$ prélevés depuis votre wallet.`,
               'success')
 
@@ -4469,7 +4469,7 @@ export async function processMonthlySubscriptions(db: D1Database): Promise<{
              WHERE id=?`
           ).bind(renewalId).run()
           await createNotification(db, memberId,
-            '⛔ Renouvellement impossible',
+            ' Renouvellement impossible',
             `Impossible de renouveler votre abonnement ${order.pkg_name}. Contactez le support.`,
             'error')
           errors++
@@ -4506,7 +4506,7 @@ export async function processMonthlySubscriptions(db: D1Database): Promise<{
          WHERE id=?`
       ).bind(sr.package_order_id).run()
       await createNotification(db, sr.member_id,
-        '⛔ Abonnement suspendu',
+        ' Abonnement suspendu',
         `Votre abonnement ${sr.pkg_name} a été suspendu faute de paiement confirmé. Contactez le support.`,
         'error')
     }

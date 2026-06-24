@@ -716,7 +716,7 @@ NE JAMAIS répondre autre chose que "approve" ou "manual_review" dans le champ r
     : (recommendation === 'approve' && valid_doc && doc_readable && !doc_expired)
 
   if (canAutoApprove) {
-    // ✅ L'IA approuve → mise à jour immédiate du niveau KYC
+    //  L'IA approuve → mise à jour immédiate du niveau KYC
     await db.prepare(
       `UPDATE kyc_applications
        SET status='approved', reviewed_at=datetime('now'), updated_at=datetime('now'),
@@ -767,11 +767,11 @@ NE JAMAIS répondre autre chose que "approve" ou "manual_review" dans le champ r
       success: true,
       decision: 'approved',
       score,
-      message: 'Identité vérifiée avec succès ✓',
+      message: 'Identité vérifiée avec succès',
     })
 
   } else {
-    // ❌ L'IA ne peut pas valider → transmission à l'admin avec note détaillée
+    //  L'IA ne peut pas valider → transmission à l'admin avec note détaillée
     const aiNote = _buildAiNote(aiResult, hasSelfie, score, rejection_reason)
     await _submitToAdmin(db, memberId, application_id, aiResult, aiNote)
 

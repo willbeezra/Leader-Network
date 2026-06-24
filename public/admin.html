@@ -782,8 +782,8 @@ async function viewMember(id) {
         <div class="bg-dark-700 rounded-lg p-3"><div class="text-xs text-gray-400 mb-1">Téléphone</div>${m.phone||'—'}</div>
         <div class="bg-dark-700 rounded-lg p-3"><div class="text-xs text-gray-400 mb-1">Package</div><span class="text-sm">${m.package_type||'—'}</span></div>
         <div class="bg-dark-700 rounded-lg p-3"><div class="text-xs text-gray-400 mb-1">KYC</div><span class="text-xs ${m.kyc_status==='verified'?'text-green-400':'text-yellow-400'}">${m.kyc_status}</span></div>
-        <div class="bg-dark-700 rounded-lg p-3"><div class="text-xs text-gray-400 mb-1">Licence</div><span class="${m.license_active?'text-green-400':'text-red-400'} text-sm font-medium">${m.license_active?'✅ Active':'❌ Inactive'}</span>${m.license_expires_at?`<div class="text-[10px] text-gray-500">expire ${fmtDate(m.license_expires_at)}</div>`:''}</div>
-        <div class="bg-dark-700 rounded-lg p-3"><div class="text-xs text-gray-400 mb-1">Holding Tank</div><span class="${m.in_holding_tank?'text-orange-400':'text-green-400'} text-sm">${m.in_holding_tank?'⏳ En attente':'✅ Placé'}</span></div>
+        <div class="bg-dark-700 rounded-lg p-3"><div class="text-xs text-gray-400 mb-1">Licence</div><span class="${m.license_active?'text-green-400':'text-red-400'} text-sm font-medium">${m.license_active?' Active':' Inactive'}</span>${m.license_expires_at?`<div class="text-[10px] text-gray-500">expire ${fmtDate(m.license_expires_at)}</div>`:''}</div>
+        <div class="bg-dark-700 rounded-lg p-3"><div class="text-xs text-gray-400 mb-1">Holding Tank</div><span class="${m.in_holding_tank?'text-orange-400':'text-green-400'} text-sm">${m.in_holding_tank?'⏳ En attente':' Placé'}</span></div>
       </div>
       <div class="bg-dark-700 rounded-xl p-4">
         <div class="text-xs text-gray-400 mb-3 font-medium uppercase">Volumes BV (mensuel)</div>
@@ -2930,7 +2930,7 @@ async function saveRankConfig(name, btnEl) {
       badge_url:         badgeUrl || undefined,
     })
     btnSaved(btnEl)
-    showToast(`✅ Rang ${name} sauvegardé`)
+    showToast(` Rang ${name} sauvegardé`)
   } catch (e) { restore(); showToast(e.error||'Erreur', 'error') }
 }
 
@@ -2957,7 +2957,7 @@ async function uploadRankBadge(rankName, inputEl) {
   }
   try {
     await apiAdmin('PUT', `/config/rank/${rankName}`, { badge_url: dataUrl })
-    showToast(`🏅 Badge ${rankName} uploadé !`)
+    showToast(` Badge ${rankName} uploadé !`)
     // Afficher bouton supprimer si absent
     const btnZone = preview?.parentElement?.querySelector('.flex.gap-1')
     if (btnZone && !btnZone.querySelector('[data-del-badge]')) {
@@ -2992,7 +2992,7 @@ async function deleteRankBadge(rankName, btnEl) {
       preview.classList.add('border-dark-500')
     }
     if (btnEl) btnEl.remove()
-    showToast(`🗑️ Badge ${rankName} supprimé`)
+    showToast(`️ Badge ${rankName} supprimé`)
   } catch (e) {
     if (btnEl) { btnEl.disabled=false; btnEl.innerHTML=orig }
     showToast(e.error||'Erreur suppression badge', 'error')

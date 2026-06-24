@@ -2255,7 +2255,7 @@ members.get('/license', async (c) => {
 // POST /api/members/license/order — Commander une licence
 // CDC v2 A10 — Les frais admin s'appliquent sur le PREMIER achat (licence ou package)
 //
-// ⚠️  SÉCURITÉ : pour PayPal, cette route retourne UNIQUEMENT un intent (montants).
+// ️  SÉCURITÉ : pour PayPal, cette route retourne UNIQUEMENT un intent (montants).
 //     La licence n'est PAS créée en DB ici — elle sera créée dans /paypal/capture-order
 //     APRÈS confirmation du paiement par PayPal. Cela évite qu'une licence soit
 //     activée sans paiement confirmé si l'utilisateur ferme la fenêtre PayPal.
@@ -4270,7 +4270,7 @@ async function getCoinPaymentsConfig(db: D1Database, env: {
 }
 
 // Helper : appel API CoinPayments REST (HMAC-SHA512)
-// ⚠️ Le nonce est OBLIGATOIRE — valeur unique croissante (timestamp ms)
+// ️ Le nonce est OBLIGATOIRE — valeur unique croissante (timestamp ms)
 async function callCoinPaymentsAPI(privateKey: string, publicKey: string, params: Record<string, string>): Promise<any> {
   const body = new URLSearchParams({
     ...params,

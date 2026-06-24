@@ -894,7 +894,7 @@ admin.post('/withdrawals/:id/confirm', requirePermission('withdrawals.approve'),
   ).bind(w.amount, w.member_id).run()
 
   const refInfo = payment_reference ? ` (Réf: ${payment_reference})` : ''
-  await createNotification(c.env.DB, w.member_id, 'success', '💸 Retrait confirmé — Paiement envoyé',
+  await createNotification(c.env.DB, w.member_id, 'success', ' Retrait confirmé — Paiement envoyé',
     `Votre retrait de $${w.net_amount} a été traité et envoyé sur PayPal${refInfo}. Délai de réception : 1-3h selon PayPal.`)
 
   // ── Email retrait approuvé ──
@@ -936,7 +936,7 @@ admin.post('/withdrawals/:id/reject', requirePermission('withdrawals.approve'), 
     `UPDATE withdrawals SET status='rejected', admin_note=?, admin_internal_note=?, updated_at=datetime('now') WHERE id=?`
   ).bind(reason||'Rejeté par admin', admin_internal_note||null, c.req.param('id')).run()
 
-  await createNotification(c.env.DB, w.member_id, 'warning', '⚠️ Retrait refusé — Solde recrédité',
+  await createNotification(c.env.DB, w.member_id, 'warning', '️ Retrait refusé — Solde recrédité',
     `Votre demande de retrait de $${w.amount} a été refusée. Raison : ${reason||'Non précisée'}. Le montant a été automatiquement recrédité dans votre portefeuille.`)
 
   // ── Email retrait rejeté ──
@@ -6718,7 +6718,7 @@ admin.get('/reports/binary-tree', requirePermission('reports.view'), async (c) =
 
   const [networkBalance, depthStats, orphans, topBalanced, holdingTank, withBothLegs] = await Promise.all([
     // Balance réseau = valeur du membre utero 1 (racine opérationnelle = Willy LDR994691)
-    // ⚠️ SUM de tous les membres = double-comptage dans un arbre binaire
+    // ️ SUM de tous les membres = double-comptage dans un arbre binaire
     db.prepare(
       `SELECT
         COALESCE(left_bv_total,0)    as total_left,

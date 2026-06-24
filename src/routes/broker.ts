@@ -246,7 +246,7 @@ broker.get('/triomarkets/webhook', async (c) => {
       // Notification membre
       await createNotification(
         c.env.DB, reg.m_id,
-        '⚠️ Dépôt insuffisant chez Triomarkets',
+        '️ Dépôt insuffisant chez Triomarkets',
         `Votre dépôt de ${amount} ${currency} ne correspond à aucun package disponible (minimum 600$). Un administrateur va examiner votre dossier.`,
         'warning'
       )
@@ -257,7 +257,7 @@ broker.get('/triomarkets/webhook', async (c) => {
          VALUES (?, 'admin', ?, ?, 'warning', 0, datetime('now'))`
       ).bind(
         `notif-admin-${Date.now()}`,
-        '🏦 Dépôt broker insuffisant — action requise',
+        ' Dépôt broker insuffisant — action requise',
         `${reg.first_name} ${reg.last_name} a déposé ${amount} ${currency} chez Triomarkets (click_id: ${click_id}). Montant insuffisant pour activer un package. Assignez manuellement un package depuis l'espace admin.`
       ).run()
 
@@ -286,7 +286,7 @@ broker.get('/triomarkets/webhook', async (c) => {
     // Notification membre
     await createNotification(
       c.env.DB, reg.m_id,
-      '🏦 Package Broker activé !',
+      ' Package Broker activé !',
       `Votre dépôt de ${amount} ${currency} a activé le package ${bestPkg.name} — ${Number(bestPkg.bv_value).toLocaleString()} BV déployés.`,
       'success'
     )
@@ -480,7 +480,7 @@ brokerAdmin.patch('/registrations/:id/assign-package', async (c) => {
   // Notifier le membre
   await createNotification(
     c.env.DB, reg.m_id,
-    '🏦 Package Broker assigné par l\'administrateur',
+    ' Package Broker assigné par l\'administrateur',
     `Votre package ${pkg.name} a été activé manuellement — ${Number(pkg.bv_value).toLocaleString()} BV déployés.`,
     'success'
   )
@@ -682,7 +682,7 @@ brokerAdmin.patch('/registrations/:id/cancel', async (c) => {
   // Notifier le membre
   await createNotification(
     db, memberId,
-    '🚫 Inscription broker annulée — BV et commissions annulés',
+    ' Inscription broker annulée — BV et commissions annulés',
     `Votre inscription Triomarkets a été annulée par un administrateur. ${rollbackSummary.bv_reversed > 0 ? rollbackSummary.bv_reversed + ' BV ont été retirés de votre réseau.' : ''} Contactez le support pour plus d'informations.`,
     'warning'
   )
@@ -1051,7 +1051,7 @@ brokerAdmin.post('/subscriptions/trio-confirm/:id', async (c) => {
 
   // Notification membre
   await createNotification(c.env.DB, renewal.member_id,
-    '✅ Abonnement renouvelé',
+    ' Abonnement renouvelé',
     `Votre paiement Triomarkets pour l'abonnement ${renewal.pkg_name} (${renewal.amount_due}$) a été confirmé pour la période ${renewal.period}.`,
     'success')
 
@@ -1093,7 +1093,7 @@ brokerAdmin.post('/subscriptions/trio-import', async (c) => {
       ).bind(adminId, item.amount_received || renewal.amount_due, item.notes || 'Import CSV', item.id).run()
 
       await createNotification(c.env.DB, renewal.member_id,
-        '✅ Abonnement renouvelé',
+        ' Abonnement renouvelé',
         `Paiement Triomarkets confirmé pour votre abonnement — période ${renewal.id.slice(-6)}.`,
         'success')
 
@@ -1135,7 +1135,7 @@ brokerAdmin.post('/subscriptions/reactivate/:member_id', async (c) => {
   ).bind(order.id).run()
 
   await createNotification(c.env.DB, targetMemberId,
-    '✅ Abonnement réactivé',
+    ' Abonnement réactivé',
     `Votre abonnement ${order.pkg_name} a été réactivé par l'équipe. Bienvenue de retour !`,
     'success')
 
