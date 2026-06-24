@@ -2442,6 +2442,24 @@ export async function processDailyPayments(db: D1Database): Promise<number> {
 
       const amountForThisDay = entry.amount_per_day
 
+      // ── IDs déterministes — clé d'idempotence anti-doublon ────────────────
+      // Format : "dpay-{pwe_id_8chars}-d{dayIndex:02d}-out/in"
+      // Si la transaction existe déjà (INSERT OR IGNORE la rejette silencieusement),
+      // on skip ce jour sans toucher aux wallets ni à days_paid.
+      const pweShort   = entry.id.replace(/-/g, '').substring(0, 12)
+      const txIdDebit  = `dpay-${pweShort}-d${String(dayIndex).padStart(3,'0')}-out`
+      const txIdCredit = `dpay-${pweShort}-d${String(dayIndex).padStart(3,'0')}-in`
+
+      // Vérifier si ce jour a déjà été versé (idempotence stricte)
+      const alreadyPaid = await db.prepare(
+        `SELECT id FROM wallet_transactions WHERE id = ?`
+      ).bind(txIdCredit).first()
+      if (alreadyPaid) {
+        // Transaction déjà présente : days_paid est peut-être en retard, on le rattrape
+        currentDaysPaid++
+        continue
+      }
+
       // Lire les soldes avant ce versement
       const walletSnap = await db.prepare(
         `SELECT balance, pending_balance FROM wallets WHERE member_id = ?`
@@ -2457,13 +2475,14 @@ export async function processDailyPayments(db: D1Database): Promise<number> {
          WHERE member_id = ?`
       ).bind(amountForThisDay, entry.member_id).run()
 
-      // Transaction de sortie du wallet pending
+      // Transaction de sortie du wallet pending (ID déterministe → INSERT OR IGNORE)
       await db.prepare(
-        `INSERT INTO wallet_transactions
+        `INSERT OR IGNORE INTO wallet_transactions
            (id, member_id, wallet_type, transaction_type, amount,
             balance_before, balance_after, description, reference_id)
-         VALUES (lower(hex(randomblob(16))), ?, 'pending', 'debit_transfer', ?, ?, ?, ?, ?)`
+         VALUES (?, ?, 'pending', 'debit_transfer', ?, ?, ?, ?, ?)`
       ).bind(
+        txIdDebit,
         entry.member_id,
         -amountForThisDay,
         balPendingBefore,
@@ -2472,13 +2491,30 @@ export async function processDailyPayments(db: D1Database): Promise<number> {
         entry.id
       ).run()
 
-      // Créditer le portefeuille principal (retirable)
-      await walletOperation(
-        db, entry.member_id, amountForThisDay, 'credit',
+      // Créditer le portefeuille principal (ID déterministe → INSERT OR IGNORE)
+      const mauritiusNowStr = new Date(Date.now() + MAURITIUS_OFFSET_HOURS * 60 * 60 * 1000).toISOString().replace('T', ' ').substring(0, 19)
+      await db.prepare(
+        `UPDATE members SET wallet_balance = wallet_balance + ?, updated_at = datetime('now') WHERE id = ?`
+      ).bind(amountForThisDay, entry.member_id).run()
+      await db.prepare(
+        `UPDATE wallets SET balance = balance + ?, total_earned = total_earned + ?, updated_at = datetime('now') WHERE member_id = ?`
+      ).bind(amountForThisDay, amountForThisDay, entry.member_id).run()
+      await db.prepare(
+        `INSERT OR IGNORE INTO wallet_transactions
+           (id, member_id, wallet_type, transaction_type, amount,
+            balance_before, balance_after, description, reference_id, created_at)
+         VALUES (?, ?, 'principal', ?, ?, ?, ?, ?, ?, ?)`
+      ).bind(
+        txIdCredit,
+        entry.member_id,
         entry.commission_type + '_daily',
+        amountForThisDay,
+        balPrincipalBefore,
+        balPrincipalBefore + amountForThisDay,
         `${labelForSource(entry.commission_type + '_daily')} · ${dayLabel} · $${amountForThisDay.toFixed(2)}/j`,
-        entry.id
-      )
+        entry.id,
+        mauritiusNowStr
+      ).run()
 
       currentDaysPaid++
       paid++
