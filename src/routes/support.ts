@@ -269,7 +269,7 @@ async function buildContextSnapshot(db: D1Database, memberId: string): Promise<s
 }
 
 // ─────────────────────────────────────────────────────────────
-// ██ IA SUPPORT — GPT-4o réponse automatique (invisible membre)
+//  IA SUPPORT — GPT-4o réponse automatique (invisible membre)
 // ─────────────────────────────────────────────────────────────
 
 const LEADER_SYSTEM_PROMPT = `Tu es le Support LEADER, l'assistant officiel de LEADER.
@@ -871,8 +871,8 @@ support.post('/tickets/:id/rate', async (c) => {
 
       // 2. Message interne visible admin uniquement
       const noteText = comment?.trim()
-        ? `⭐ Note qualité : ${rating}/5 — "${comment.trim()}" — Escalade vers support humain requise.`
-        : `⭐ Note qualité : ${rating}/5 — Escalade vers support humain requise.`
+        ? ` Note qualité : ${rating}/5 — "${comment.trim()}" — Escalade vers support humain requise.`
+        : ` Note qualité : ${rating}/5 — Escalade vers support humain requise.`
 
       await c.env.DB.prepare(`
         INSERT INTO support_messages (ticket_id, sender_type, sender_id, sender_name, content, is_internal, created_at)

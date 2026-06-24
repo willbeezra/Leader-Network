@@ -391,7 +391,7 @@
     Object.assign(searchWrap.style, { padding: '8px 10px', borderBottom: '1px solid rgba(255,255,255,0.07)' });
     const searchInput = document.createElement('input');
     searchInput.type = 'text';
-    searchInput.placeholder = '🔍 Rechercher…';
+    searchInput.placeholder = 'Rechercher…';
     Object.assign(searchInput.style, {
       width: '100%', background: 'rgba(255,255,255,0.07)',
       border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px',
@@ -431,7 +431,7 @@
 
     const btn = document.createElement('button');
     btn.id = 'i18n-lang-btn';
-    const cur = _langs.find(l => l.code === _lang) || { flag: '🌐', name: _lang.toUpperCase() };
+    const cur = _langs.find(l => l.code === _lang) || { flag: '', name: _lang.toUpperCase() };
     btn.textContent = cur.flag + ' ' + cur.name;
     Object.assign(btn.style, {
       padding: '8px 14px', borderRadius: '24px',
@@ -457,7 +457,7 @@
   function updateSelectorBtn() {
     const btn = document.getElementById('i18n-lang-btn');
     if (!btn) { buildSelector(); return; }
-    const cur = _langs.find(l => l.code === _lang) || { flag: '🌐', name: _lang.toUpperCase() };
+    const cur = _langs.find(l => l.code === _lang) || { flag: '', name: _lang.toUpperCase() };
     btn.textContent = cur.flag + ' ' + cur.name;
   }
 
@@ -491,7 +491,7 @@
     if (lang === _lang) return;
 
     const btn = document.getElementById('i18n-lang-btn');
-    if (btn) btn.textContent = '⏳ Chargement…';
+    if (btn) btn.textContent = 'Chargement…';
 
     _lang = lang;
     _ready = false;

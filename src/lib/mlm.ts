@@ -2701,16 +2701,16 @@ async function hasValidatedRankByMonthlyBV(db: D1Database, member: any): Promise
  * Calcule le Bonus d'Influence sur 5 niveaux sponsor.
  *
  * CONDITIONS SUR LE BÉNÉFICIAIRE (sponsor qui reçoit) :
- * ① Rang minimum configurable (défaut Leader)
- * ② A parrainé au moins 1 personne ayant acheté un package validé dans le mois
+ *  Rang minimum configurable (défaut Leader)
+ *  A parrainé au moins 1 personne ayant acheté un package validé dans le mois
  *    (si influence_require_parrainage_achat = 'true')
- * ③ A validé son rang via son BV mensuel (jambe min >= seuil rank_config)
+ *  A validé son rang via son BV mensuel (jambe min >= seuil rank_config)
  *    (si influence_min_monthly_bv_ratio = 'true')
  *
  * CONDITIONS SUR LE FILLEUL (source de la prime) :
- * ④ Rang actuel >= rang minimum filleul configurable (défaut Manager)
+ *  Rang actuel >= rang minimum filleul configurable (défaut Manager)
  *    — Administrator exclu quelle que soit la config
- * ⑤ A validé ce rang via son BV mensuel
+ *  A validé ce rang via son BV mensuel
  *
  * Taux par niveau : N1=5%, N2=4%, N3=3%, N4=2%, N5=1% (configurables).
  * Cap partagé depuis la prime du filleul.
@@ -2725,7 +2725,7 @@ async function calculateInfluenceBonus(
   basePrime: number,
   period: string,
   remainingCap: number,
-  skipMonthlyConditions = false   // true en mode rétroactif : ignore ②③ sponsor + ⑤ filleul
+  skipMonthlyConditions = false   // true en mode rétroactif : ignore  sponsor +  filleul
 ): Promise<number> {
 
   // ── Lecture configuration depuis bonus_config ────────────────
@@ -2744,7 +2744,7 @@ async function calculateInfluenceBonus(
   ).all()
 
   // ── Vérification condition filleul (source) ─────────────────
-  // CONDITION ④ : rang filleul >= minFilleulRankIdx ET != Administrator
+  // CONDITION  : rang filleul >= minFilleulRankIdx ET != Administrator
   const filleul = await db.prepare(
     `SELECT * FROM members WHERE id = ?`
   ).bind(memberId).first() as any
@@ -2755,7 +2755,7 @@ async function calculateInfluenceBonus(
   if (filleulRankIdx <= adminRankIdx) return 0
   if (filleulRankIdx < minFilleulRankIdx) return 0
 
-  // CONDITION ⑤ : filleul a validé son rang via BV mensuel
+  // CONDITION  : filleul a validé son rang via BV mensuel
   // Ignorée si skipMonthlyConditions=true (rétroactivité intra-mois activée)
   if (requireMonthlyBV && !skipMonthlyConditions) {
     const filleulValidated = await hasValidatedRankByMonthlyBV(db, filleul)
@@ -2792,18 +2792,18 @@ async function calculateInfluenceBonus(
 
     if (!sponsor) continue
 
-    // ── CONDITION ① : rang bénéficiaire >= minRankIdx ───────────
+    // ── CONDITION  : rang bénéficiaire >= minRankIdx ───────────
     const sponsorRankIdx = getRankIndex(sponsor.current_rank)
     if (sponsorRankIdx < minRankIdx) continue
 
-    // ── CONDITION ② : bénéficiaire a validé son rang via BV mensuel ──
+    // ── CONDITION  : bénéficiaire a validé son rang via BV mensuel ──
     // Ignorée si skipMonthlyConditions=true (rétroactivité intra-mois activée)
     if (requireMonthlyBV && !skipMonthlyConditions) {
       const sponsorValidated = await hasValidatedRankByMonthlyBV(db, sponsor)
       if (!sponsorValidated) continue
     }
 
-    // ── CONDITION ③ : bénéficiaire a parrainé avec achat de package ce mois ──
+    // ── CONDITION  : bénéficiaire a parrainé avec achat de package ce mois ──
     // Ignorée si skipMonthlyConditions=true (rétroactivité intra-mois activée)
     if (requireParrainAchat && !skipMonthlyConditions) {
       // Un filleul direct ayant un package validé dont created_at est dans le mois
@@ -2855,9 +2855,9 @@ async function calculateInfluenceBonus(
  * Bonus de Rayonnement : 10% de la prime RÉELLE de chaque direct
  *
  * CONDITIONS (toutes obligatoires) :
- * ① Package éligible actif : catégorie cat-synex ou cat-club avec price_usd >= prix_min configuré
- * ② Parrainage mensuel     : au moins 1 nouveau filleul direct recruté dans le mois calendaire
- * ③ BV mensuel Captain     : BV cumulés ce mois (left+right+personal) >= seuil configuré (défaut 6000)
+ *  Package éligible actif : catégorie cat-synex ou cat-club avec price_usd >= prix_min configuré
+ *  Parrainage mensuel     : au moins 1 nouveau filleul direct recruté dans le mois calendaire
+ *  BV mensuel Captain     : BV cumulés ce mois (left+right+personal) >= seuil configuré (défaut 6000)
  *
  * Toutes les conditions sont paramétrables depuis le backoffice admin (bonus_config).
  */
@@ -2866,7 +2866,7 @@ async function calculateRayonnementBonus(
   memberId: string,
   period: string,
   remainingCap: number,
-  skipMonthlyConditions = false   // true en mode rétroactif : ignore ② et ③
+  skipMonthlyConditions = false   // true en mode rétroactif : ignore  et 
 ): Promise<void> {
   const member = await db.prepare(`SELECT * FROM members WHERE id = ?`).bind(memberId).first() as any
   if (!member) return
@@ -2888,7 +2888,7 @@ async function calculateRayonnementBonus(
   const minRankIdx = getRankIndex(minRankStr)
   if (rankIdx < minRankIdx) return
 
-  // ── CONDITION ① : Package éligible ─────────────────────────
+  // ── CONDITION  : Package éligible ─────────────────────────
   // Toujours vérifiée, même en mode rétroactif (condition structurelle).
   // Doit posséder un package validé dans les catégories autorisées
   // avec price_usd >= minPackagePrice.
@@ -2922,7 +2922,7 @@ async function calculateRayonnementBonus(
   ).bind(memberId, ...eligibleCats, minPackagePrice).first()
   if (!packageRow) return
 
-  // ── CONDITION ② : Parrainage dans le mois ──────────────────
+  // ── CONDITION  : Parrainage dans le mois ──────────────────
   // Ignorée si skipMonthlyConditions=true (rétroactivité intra-mois activée)
   if (requireParrain && !skipMonthlyConditions) {
     const periodStart = period + '-01'                        // ex. "2026-05-01"
@@ -2941,7 +2941,7 @@ async function calculateRayonnementBonus(
     if (!parrainRow) return
   }
 
-  // ── CONDITION ③ : BV mensuel >= seuil Captain ──────────────
+  // ── CONDITION  : BV mensuel >= seuil Captain ──────────────
   // Ignorée si skipMonthlyConditions=true (rétroactivité intra-mois activée)
   // BV cumulés du mois = left_bv_monthly + right_bv_monthly + personal_bv_monthly
   if (!skipMonthlyConditions) {
@@ -3693,9 +3693,9 @@ export async function recalculBonusRetroactif(
 
   // ── A) Recalcul RAYONNEMENT du membre ─────────────────────────
   // Conditions vérifiées dans calculateRayonnementBonus :
-  //   ① Package éligible (cat-synex/cat-club ≥ 1000$ = DÉVELOPPEMENT minimum) — toujours vérifiée
-  //   ② Parrainage ce mois  → ignorée si retroEnabled
-  //   ③ BV mensuel ≥ seuil  → ignorée si retroEnabled
+  //    Package éligible (cat-synex/cat-club ≥ 1000$ = DÉVELOPPEMENT minimum) — toujours vérifiée
+  //    Parrainage ce mois  → ignorée si retroEnabled
+  //    BV mensuel ≥ seuil  → ignorée si retroEnabled
   if (await isBonusEnabled(db, 'rayonnement_enabled')) {
     // Purge des anciens bonus rayonnement du membre ce mois
     const oldRayRows = await db.prepare(
@@ -3727,11 +3727,11 @@ export async function recalculBonusRetroactif(
   // Pour chaque filleul direct ayant une prime_leadership ce mois,
   // recalculer l'influence que ce filleul génère vers ses sponsors N1..N5.
   // Conditions vérifiées dans calculateInfluenceBonus :
-  //   ① Rang sponsor >= minRank (Leader) — toujours vérifiée
-  //   ② BV mensuel sponsor >= seuil    → ignorée si retroEnabled
-  //   ③ Parrainage sponsor ce mois     → ignorée si retroEnabled
-  //   ④ Rang filleul >= minFilleulRank  — toujours vérifiée
-  //   ⑤ BV mensuel filleul >= seuil    → ignorée si retroEnabled
+  //    Rang sponsor >= minRank (Leader) — toujours vérifiée
+  //    BV mensuel sponsor >= seuil    → ignorée si retroEnabled
+  //    Parrainage sponsor ce mois     → ignorée si retroEnabled
+  //    Rang filleul >= minFilleulRank  — toujours vérifiée
+  //    BV mensuel filleul >= seuil    → ignorée si retroEnabled
   if (await isBonusEnabled(db, 'influence_enabled')) {
     const directsWithPrime = await db.prepare(
       `SELECT c.member_id as filleul_id, c.amount as prime
@@ -4072,7 +4072,7 @@ export async function expireCreditssCroissance(db: D1Database): Promise<number> 
     // Notification au membre
     await createNotification(
       db, entry.member_id, 'warning',
-      '⏳ Crédit de Croissance expiré',
+      ' Crédit de Croissance expiré',
       `Votre Crédit de Croissance de ${residual.toFixed(2)}$ (période ${entry.period}) a expiré faute d'utilisation. Restez actif pour valoriser vos prochains crédits.`
     )
 
@@ -4452,7 +4452,7 @@ export async function processMonthlySubscriptions(db: D1Database): Promise<{
           ).bind(renewalId).run()
 
           await createNotification(db, memberId,
-            '⏳ Renouvellement en attente',
+            ' Renouvellement en attente',
             `Votre abonnement ${order.pkg_name} (${amountDue}$) sera prélevé sur votre dépôt Triomarkets. Aucune action requise de votre part.`,
             'warning')
 

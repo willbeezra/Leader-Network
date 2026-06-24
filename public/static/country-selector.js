@@ -316,7 +316,7 @@ function CountrySelectorInstance(config) {
   // ── Créer le bouton trigger dans le wrapper ──
   wrap.innerHTML = [
     '<button type="button" class="cs-trigger" id="'+config.wrapperId+'-btn" aria-haspopup="listbox" aria-expanded="false">',
-    '  <span class="cs-trigger-flag" id="'+config.wrapperId+'-flag">🌍</span>',
+    '  <span class="cs-trigger-flag" id="'+config.wrapperId+'-flag"></span>',
     '  <span class="cs-trigger-name cs-trigger-placeholder" id="'+config.wrapperId+'-name">'+(config.placeholder||'Sélectionner un pays')+'</span>',
     '  <span class="cs-trigger-dial" id="'+config.wrapperId+'-dial"></span>',
     '  <i class="fas fa-chevron-down cs-trigger-arrow"></i>',
@@ -508,7 +508,7 @@ function CountrySelectorInstance(config) {
   self.getValue = function() { return selected }
   self.reset = function() {
     selected = null
-    flagEl.textContent = '🌍'
+    flagEl.textContent = ''
     nameEl.textContent = config.placeholder || 'Sélectionner un pays'
     nameEl.className = 'cs-trigger-name cs-trigger-placeholder'
     dialEl.textContent = ''

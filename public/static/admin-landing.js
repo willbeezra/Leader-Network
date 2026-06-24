@@ -488,14 +488,14 @@ function buildLandingTestimonialsTab(testimonials) {
           </div>
           <div class="flex gap-1">
             <span class="${t.is_featured ? 'bg-gold-500/20 text-gold-400' : 'bg-gray-700 text-gray-500'} text-xs px-1.5 py-0.5 rounded">
-              ${t.is_featured ? '⭐ Mis en avant' : 'Standard'}
+              ${t.is_featured ? 'Mis en avant' : 'Standard'}
             </span>
           </div>
         </div>
         <div class="flex gap-0.5">
-          ${'★'.repeat(t.rating)}<span class="text-gray-600">${'★'.repeat(5 - t.rating)}</span>
+          ${'*'.repeat(t.rating)}<span class="text-gray-600">${'*'.repeat(5 - t.rating)}</span>
         </div>
-        ${t.transformation ? `<div class="text-gold-400 text-xs font-semibold bg-gold-500/10 rounded-full px-2 py-0.5 inline-block">⚡ ${t.transformation}</div>` : ''}
+        ${t.transformation ? `<div class="text-gold-400 text-xs font-semibold bg-gold-500/10 rounded-full px-2 py-0.5 inline-block"> ${t.transformation}</div>` : ''}
         <p class="text-gray-400 text-xs line-clamp-3 italic">"${t.content}"</p>
         <div class="flex gap-1.5 pt-1 border-t border-dark-600">
           <button onclick="showTestimonialModal(${JSON.stringify(t).replace(/"/g, '&quot;')})"
@@ -537,7 +537,7 @@ function showTestimonialModal(t) {
       <div class="space-y-1.5">
         <label class="text-xs text-gray-400 uppercase tracking-wide">Note (1-5)</label>
         <select id="tm-rating" class="form-input w-full">
-          ${[5,4,3,2,1].map(n => `<option value="${n}" ${isEdit && t.rating === n ? 'selected' : ''}>${'★'.repeat(n)} (${n}/5)</option>`).join('')}
+          ${[5,4,3,2,1].map(n => `<option value="${n}" ${isEdit && t.rating === n ? 'selected' : ''}>${'*'.repeat(n)} (${n}/5)</option>`).join('')}
         </select>
       </div>
       <div class="space-y-1.5 md:col-span-2">
