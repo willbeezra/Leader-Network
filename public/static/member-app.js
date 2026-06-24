@@ -2631,7 +2631,7 @@ window._wizardOpenForCourse = function (courseId, title, priceUsd) {
 
 
     t.accentBg, " ").concat(t.accent, " border ").concat(t.cardBorder, " font-medium\">\n\n          <i class=\"fas fa-chart-bar mr-1 text-xs\"></i>").concat(
-    e.bv_value, " BV\n\n        </span>\n\n        <!-- Point 6 : direct_commission_rate masqu\xE9 c\xF4t\xE9 membre (confidentiel admin) -->\n\n        ").concat(
+    (e.payment_mode==='subscription'?(e.bv_per_payment||e.bv_value)+' BV/mois':e.bv_value+' BV'), "\n\n        </span>\n\n        <!-- Point 6 : direct_commission_rate masqu\xE9 c\xF4t\xE9 membre (confidentiel admin) -->\n\n        ").concat(
 
 
     l > 0 ? "\n\n        <span class=\"text-xs px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium\">\n\n          <i class=\"fas fa-star mr-1 text-xs\"></i>".concat(
