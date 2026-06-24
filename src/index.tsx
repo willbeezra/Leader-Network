@@ -258,6 +258,37 @@ app.post('/api/cron/orchestrateur', async (c) => {
   return c.json({ ok: true, message: 'Orchestrateur démarré en arrière-plan', ts: new Date().toISOString() })
 })
 
+// ── Route cron status — état de configuration ──────────────
+// GET /api/cron/status — retourne si CRON_SECRET est configuré et le prochain cycle
+app.get('/api/cron/status', async (c) => {
+  const adminToken = c.req.header('Authorization')?.replace('Bearer ', '') || ''
+  if (!adminToken) return c.json({ error: 'Non autorisé' }, 401)
+  try {
+    const payload = await verifyJWT(adminToken, (c.env as any).JWT_SECRET || 'leader-secret-2024') as any
+    if (!payload || payload.role !== 'admin') return c.json({ error: 'Non autorisé' }, 401)
+  } catch { return c.json({ error: 'Token invalide' }, 401) }
+
+  const hasCronSecret = !!((c.env as any).CRON_SECRET)
+  const now = new Date()
+  const nextFirst = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+  const msUntil = nextFirst.getTime() - now.getTime()
+  const daysUntil = Math.ceil(msUntil / 86_400_000)
+
+  const lastRun = await c.env.DB.prepare(
+    `SELECT value FROM system_config WHERE key = 'cron_last_run'`
+  ).first() as any
+
+  return c.json({
+    cron_secret_configured: hasCronSecret,
+    cron_url: 'POST /api/cron/orchestrateur',
+    recommended_schedule: '0 2 * * *',
+    next_subscription_billing: nextFirst.toISOString().substring(0, 10),
+    days_until_billing: daysUntil,
+    last_cron_run: lastRun?.value || null,
+    warning: !hasCronSecret ? 'CRON_SECRET non configuré — la route cron est accessible sans authentification !' : null,
+  })
+})
+
 // ── Route publique pour servir les fichiers uploadés ──────────
 // Accessible sans auth — utilisée par les liens admin et membres
 // Le fichier est stocké dans KV (FILES_KV) avec fallback D1 (data_b64)

@@ -12,7 +12,8 @@ import {
   walletOperation, createNotification, orchestrateur, resetMonthlyBV,
   forceRecalcAllRanks, RANK_ORDER, getRankIndex,
   recordCCWithdrawal, getCCBalance,
-  recalculBonusRetroactif, upgradePrimeLeadership, getMauritiusDateStr
+  recalculBonusRetroactif, upgradePrimeLeadership, getMauritiusDateStr,
+  processMonthlySubscriptions
 } from '../lib/mlm.js'
 import type { Bindings } from '../types/index.js'
 import { requirePermission, requireAnyPermission } from '../middleware/permissions.js'
@@ -1770,6 +1771,133 @@ admin.post('/commissions/run-monthly-cycle', requirePermission('commissions.edit
     ranks: { processed: rankResult.processed, changes: rankResult.rankChanges },
     commissions: { processed: commResult.processed, skipped: commResult.skipped, alreadyDone: commResult.alreadyDone },
     dailyPaid
+  })
+})
+
+// ── RENOUVELLEMENTS ABONNEMENTS MENSUELS ──────────────────
+// POST /admin/subscriptions/run-renewals
+// Déclenche manuellement processMonthlySubscriptions pour la période en cours.
+// Idempotent : les abonnements déjà traités ce mois sont ignorés.
+// Crédite automatiquement les BV (bv_per_payment) pour chaque renouvellement payé.
+admin.post('/subscriptions/run-renewals', requirePermission('commissions.edit'), async (c) => {
+  try {
+    const result = await processMonthlySubscriptions(c.env.DB)
+    return c.json({
+      success: true,
+      period: new Date().toISOString().substring(0, 7),
+      ...result,
+    })
+  } catch (err: any) {
+    console.error('[admin/subscriptions/run-renewals] Erreur:', err?.message)
+    return c.json({ error: err?.message || 'Erreur lors du traitement des renouvellements' }, 500)
+  }
+})
+
+// ── LISTE DES RENOUVELLEMENTS (pagination) ─────────────────
+// GET /admin/subscriptions/renewals?period=YYYY-MM&status=&page=1&per_page=25
+admin.get('/subscriptions/renewals', requirePermission('commissions.view'), async (c) => {
+  const period   = c.req.query('period')   || new Date().toISOString().substring(0, 7)
+  const status   = c.req.query('status')   || ''
+  const page     = Math.max(1, parseInt(c.req.query('page')     || '1',  10))
+  const perPage  = Math.min(100, parseInt(c.req.query('per_page') || '25', 10))
+  const offset   = (page - 1) * perPage
+
+  let where = `WHERE sr.period = ?`
+  const params: any[] = [period]
+  if (status) { where += ` AND sr.status = ?`; params.push(status) }
+
+  const total = await c.env.DB.prepare(
+    `SELECT COUNT(*) as cnt FROM subscription_renewals sr ${where}`
+  ).bind(...params).first() as any
+
+  const rows = await c.env.DB.prepare(
+    `SELECT sr.*, m.first_name, m.last_name, m.email, p.name as pkg_name, p.price_monthly
+     FROM subscription_renewals sr
+     JOIN members  m ON m.id = sr.member_id
+     JOIN packages p ON p.id = sr.package_id
+     ${where}
+     ORDER BY sr.created_at DESC
+     LIMIT ? OFFSET ?`
+  ).bind(...params, perPage, offset).all()
+
+  return c.json({
+    renewals: rows.results || [],
+    total: total?.cnt || 0,
+    period,
+    page,
+    per_page: perPage,
+  })
+})
+
+// ── CONFIRMER UN RENOUVELLEMENT TRIO ───────────────────────
+// POST /admin/subscriptions/renewals/:id/confirm-trio
+// Valide manuellement un renouvellement trio_pending (admin confirme que Triomarkets a débité)
+admin.post('/subscriptions/renewals/:id/confirm-trio', requirePermission('commissions.edit'), async (c) => {
+  const renewalId = c.req.param('id')
+  const adminId   = c.get('adminId' as any) as string
+  const { amount_received, notes } = await c.req.json() as any
+
+  const renewal = await c.env.DB.prepare(
+    `SELECT sr.*, p.bv_per_payment, p.bv_value, p.name as pkg_name,
+            po.id as order_id
+     FROM subscription_renewals sr
+     JOIN packages      p  ON p.id  = sr.package_id
+     JOIN package_orders po ON po.id = sr.package_order_id
+     WHERE sr.id = ?`
+  ).bind(renewalId).first() as any
+
+  if (!renewal) return c.json({ error: 'Renouvellement introuvable' }, 404)
+  if (renewal.status !== 'trio_pending') {
+    return c.json({ error: `Statut incompatible : ${renewal.status} (attendu: trio_pending)` }, 409)
+  }
+
+  // 1. Marquer comme confirmé
+  await c.env.DB.prepare(
+    `UPDATE subscription_renewals
+     SET status='trio_confirmed', trio_confirmed_at=datetime('now'),
+         trio_confirmed_by=?, trio_amount_received=?,
+         notes=?, updated_at=datetime('now')
+     WHERE id=?`
+  ).bind(adminId, amount_received || renewal.amount_due, notes || null, renewalId).run()
+
+  // 2. Créditer les BV du renouvellement (bv_per_payment ou bv_value)
+  const bvAmount = (renewal.bv_per_payment > 0 ? renewal.bv_per_payment : renewal.bv_value) || 0
+  if (bvAmount > 0) {
+    const period = renewal.period
+    await c.env.DB.prepare(
+      `UPDATE members SET
+        personal_bv_monthly = personal_bv_monthly + ?,
+        personal_bv_total   = COALESCE(personal_bv_total, 0) + ?,
+        updated_at          = datetime('now')
+       WHERE id = ?`
+    ).bind(bvAmount, bvAmount, renewal.member_id).run()
+
+    await c.env.DB.prepare(
+      `INSERT OR IGNORE INTO bv_logs
+         (id, member_id, source_member_id, bv_amount, bv_type, package_order_id, propagated, period)
+       VALUES (?, ?, ?, ?, 'subscription_renewal', ?, 0, ?)`
+    ).bind(
+      `bvlog-trio-${renewalId}`,
+      renewal.member_id, renewal.member_id, bvAmount,
+      renewal.order_id, period
+    ).run()
+  }
+
+  // 3. Notifier le membre
+  await c.env.DB.prepare(
+    `INSERT INTO notifications (id, member_id, type, title, message, created_at)
+     VALUES (?, ?, 'success', 'Abonnement renouvelé', ?, datetime('now'))`
+  ).bind(
+    `notif-trio-${renewalId}`,
+    renewal.member_id,
+    `Votre abonnement ${renewal.pkg_name} a été confirmé pour ${renewal.period}. ${bvAmount > 0 ? `${bvAmount} BV crédités.` : ''}`
+  ).run()
+
+  return c.json({
+    success: true,
+    renewal_id: renewalId,
+    bv_credited: bvAmount,
+    message: 'Renouvellement Trio confirmé' + (bvAmount > 0 ? ` + ${bvAmount} BV crédités` : ''),
   })
 })
 

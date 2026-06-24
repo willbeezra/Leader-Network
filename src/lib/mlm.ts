@@ -3497,6 +3497,14 @@ export async function orchestrateur(db: D1Database): Promise<any> {
     }
   }
 
+  // Tracer le dernier run dans system_config (pour /api/cron/status)
+  try {
+    await db.prepare(
+      `INSERT INTO system_config (key, value) VALUES ('cron_last_run', ?)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value`
+    ).bind(new Date().toISOString()).run()
+  } catch {}
+
   return { bvResult, rankResult, dailyPaid, commResult, ccExpired, rsUnlocked, bvResetDone, subscriptionResult }
 }
 
@@ -4265,8 +4273,10 @@ export async function checkSubscriptionAccess(
 export async function processMonthlySubscriptions(db: D1Database): Promise<{
   processed: number
   paid_wallet: number
+  paid_cb: number
   trio_pending: number
   already_done: number
+  bv_credited: number
   errors: number
 }> {
   const period      = getMauritiusDateStr().substring(0, 7) // 'YYYY-MM'
@@ -4283,7 +4293,7 @@ export async function processMonthlySubscriptions(db: D1Database): Promise<{
   const enabled       = cfg.subscription_enabled !== '0'
   if (!enabled) {
     console.log('[processMonthlySubscriptions] Système désactivé via subscription_enabled=0')
-    return { processed: 0, paid_wallet: 0, trio_pending: 0, already_done: 0, errors: 0 }
+    return { processed: 0, paid_wallet: 0, paid_cb: 0, trio_pending: 0, already_done: 0, bv_credited: 0, errors: 0 }
   }
 
   const graceDays     = parseInt(cfg.subscription_grace_days     || '7', 10)
@@ -4301,7 +4311,7 @@ export async function processMonthlySubscriptions(db: D1Database): Promise<{
   // ── Récupérer tous les abonnements actifs à prélever ─────────────────────
   const activeOrders = await db.prepare(
     `SELECT po.id, po.member_id, po.package_id,
-            p.price_monthly, p.name as pkg_name,
+            p.price_monthly, p.bv_per_payment, p.bv_value, p.name as pkg_name,
             m.first_name, m.last_name, m.email
      FROM package_orders po
      JOIN packages p ON p.id = po.package_id
@@ -4321,8 +4331,10 @@ export async function processMonthlySubscriptions(db: D1Database): Promise<{
 
   let processed   = 0
   let paidWallet  = 0
+  let paidCB      = 0
   let trioPending = 0
   let alreadyDone = 0
+  let bvCredited  = 0
   let errors      = 0
 
   for (const order of orders) {
@@ -4428,18 +4440,109 @@ export async function processMonthlySubscriptions(db: D1Database): Promise<{
           }
         }
 
-        // ── PRIORITÉ 2 : CB (Stripe/Mollie) — marqué pour implémentation future ─
-        // Le prélèvement CB nécessite la Phase 3 (member_saved_payments + API Stripe)
-        // Pour l'instant on skip proprement et on passe à Trio
+        // ── PRIORITÉ 2 : CB (Stripe/Mollie) via member_saved_payments ─────────
         if (method === 'cb' && !paid) {
-          // Phase 3 — à implémenter : charge Stripe/Mollie via member_saved_payments
-          // Pour l'instant : on enregistre la tentative comme 'no_card' et on passe
-          await db.prepare(
-            `UPDATE subscription_renewals
-             SET cb_tried_at=datetime('now'), cb_result='phase3_not_implemented',
-                 updated_at=datetime('now')
-             WHERE id=?`
-          ).bind(renewalId).run()
+          try {
+            // Chercher une CB Stripe active sauvegardée pour ce membre
+            const savedCard = await db.prepare(
+              `SELECT stripe_customer_id, stripe_pm_id, card_brand, card_last4
+               FROM member_saved_payments
+               WHERE member_id = ? AND provider = 'stripe'
+                 AND is_active = 1 AND is_default = 1
+               LIMIT 1`
+            ).bind(memberId).first() as any
+
+            if (!savedCard?.stripe_customer_id || !savedCard?.stripe_pm_id) {
+              // Pas de CB sauvegardée → enregistrer et passer à la méthode suivante
+              await db.prepare(
+                `UPDATE subscription_renewals
+                 SET cb_tried_at=datetime('now'), cb_result='no_card',
+                     updated_at=datetime('now')
+                 WHERE id=?`
+              ).bind(renewalId).run()
+            } else {
+              // CB présente → tenter le prélèvement via Stripe API
+              const stripeCfg = await db.prepare(
+                `SELECT key, value FROM payment_gateway_config WHERE gateway = 'stripe_api'`
+              ).all()
+              const stripeCfgMap: Record<string, string> = {}
+              for (const r of (stripeCfg.results as any[])) stripeCfgMap[r.key] = r.value
+              const stripeSecretKey = stripeCfgMap['secret_key'] || ''
+
+              if (!stripeSecretKey) {
+                await db.prepare(
+                  `UPDATE subscription_renewals
+                   SET cb_tried_at=datetime('now'), cb_result='no_gateway_config',
+                       updated_at=datetime('now')
+                   WHERE id=?`
+                ).bind(renewalId).run()
+              } else {
+                // Créer un PaymentIntent avec confirm=true (charge immédiate)
+                const stripeBody = new URLSearchParams({
+                  amount:               String(Math.round(amountDue * 100)), // centimes
+                  currency:             'usd',
+                  customer:             savedCard.stripe_customer_id,
+                  payment_method:       savedCard.stripe_pm_id,
+                  confirm:              'true',
+                  off_session:          'true',
+                  description:          `Renouvellement ${order.pkg_name} — ${period}`,
+                  'metadata[member_id]':   memberId,
+                  'metadata[renewal_id]':  renewalId,
+                  'metadata[period]':      period,
+                })
+
+                const stripeRes = await fetch('https://api.stripe.com/v1/payment_intents', {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${stripeSecretKey}`,
+                    'Content-Type':  'application/x-www-form-urlencoded',
+                  },
+                  body: stripeBody.toString(),
+                })
+
+                const stripeJson = await stripeRes.json() as any
+
+                if (stripeJson.status === 'succeeded') {
+                  // Paiement CB réussi
+                  await db.prepare(
+                    `UPDATE subscription_renewals
+                     SET status='paid_cb', payment_method='stripe',
+                         cb_tried_at=datetime('now'), cb_result='ok',
+                         cb_charge_id=?,
+                         updated_at=datetime('now')
+                     WHERE id=?`
+                  ).bind(stripeJson.id, renewalId).run()
+
+                  await createNotification(db, memberId,
+                    'Abonnement renouvelé',
+                    `Votre abonnement ${order.pkg_name} a été renouvelé pour ${period} — ${amountDue}$ prélevés sur votre carte ${savedCard.card_brand?.toUpperCase()} **** ${savedCard.card_last4}.`,
+                    'success')
+
+                  paidCB++
+                  paid = true
+                  console.log(`[processMonthlySubscriptions] CB OK: member=${memberId} amount=${amountDue}$ pi=${stripeJson.id}`)
+                } else {
+                  // Échec CB (carte refusée, authentification requise, etc.)
+                  const declineCode = stripeJson.last_payment_error?.decline_code || stripeJson.last_payment_error?.code || stripeJson.error?.code || 'declined'
+                  await db.prepare(
+                    `UPDATE subscription_renewals
+                     SET cb_tried_at=datetime('now'), cb_result=?,
+                         updated_at=datetime('now')
+                     WHERE id=?`
+                  ).bind(declineCode, renewalId).run()
+                  console.warn(`[processMonthlySubscriptions] CB échouée: member=${memberId} code=${declineCode}`)
+                }
+              }
+            }
+          } catch (cbErr: any) {
+            console.error(`[processMonthlySubscriptions] Erreur CB member=${memberId}:`, cbErr?.message)
+            await db.prepare(
+              `UPDATE subscription_renewals
+               SET cb_tried_at=datetime('now'), cb_result='error',
+                   updated_at=datetime('now')
+               WHERE id=?`
+            ).bind(renewalId).run()
+          }
         }
 
         // ── PRIORITÉ 3 : Triomarkets manuel ───────────────────────────────
@@ -4473,6 +4576,39 @@ export async function processMonthlySubscriptions(db: D1Database): Promise<{
             `Impossible de renouveler votre abonnement ${order.pkg_name}. Contactez le support.`,
             'error')
           errors++
+        }
+      } // fin for (const method of priority)
+
+      // ── Crédit BV post-paiement (wallet OU CB) ────────────────────────────
+      // On crédite les BV dès que le renouvellement est payé (wallet ou CB).
+      // Pour trio_pending : les BV sont crédités lors de la confirmation admin.
+      if (paid) {
+        const bvAmount = order.bv_per_payment > 0 ? order.bv_per_payment : (order.bv_value || 0)
+        if (bvAmount > 0) {
+          try {
+            await db.prepare(
+              `UPDATE members SET
+                personal_bv_monthly = personal_bv_monthly + ?,
+                personal_bv_total   = COALESCE(personal_bv_total, 0) + ?,
+                updated_at          = datetime('now')
+               WHERE id = ?`
+            ).bind(bvAmount, bvAmount, memberId).run()
+
+            await db.prepare(
+              `INSERT INTO bv_logs
+                 (id, member_id, source_member_id, bv_amount, bv_type, package_order_id, propagated, period)
+               VALUES (?, ?, ?, ?, 'subscription_renewal', ?, 0, ?)`
+            ).bind(
+              `bvlog-sub-${renewalId}`,
+              memberId, memberId, bvAmount,
+              order.id, period
+            ).run()
+
+            bvCredited++
+            console.log(`[processMonthlySubscriptions] BV crédités: member=${memberId} bv=${bvAmount}`)
+          } catch (bvErr: any) {
+            console.error(`[processMonthlySubscriptions] Erreur crédit BV member=${memberId}:`, bvErr?.message)
+          }
         }
       }
 
@@ -4514,6 +4650,6 @@ export async function processMonthlySubscriptions(db: D1Database): Promise<{
     console.error('[processMonthlySubscriptions] Vérification suspensions échouée:', suspErr?.message)
   }
 
-  console.log(`[processMonthlySubscriptions] Résultat période ${period}: processed=${processed} paid_wallet=${paidWallet} trio_pending=${trioPending} already_done=${alreadyDone} errors=${errors}`)
-  return { processed, paid_wallet: paidWallet, trio_pending: trioPending, already_done: alreadyDone, errors }
+  console.log(`[processMonthlySubscriptions] Résultat période ${period}: processed=${processed} paid_wallet=${paidWallet} paid_cb=${paidCB} trio_pending=${trioPending} bv_credited=${bvCredited} already_done=${alreadyDone} errors=${errors}`)
+  return { processed, paid_wallet: paidWallet, paid_cb: paidCB, trio_pending: trioPending, already_done: alreadyDone, bv_credited: bvCredited, errors }
 }
