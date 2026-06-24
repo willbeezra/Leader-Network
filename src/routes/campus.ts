@@ -943,16 +943,35 @@ campus.post('/course-order/:orderId/proof', async (c) => {
 
 // Helper : lire la config Stripe depuis la DB
 async function getCampusStripeConfig(db: D1Database, env: any) {
+  // 1. Lire depuis payment_gateway_config (ancien système)
   const rows = await db.prepare(
     `SELECT key, value FROM payment_gateway_config WHERE gateway = 'stripe_api'`
   ).all()
   const map: Record<string, string> = {}
   for (const r of (rows.results as any[])) map[r.key] = r.value
-  return {
-    enabled:   map['enabled'] === 'true',
-    secretKey: map['secret_key'] || (env?.STRIPE_SECRET_KEY as string) || '',
-    publicKey: map['public_key'] || '',
-  }
+
+  // 2. Fallback : lire depuis payment_methods V2 (clé = publishable_key dans V2)
+  let v2PublicKey = '', v2SecretKey = '', v2WebhookSecret = ''
+  try {
+    const v2Row = await db.prepare(
+      `SELECT config FROM payment_methods WHERE provider = 'stripe' AND is_active = 1 LIMIT 1`
+    ).first() as any
+    if (v2Row?.config) {
+      const v2cfg = JSON.parse(v2Row.config)
+      v2PublicKey     = v2cfg['publishable_key'] || v2cfg['public_key'] || ''
+      v2SecretKey     = v2cfg['secret_key'] || ''
+      v2WebhookSecret = v2cfg['webhook_secret'] || ''
+    }
+  } catch {}
+
+  const publicKey  = map['public_key']  || v2PublicKey     || ''
+  const secretKey  = map['secret_key']  || v2SecretKey     || (env?.STRIPE_SECRET_KEY as string) || ''
+  const webhookSec = map['webhook_secret'] || v2WebhookSecret || ''
+  // enabled = true si les clés sont présentes (V2 is_active=1 suffit)
+  const enabledFlag = map['enabled']
+  const enabled    = (enabledFlag === undefined || enabledFlag === 'true') && !!(publicKey && secretKey)
+
+  return { enabled, secretKey, publicKey, webhookSecret: webhookSec }
 }
 
 // POST /campus/stripe/create-payment-intent

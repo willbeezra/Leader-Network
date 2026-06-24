@@ -3817,10 +3817,26 @@ async function getStripeConfig(db: D1Database, env: {
   const cfg: Record<string, string> = {}
   for (const r of (rows.results as any[])) cfg[r.key] = r.value
 
-  const publicKey     = cfg['public_key']     || env.STRIPE_PUBLIC_KEY     || ''
-  const secretKey     = cfg['secret_key']      || env.STRIPE_SECRET_KEY     || ''
-  const webhookSecret = cfg['webhook_secret']  || env.STRIPE_WEBHOOK_SECRET || ''
-  const mode          = cfg['mode']            || (publicKey.startsWith('pk_live') ? 'live' : 'test')
+  // Fallback : lire depuis payment_methods V2 (nouveau système admin)
+  // Le champ public key s'appelle 'publishable_key' dans V2
+  let v2PublicKey = '', v2SecretKey = '', v2WebhookSecret = '', v2Mode = ''
+  try {
+    const v2Row = await db.prepare(
+      `SELECT config FROM payment_methods WHERE provider = 'stripe' AND is_active = 1 LIMIT 1`
+    ).first() as any
+    if (v2Row?.config) {
+      const v2cfg = JSON.parse(v2Row.config)
+      v2PublicKey     = v2cfg['publishable_key'] || v2cfg['public_key'] || ''
+      v2SecretKey     = v2cfg['secret_key'] || ''
+      v2WebhookSecret = v2cfg['webhook_secret'] || ''
+      v2Mode          = v2cfg['mode'] || ''
+    }
+  } catch {}
+
+  const publicKey     = cfg['public_key']     || v2PublicKey     || env.STRIPE_PUBLIC_KEY     || ''
+  const secretKey     = cfg['secret_key']      || v2SecretKey     || env.STRIPE_SECRET_KEY     || ''
+  const webhookSecret = cfg['webhook_secret']  || v2WebhookSecret || env.STRIPE_WEBHOOK_SECRET || ''
+  const mode          = cfg['mode']            || v2Mode          || (publicKey.startsWith('pk_live') ? 'live' : 'test')
   const enabled       = (cfg['enabled'] ?? 'true') !== 'false' && !!(publicKey && secretKey)
 
   const result = { publicKey, secretKey, webhookSecret, mode, enabled }
