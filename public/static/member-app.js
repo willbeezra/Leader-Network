@@ -1564,11 +1564,14 @@ async function _walletPayOrder(){
 }
 
 let _wizardData={};let cp_enabled=!1,_cpCoins="USDT.TRC20,USDT.ERC20,BTC,ETH";
-// NOTE: _tw était une variable globale implicite (Tailwind interne) — remplacée par variable locale sûre
-let _wizardTw={};
-function _wizardReset(){_wizardData={};window._wizardData=_wizardData;_wizardTw={};}
+// _wizardReset : reset UNIQUEMENT les données wizard, sans toucher à window
+// (évite tout setter/Proxy sur window qui causerait un RangeError récursif)
+function _wizardReset(){
+  // Vider les propriétés de l'objet existant plutôt que recréer (évite les setters window)
+  var keys=Object.keys(_wizardData);
+  for(var i=0;i<keys.length;i++){delete _wizardData[keys[i]];}
+}
 // Exposer sur window pour accès inter-fichiers (campus-app.js, etc.)
-window._wizardData=_wizardData;
 window._wizardReset=function(){_wizardReset();};
 window._wizardOpenForCourse=function(courseId,title,priceUsd){
   // Anti-réentrance strict : un seul appel à la fois, lock de 3 secondes

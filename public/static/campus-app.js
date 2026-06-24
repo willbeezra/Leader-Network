@@ -416,50 +416,33 @@ function _renderCampusCatalogOnly(mainContent, courses, categories, hasAccess, c
 
 }
 
-// ── Event delegation GLOBALE pour les cartes 'priced' ────────────────────────
-// Stocke l'AbortController sur window pour survivre aux ré-exécutions du script
-// (SPA : campus-app.js peut être ré-évalué sans rechargement de page)
-function _initCampusPricedDelegate() {
-  // Annuler et retirer TOUT listener précédent (même de sessions passées)
-  if (window._campusPricedAbort) {
-    try { window._campusPricedAbort.abort(); } catch(e) {}
-    window._campusPricedAbort = null;
+// ── Achat direct formation (bouton Acquérir) ─────────────────────────────────
+// Approche : onclick inline sur le bouton → zéro listener sur document
+// Pas d'AbortController, pas de délégation, pas d'accumulation possible.
+// Flag atomique window._campusBuyLock (timestamp) — reset auto 4s.
+// ─────────────────────────────────────────────────────────────────────────────
+window._campusAcquerirClick = function(btn, courseId, coursePrice, courseTitle) {
+  // Bloquer immédiatement les appels multiples (multi-tap, double-clic)
+  var now = Date.now();
+  if (window._campusBuyLock && (now - window._campusBuyLock) < 4000) {
+    console.log('[Campus] achat ignoré — déjà en cours');
+    return;
   }
-  window._campusPricedAbort = new AbortController();
-  var _signal = window._campusPricedAbort.signal;
+  window._campusBuyLock = now;
+  setTimeout(function() { window._campusBuyLock = 0; }, 4000);
 
-  document.addEventListener('click', function _campusPricedHandler(e) {
-    // Vérification que le signal n'est pas révoqué (double sécurité)
-    if (_signal.aborted) return;
+  console.log('[Campus] _campusAcquerirClick — id:', courseId, 'price:', coursePrice);
 
-    const card = e.target.closest('article.campus-card[data-status="priced"]');
-    if (!card) return;
+  if (typeof window._wizardOpenForCourse !== 'function') {
+    window._campusBuyLock = 0;
+    alert('Module de paiement indisponible. Rechargez la page.');
+    return;
+  }
+  window._wizardOpenForCourse(courseId, courseTitle || '', coursePrice);
+};
 
-    // Anti-double-clic : ignorer si wizard déjà en cours
-    if (window._wizardOpenLock && (Date.now() - window._wizardOpenLock) < 3000) {
-      console.log('[Campus] clic ignoré — wizard déjà en cours');
-      return;
-    }
-
-    const courseId    = card.dataset.courseId || '';
-    const coursePrice = parseFloat(card.dataset.coursePrice || '0');
-    const courseTitle = card.querySelector('.campus-card-title')?.textContent?.trim() || '';
-
-    if (!courseId) {
-      console.error('[Campus] data-course-id manquant');
-      return;
-    }
-
-    console.log('[Campus] clic carte priced — id:', courseId, 'price:', coursePrice);
-
-    if (typeof window._wizardOpenForCourse === 'function') {
-      window._wizardOpenForCourse(courseId, courseTitle, coursePrice);
-    } else {
-      console.error('[Campus] window._wizardOpenForCourse non défini !');
-      alert('Module de paiement indisponible. Rechargez la page.');
-    }
-  }, { signal: _signal });
-}
+// Compatibilité : _initCampusPricedDelegate ne fait plus rien (gardé pour ne pas casser d'éventuels appels)
+function _initCampusPricedDelegate() { /* no-op — remplacé par onclick inline */ }
 
 
 function renderCampusCourseCard(course) {
@@ -524,15 +507,16 @@ function renderCampusCourseCard(course) {
   ` : '';
 
   // ── Action au clic ──
-  // Pour 'priced' : pas d'onclick inline — géré par délégation _initCampusPricedDelegate
-  // Pour les autres : onclick inline direct
+  // Toujours un onclick inline direct
   const onClickAction = (status === 'priced') ? '' : `onclick="showCampusCourse('${course.slug}')"` ;
 
   // ── Texte footer ──
   const footerRight = (status === 'included' || status === 'free')
     ? `<span class="campus-card-lessons"><i class="fas fa-play-circle"></i> ${course.total_lessons || 0} ${_t(course.total_lessons > 1 ? 'leçons' : 'leçon')}</span>`
     : status === 'priced'
-      ? `<button class="campus-card-unlock campus-card-buy-btn" style="color:#c9a84c;background:none;border:none;cursor:pointer;padding:0;font:inherit;">
+      ? `<button class="campus-card-unlock campus-card-buy-btn"
+               onclick="event.stopPropagation();window._campusAcquerirClick(this,'${course.id}',${course.price_usd || 0},'${(course.title || '').replace(/'/g, "\\'")}')"
+               style="color:#c9a84c;background:none;border:none;cursor:pointer;padding:0;font:inherit;">
            <i class="fas fa-shopping-cart"></i> Acquérir
          </button>`
       : `<span class="campus-card-unlock"><i class="fas fa-unlock-alt"></i> Débloquer</span>`;
@@ -1759,5 +1743,5 @@ function campusGoToPackages() {
 // ── Init délégation clic cartes priced ───────────────────────────────────────
 // Appelée au chargement du script. Le flag interne empêche tout double-attachement.
 // DOIT être la seule façon de déclencher le wizard pour les cartes priced
-// (aucun onclick inline sur article ou bouton pour les cartes priced).
+// _initCampusPricedDelegate est désormais un no-op — l'appel est conservé pour compatibilité
 _initCampusPricedDelegate();
