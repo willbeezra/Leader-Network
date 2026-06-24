@@ -1342,6 +1342,30 @@ export async function activateAndReward(
   let bvAmount: number
   const isUpgrade = order.product_type === 'upgrade' && order.upgrade_from_package_id
 
+  // ── Désactivation ancienne subscription lors d'un upgrade subscription ─────
+  // Si le nouveau package est un abonnement (subscription), l'ancienne commande
+  // subscription doit être annulée au moment de l'activation pour éviter
+  // que les deux apparaissent comme "Abonnement actif" dans le frontend.
+  if (isUpgrade && order.payment_mode === 'subscription') {
+    try {
+      await db.prepare(
+        `UPDATE package_orders
+         SET activation_done = 0,
+             status = 'cancelled',
+             rejection_reason = ?,
+             updated_at = datetime('now')
+         WHERE id = ? AND activation_done = 1 AND status = 'validated'`
+      ).bind(
+        `Supersédé par upgrade vers ${order.package_id}`,
+        order.upgrade_from_package_id
+      ).run()
+      console.log(`[activateAndReward] Ancienne subscription ${order.upgrade_from_package_id} désactivée (upgrade vers ${order.package_id})`)
+    } catch (err: any) {
+      console.error('[activateAndReward] Désactivation ancienne subscription échouée (non bloquant):', err?.message)
+    }
+  }
+  // ───────────────────────────────────────────────────────────────────────────
+
   if (isUpgrade && order.upgrade_diff_bv !== null && order.upgrade_diff_bv !== undefined) {
     // Upgrade : utiliser le BV différentiel pré-calculé à la création de la commande
     bvAmount = Math.max(0, order.upgrade_diff_bv)
