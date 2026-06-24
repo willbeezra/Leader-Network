@@ -2030,13 +2030,17 @@ members.post('/packages/upgrade', async (c) => {
 
   if (!currentOrder) return c.json({ error: 'Aucun package actif à upgrader' }, 400)
 
-  // 3. Valider que le package cible est supérieur en BV
+  // 3. Valider que le package cible est supérieur (en BV ou en prix)
   const currentBV  = currentOrder.pkg_bv || 0
   const targetBV   = targetPkg.bv_value  || 0
   const diffBV     = targetBV - currentBV
   const diffAmount = targetPkg.price_usd - (currentOrder.pkg_price || 0)
 
-  if (diffBV <= 0) return c.json({ error: 'Le package cible doit avoir plus de BV que le package actuel' }, 400)
+  // Pour les packages sans BV (ex: abonnements subscription à 0 BV),
+  // on accepte l'upgrade si le prix cible est supérieur
+  if (diffBV <= 0 && diffAmount <= 0) {
+    return c.json({ error: 'Le package cible doit être supérieur au package actuel (prix ou BV)' }, 400)
+  }
 
   // 4. Calculer frais admin selon admin_fee_mode (once/multiple)
   const [feeActiveRow, feeAmountRow, feeModeRow, memberRow] = await Promise.all([
@@ -2103,7 +2107,7 @@ members.post('/packages/upgrade', async (c) => {
     payment_method,
     currentOrder.id,           // upgrade_from_package_id
     Math.max(0, diffAmount),
-    diffBV,                    // upgrade_diff_bv = BV effectivement propagé
+    Math.max(0, diffBV),           // upgrade_diff_bv = BV différentiel (0 pour packages sans BV)
     adminFeeAmount
   ).run()
 
