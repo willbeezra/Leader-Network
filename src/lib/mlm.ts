@@ -2301,13 +2301,23 @@ export async function processDailyPayments(db: D1Database): Promise<number> {
 
   // ── VERROU GLOBAL : une seule exécution par jour (clé système) ────────────
   // Protection contre les appels concurrents (plusieurs Workers en parallèle)
+  // TTL 23h : si le verrou est plus vieux que 23h (run planté après pose du verrou),
+  // il est considéré orphelin et supprimé pour permettre le rattrapage.
   const lockKey = `daily_payment_lock_${todayStr}`
   const existingLock = await db.prepare(
-    `SELECT value FROM system_config WHERE key = ?`
+    `SELECT value, updated_at FROM system_config WHERE key = ?`
   ).bind(lockKey).first() as any
   if (existingLock) {
-    console.log(`[processDailyPayments] Déjà exécuté aujourd'hui (${todayStr}) — verrou actif`)
-    return 0
+    const lockAgeMs = Date.now() - new Date(existingLock.updated_at + 'Z').getTime()
+    if (lockAgeMs < 23 * 60 * 60 * 1000) {
+      // Verrou frais (< 23h) : run déjà effectué aujourd'hui, on skip normalement
+      console.log(`[processDailyPayments] Déjà exécuté aujourd'hui (${todayStr}) — verrou actif`)
+      return 0
+    }
+    // Verrou orphelin (> 23h) : le run précédent a planté après avoir posé le verrou
+    // On le supprime pour rejouer le rattrapage
+    console.warn(`[processDailyPayments] Verrou orphelin détecté (${todayStr}, âge ${Math.round(lockAgeMs/3600000)}h) — suppression et relance`)
+    await db.prepare(`DELETE FROM system_config WHERE key = ?`).bind(lockKey).run()
   }
   // Poser le verrou atomiquement (INSERT OR IGNORE évite les doublons)
   await db.prepare(
