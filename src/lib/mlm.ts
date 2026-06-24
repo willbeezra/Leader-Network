@@ -2395,7 +2395,7 @@ export async function processDailyPayments(db: D1Database): Promise<number> {
     // today_day_index = index 0-based d'aujourd'hui dans le mois M+1
     const todayDayIndex    = Math.min(
       Math.floor((todayMs - startMs) / (1000 * 60 * 60 * 24)),
-      entry.days_in_month - 1  // plafonner au dernier jour du mois
+      entry.days_in_month - 1  // plafonner au dernier jour alloué (= dernier jour du mois)
     )
 
     // On doit payer les jours dont l'index est entre days_paid et todayDayIndex inclus

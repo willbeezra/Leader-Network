@@ -1311,7 +1311,36 @@ members.get('/wallet-history', async (c) => {
       const remaining  = Math.max(0, e.total_amount - released)
       const progress   = e.days_in_month > 0 ? Math.round((e.days_paid / e.days_in_month) * 100) : 0
       const daysPaid   = e.days_paid || 0
-      const daysLeft   = Math.max(0, (e.days_in_month || 0) - daysPaid)
+
+      // Calculer daysLeft = jours encore à verser à partir de DEMAIN
+      // (les jours entre days_paid et aujourd'hui inclus seront versés ce soir en rattrapage)
+      // Formule : days_in_month - max(days_paid, todayDayIndex+1)
+      // où todayDayIndex = nb de jours écoulés depuis start_date (aujourd'hui inclus, index 0-based)
+      let daysLeft = Math.max(0, (e.days_in_month || 0) - daysPaid)
+      if (e.start_date && e.eligible_date && e.status === 'active') {
+        const startMs     = Date.UTC(
+          parseInt(e.start_date.substring(0, 4)),
+          parseInt(e.start_date.substring(5, 7)) - 1,
+          parseInt(e.start_date.substring(8, 10))
+        )
+        // Heure de Maurice = UTC+4
+        const nowMauritius = new Date(Date.now() + 4 * 60 * 60 * 1000)
+        const todayStr     = nowMauritius.toISOString().substring(0, 10)
+        const todayMs      = Date.UTC(
+          parseInt(todayStr.substring(0, 4)),
+          parseInt(todayStr.substring(5, 7)) - 1,
+          parseInt(todayStr.substring(8, 10))
+        )
+        // Index 0-based du jour aujourd'hui dans la fenêtre de versement
+        const todayDayIndex = Math.min(
+          Math.floor((todayMs - startMs) / (1000 * 60 * 60 * 24)),
+          (e.days_in_month || 30) - 1
+        )
+        // Les versements DUS ce soir = index days_paid..todayDayIndex (tous versés dans ce run)
+        // Jours RESTANTS après ce soir = days_in_month - (todayDayIndex + 1)
+        const paidAfterTonightRun = Math.max(daysPaid, todayDayIndex + 1)
+        daysLeft = Math.max(0, (e.days_in_month || 0) - paidAfterTonightRun)
+      }
 
       // Calculer end_date = start_date + days_in_month jours
       let endDate: string | null = null
