@@ -540,21 +540,7 @@ function renderCampusCourseCard(course) {
   `;
 }
 
-// ── Ouvre le wizard d'achat pour une formation payante ───────────────────────
-// Appelée depuis onclick inline sur la carte ET sur le bouton "Acquérir".
-// Lit le courseId et price directement depuis les paramètres (pas de data-*).
-function _campusOpenPricedWizard(courseId, priceUsd, el) {
-  // Récupère le titre depuis la carte parente
-  const card = el && el.closest ? el.closest('article.campus-card') : null;
-  const courseTitle = card ? (card.querySelector('.campus-card-title')?.textContent?.trim() || '') : '';
-  console.log('[Campus] _campusOpenPricedWizard — id:', courseId, 'price:', priceUsd, 'title:', courseTitle);
-  if (typeof window._wizardOpenForCourse === 'function') {
-    window._wizardOpenForCourse(courseId, courseTitle, priceUsd);
-  } else {
-    console.error('[Campus] window._wizardOpenForCourse non défini !');
-    alert('Le module de paiement n\'est pas disponible. Rechargez la page.');
-  }
-}
+// _campusOpenPricedWizard supprimée — remplacée par redirection vers /campus/acheter/:courseId
 
 function campusFilterBy(catId) {
   document.querySelectorAll('.campus-filter-tab').forEach(btn => btn.classList.remove('active'));
@@ -1724,8 +1710,7 @@ function campusGoToPackages() {
   }
 }
 
-// ── Init délégation clic cartes priced ───────────────────────────────────────
-// Appelée au chargement du script. Le flag interne empêche tout double-attachement.
-// DOIT être la seule façon de déclencher le wizard pour les cartes priced
-// _initCampusPricedDelegate est désormais un no-op — l'appel est conservé pour compatibilité
+// ── Init compatibilité (no-op) ────────────────────────────────────────────────
+// _initCampusPricedDelegate ne fait plus rien — conservé pour éviter toute erreur
+// L'achat se fait exclusivement via /campus/acheter/:courseId (campus-buy.js)
 _initCampusPricedDelegate();
