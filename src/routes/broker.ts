@@ -751,7 +751,9 @@ broker.post('/synex-libre/redirect', memberAuth, async (c) => {
        AND p.payment_mode = 'subscription' AND p.pricing_type = 'monthly'
      ORDER BY po.created_at DESC LIMIT 1`
   ).bind(memberId).first() as any
-  const packageId = activeOrder?.package_id || 'pkg-synex-libre-essentiel'
+  // packageId issu de la DB uniquement — aucun fallback hardcodé
+  const packageId = activeOrder?.package_id || null
+  if (!packageId) return c.json({ error: 'Aucun abonnement actif trouvé' }, 403)
 
   // Idempotence : vérifier si déjà une registration active pour synex-libre
   const existing = await db.prepare(
@@ -815,7 +817,9 @@ broker.post('/kronex/redirect', memberAuth, async (c) => {
        AND p.payment_mode = 'subscription' AND p.pricing_type = 'monthly'
      ORDER BY po.created_at DESC LIMIT 1`
   ).bind(memberId).first() as any
-  const packageId = activeOrder?.package_id || 'pkg-synex-libre-essentiel'
+  // packageId issu de la DB uniquement — aucun fallback hardcodé
+  const packageId = activeOrder?.package_id || null
+  if (!packageId) return c.json({ error: 'Aucun abonnement actif trouvé' }, 403)
 
   const existing = await db.prepare(
     `SELECT id, status FROM broker_registrations
