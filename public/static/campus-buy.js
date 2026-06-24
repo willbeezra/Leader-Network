@@ -116,7 +116,7 @@
     showSection('cb-course-info');
     setHtml('cb-course-info', '<div class="cb-loader"><div class="cb-spinner"></div>Chargement de la formation\u2026</div>');
 
-    xhr('GET', '/campus/', null, function(data) {
+    xhr('GET', '/campus', null, function(data) {
       var courses = data.courses || [];
       var found = null;
       for (var i = 0; i < courses.length; i++) {
