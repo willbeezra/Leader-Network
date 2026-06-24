@@ -2980,6 +2980,23 @@ admin.post('/package-categories/create', requirePermission('packages.edit'), asy
   return c.json({ id }, 201)
 })
 
+// DELETE /admin/package-categories/:id — supprimer une catégorie (si aucun package actif)
+admin.delete('/package-categories/:id', requirePermission('packages.edit'), async (c) => {
+  const id = c.req.param('id')
+  // Vérifier que la catégorie existe
+  const cat = await c.env.DB.prepare(`SELECT * FROM package_categories WHERE id = ?`).bind(id).first() as any
+  if (!cat) return c.json({ error: 'Catégorie introuvable' }, 404)
+  // Compter les packages liés
+  const countRow = await c.env.DB.prepare(
+    `SELECT COUNT(*) as cnt FROM packages WHERE category_id = ?`
+  ).bind(id).first() as any
+  if (countRow && countRow.cnt > 0) {
+    return c.json({ error: `Impossible de supprimer : ${countRow.cnt} package(s) lié(s) à cette catégorie. Supprimez-les d'abord.` }, 409)
+  }
+  await c.env.DB.prepare(`DELETE FROM package_categories WHERE id = ?`).bind(id).run()
+  return c.json({ success: true })
+})
+
 // ── FRAIS ADMIN — Actions sur un membre (CDC v2 A11) ────────
 
 // POST /admin/members/:id/mark-admin-fee-paid — marquer frais admin comme payés manuellement

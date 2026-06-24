@@ -2787,23 +2787,33 @@ async function brokerRedirect(pkgId, pkgNameEnc, evt) {
   }
 }
 async function serviceRedirect(type, btnEl) {
+  var label = type === 'synex-libre' ? 'Synex' : 'Kronex';
+  var resetBtn = function() {
+    if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = '<i class="fas fa-external-link-alt mr-1"></i>' + label; }
+  };
   if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Ouverture…'; }
+  // Ouvrir la fenêtre AVANT l'appel async pour éviter le blocage popup
+  var newWin = window.open('about:blank', '_blank');
   try {
     var r = await api('POST', '/broker/' + type + '/redirect', {});
     if (r && r.url) {
-      var a = document.createElement('a');
-      a.href = r.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
-      a.style.display = 'none'; document.body.appendChild(a); a.click();
-      setTimeout(function(){ document.body.removeChild(a); }, 1000);
-      showToast('Accès ' + (type === 'synex-libre' ? 'Synex' : 'Kronex') + ' ouvert', 'success');
-      if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = '<i class="fas fa-external-link-alt mr-1"></i>' + (type === 'synex-libre' ? 'Synex' : 'Kronex'); }
+      if (newWin && !newWin.closed) {
+        newWin.location.href = r.url;
+      } else {
+        // Fallback si popup bloqué malgré tout
+        window.location.href = r.url;
+      }
+      showToast('Accès ' + label + ' ouvert', 'success');
+      resetBtn();
     } else {
+      if (newWin) newWin.close();
       showToast('Erreur : lien non disponible', 'error');
-      if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = '<i class="fas fa-external-link-alt mr-1"></i>' + (type === 'synex-libre' ? 'Synex' : 'Kronex'); }
+      resetBtn();
     }
   } catch(err) {
+    if (newWin) newWin.close();
     showToast(err && err.error || 'Erreur de redirection', 'error');
-    if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = '<i class="fas fa-external-link-alt mr-1"></i>' + (type === 'synex-libre' ? 'Synex' : 'Kronex'); }
+    resetBtn();
   }
 }function renderMyOrders(e) {if (!e || 0 === e.length) return "";const t = { pending: "En attente de paiement", proof_submitted: "Preuve soumise — en vérification", validated: "Validé ✓", rejected: "Rejeté", active: "Actif" },n = { pending: "text-yellow-400 bg-yellow-500/10 border-yellow-500/30", proof_submitted: "text-blue-400 bg-blue-500/10 border-blue-500/30", validated: "text-green-400 bg-green-500/10 border-green-500/30", rejected: "text-red-400 bg-red-500/10 border-red-500/30", active: "text-green-400 bg-green-500/10 border-green-500/30" };return "\n\n  <div class=\"bg-dark-800 rounded-2xl border border-dark-600 overflow-hidden\">\n\n    <div class=\"px-6 py-4 border-b border-dark-600 flex items-center justify-between\">\n\n      <h3 class=\"font-semibold flex items-center gap-2\"><i class=\"fas fa-list text-rouge-400\"></i>Mes commandes</h3>\n\n      <span class=\"text-xs text-gray-500\">".concat(
 
