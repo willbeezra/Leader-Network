@@ -714,6 +714,7 @@ brokerAdmin.get('/packages', async (c) => {
 
 // ── POST /api/broker/synex-libre/redirect ─────────────────────────────────────
 broker.post('/synex-libre/redirect', memberAuth, async (c) => {
+  try {
   const memberId = c.get('memberId')
   const db = c.env.DB
 
@@ -778,10 +779,15 @@ broker.post('/synex-libre/redirect', memberAuth, async (c) => {
   const redirectUrl = `${baseUrl}${sep}click_id=${regId}&utm_source=leader_network&utm_medium=synex_libre`
 
   return c.json({ url: redirectUrl, registration_id: regId })
+  } catch (err: any) {
+    console.error('[synex-libre/redirect] CRASH:', err?.message, err?.stack)
+    return c.json({ error: 'Erreur interne: ' + (err?.message || String(err)) }, 500)
+  }
 })
 
 // ── POST /api/broker/kronex/redirect ─────────────────────────────────────────
 broker.post('/kronex/redirect', memberAuth, async (c) => {
+  try {
   const memberId = c.get('memberId')
   const db = c.env.DB
 
@@ -842,6 +848,10 @@ broker.post('/kronex/redirect', memberAuth, async (c) => {
   const redirectUrl = `${baseUrl}${sep}click_id=${regId}&utm_source=leader_network&utm_medium=kronex`
 
   return c.json({ url: redirectUrl, registration_id: regId })
+  } catch (err: any) {
+    console.error('[kronex/redirect] CRASH:', err?.message, err?.stack)
+    return c.json({ error: 'Erreur interne: ' + (err?.message || String(err)) }, 500)
+  }
 })
 
 // ── GET /api/broker/subscription/status ───────────────────────────────────────
