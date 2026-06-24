@@ -777,7 +777,7 @@ function cardVerifyHTML(
   const logoUri   = branding?.logoUri || ''
 
   const statusColors: Record<string, string> = {
-    valid: '#10B981', expired: '#A02820', revoked: '#EF4444', not_found: '#6B7280', invalid: '#6B7280',
+    valid: '#10B981', expired: '#E05040', revoked: '#EF4444', not_found: '#6B7280', invalid: '#6B7280',
   }
   const statusLabels: Record<string, string> = {
     valid: '✓ CARTE VALIDE', expired: 'LICENCE EXPIREE', revoked: '✗ CARTE RÉVOQUÉE',
@@ -1042,10 +1042,10 @@ function registerHTML(opts: RegisterHTMLOpts): string {
       border-radius:0.75rem; padding:0.75rem 1rem; color:#fff;
       outline:none; transition:border-color .2s;
     }
-    .input-field:focus { border-color:#791E15; }
+    .input-field:focus { border-color:#C03020; }
     .input-field::placeholder { color:#6B7280; }
     .btn-rouge {
-      width:100%; background:linear-gradient(135deg,#791E15,#A02820,#791E15);
+      width:100%; background:linear-gradient(135deg,#C03020,#E05040,#C03020);
       color:#FFFFFF; font-weight:700; padding:0.875rem; border-radius:0.75rem;
       border:none; cursor:pointer; font-size:1rem; transition:opacity .2s;
     }
@@ -1063,10 +1063,10 @@ function registerHTML(opts: RegisterHTMLOpts): string {
       background:#1A1A26; display:flex; align-items:center; justify-content:center;
       font-size:0.75rem; font-weight:700; color:#6B7280; transition:all .3s;
     }
-    .ms-step-circle.active { border-color:#791E15; background:rgba(121,30,21,0.15); color:#A02820; }
+    .ms-step-circle.active { border-color:#C03020; background:rgba(192,48,32,0.15); color:#E05040; }
     .ms-step-circle.done   { border-color:#10B981; background:#10B981; color:#fff; }
     .ms-step-label { font-size:0.65rem; color:#6B7280; margin-top:0.25rem; text-align:center; }
-    .ms-step-label.active { color:#A02820; }
+    .ms-step-label.active { color:#E05040; }
     .ms-step-label.done   { color:#10B981; }
     .ms-step-line { flex:1; height:2px; background:#22223A; margin:0 0.25rem; margin-bottom:1.1rem; }
     .ms-step-line.done { background:#10B981; }
@@ -1074,11 +1074,11 @@ function registerHTML(opts: RegisterHTMLOpts): string {
     .ms-section { display:none; }
     .ms-section.active { display:block; }
     .btn-outline-rouge {
-      background:transparent; border:1px solid #791E15; color:#A02820;
+      background:transparent; border:1px solid #C03020; color:#E05040;
       border-radius:0.75rem; padding:0.75rem 1.5rem; cursor:pointer;
       font-weight:600; transition:all .2s;
     }
-    .btn-outline-rouge:hover { background:rgba(121,30,21,0.12); }
+    .btn-outline-rouge:hover { background:rgba(192,48,32,0.12); }
   </style>
   <script src="/static/country-selector.js"></script>
 </head>
@@ -1088,7 +1088,7 @@ function registerHTML(opts: RegisterHTMLOpts): string {
 
   <!-- LOGO -->
   <div class="text-center mb-8">
-    <a href="/" class="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 shadow-lg" style="background:linear-gradient(135deg,#791E15,#5A1510)">
+    <a href="/" class="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 shadow-lg" style="background:linear-gradient(135deg,#C03020,#8A1E10)">
       <i class="fas fa-crown text-dark-900 text-2xl"></i>
     </a>
     <h1 class="text-2xl font-bold text-white">LEADER</h1>
@@ -1098,8 +1098,8 @@ function registerHTML(opts: RegisterHTMLOpts): string {
   <!-- ÉTAPE 1 : CHARGEMENT (M2/M3 — validation du lien) -->
   <div id="step-loading" class="step active">
     <div class="bg-dark-800 rounded-2xl border border-dark-600 p-10 text-center">
-      <div class="inline-flex items-center justify-center w-14 h-14 rounded-full mb-4" style="background:rgba(121,30,21,0.2)">
-        <i class="fas fa-spinner fa-spin text-2xl" style="color:#791E15"></i>
+      <div class="inline-flex items-center justify-center w-14 h-14 rounded-full mb-4" style="background:rgba(192,48,32,0.2)">
+        <i class="fas fa-spinner fa-spin text-2xl" style="color:#C03020"></i>
       </div>
       <p class="text-gray-300">Vérification du lien en cours…</p>
     </div>
@@ -1110,8 +1110,8 @@ function registerHTML(opts: RegisterHTMLOpts): string {
     <div class="bg-dark-800 rounded-2xl border border-dark-600 p-8 fade-in">
 
       <!-- Bandeau parrain (M2/M3) -->
-      <div id="sponsor-banner" class="hidden mb-5 rounded-xl px-4 py-3 flex items-start gap-3" style="background:rgba(121,30,21,0.1);border:1px solid rgba(121,30,21,0.3)">
-        <i class="fas fa-user-check mt-0.5 flex-shrink-0" style="color:#A02820"></i>
+      <div id="sponsor-banner" class="hidden mb-5 rounded-xl px-4 py-3 flex items-start gap-3" style="background:rgba(192,48,32,0.1);border:1px solid rgba(192,48,32,0.3)">
+        <i class="fas fa-user-check mt-0.5 flex-shrink-0" style="color:#E05040"></i>
         <div>
           <div class="text-sm font-semibold" id="sponsor-banner-name" style="color:#C03020"></div>
           <div class="text-xs mt-0.5" id="sponsor-banner-detail" style="color:rgba(160,40,32,0.7)"></div>
@@ -1190,7 +1190,7 @@ function registerHTML(opts: RegisterHTMLOpts): string {
         <div id="r-phone-field">
           <label class="block text-xs text-gray-400 mb-1.5">Numéro de téléphone <span id="r-phone-req" class="text-red-400 hidden">*</span></label>
           <div class="flex gap-2 items-center">
-            <span id="r-dial-display" style="background:#1a1a2e;border:1px solid #374151;border-radius:0.75rem;padding:0.75rem 0.6rem;color:#791E15;font-weight:600;font-size:0.85rem;white-space:nowrap;flex-shrink:0">+33</span>
+            <span id="r-dial-display" style="background:#1a1a2e;border:1px solid #374151;border-radius:0.75rem;padding:0.75rem 0.6rem;color:#C03020;font-weight:600;font-size:0.85rem;white-space:nowrap;flex-shrink:0">+33</span>
             <input id="r-phone" type="tel" placeholder="6 00 00 00 00" autocomplete="tel" class="input-field">
           </div>
         </div>
@@ -1241,7 +1241,7 @@ function registerHTML(opts: RegisterHTMLOpts): string {
         <div class="flex items-start gap-3 pt-1">
           <input id="r-cgu" type="checkbox" class="mt-0.5 w-4 h-4 rounded accent-yellow-500 flex-shrink-0">
           <label for="r-cgu" class="text-sm text-gray-400 leading-relaxed">
-            J'accepte les <button type="button" onclick="showCGU()" class="hover:underline" style="color:#A02820">conditions générales d'utilisation</button>
+            J'accepte les <button type="button" onclick="showCGU()" class="hover:underline" style="color:#E05040">conditions générales d'utilisation</button>
             et la politique de confidentialité de LEADER. <span class="text-red-400">*</span>
           </label>
         </div>
@@ -1268,7 +1268,7 @@ function registerHTML(opts: RegisterHTMLOpts): string {
       </div>
 
       <div class="mt-4 text-center">
-        <a href="/" class="text-sm hover:underline" style="color:#A02820">
+        <a href="/" class="text-sm hover:underline" style="color:#E05040">
           <i class="fas fa-arrow-left mr-1 text-xs"></i>Déjà membre ? Se connecter
         </a>
       </div>
@@ -1277,9 +1277,9 @@ function registerHTML(opts: RegisterHTMLOpts): string {
 
   <!-- ÉTAPE 3 : CONFIRMATION PIN (affichée une seule fois) -->
   <div id="step-pin" class="step">
-    <div class="bg-dark-800 rounded-2xl p-8 fade-in" style="border:1px solid rgba(121,30,21,0.4)">
+    <div class="bg-dark-800 rounded-2xl p-8 fade-in" style="border:1px solid rgba(192,48,32,0.4)">
       <div class="text-center mb-6">
-        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 shadow-lg" style="background:linear-gradient(135deg,#791E15,#5A1510)">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 shadow-lg" style="background:linear-gradient(135deg,#C03020,#8A1E10)">
           <i class="fas fa-shield-halved text-dark-900 text-2xl"></i>
         </div>
         <h2 class="text-2xl font-bold text-white">Compte créé avec succès !</h2>
@@ -1308,7 +1308,7 @@ function registerHTML(opts: RegisterHTMLOpts): string {
       </div>
       <h2 class="text-xl font-bold text-white mb-2">Lien invalide ou expiré</h2>
       <p class="text-gray-400 text-sm mb-6" id="invalid-message">Ce lien d'inscription n'est plus disponible.</p>
-      <a href="/" class="inline-flex items-center gap-2 text-sm" style="color:#A02820">
+      <a href="/" class="inline-flex items-center gap-2 text-sm" style="color:#E05040">
         <i class="fas fa-arrow-left text-xs"></i> Retour à l'accueil
       </a>
     </div>
@@ -1718,9 +1718,9 @@ function showPinConfirmation(data) {
 
   document.getElementById('pin-content').innerHTML = \`
     <!-- Identifiant unique -->
-    <div class="bg-dark-700 rounded-xl p-4" style="border:1px solid rgba(121,30,21,0.3)">
+    <div class="bg-dark-700 rounded-xl p-4" style="border:1px solid rgba(192,48,32,0.3)">
       <div class="text-xs text-gray-400 uppercase tracking-wider mb-1">Votre identifiant unique</div>
-      <div class="text-3xl font-bold font-mono tracking-widest text-center py-1" style="color:#A02820">
+      <div class="text-3xl font-bold font-mono tracking-widest text-center py-1" style="color:#E05040">
         \${member.unique_id || '—'}
       </div>
       <div class="text-xs text-gray-500 text-center mt-1">
@@ -1756,7 +1756,7 @@ function showPinConfirmation(data) {
       </div>
       <div class="flex justify-between items-center">
         <span class="text-gray-400">Méthode</span>
-        <span class="text-xs font-medium" style="color:#A02820">\${modeLabel}</span>
+        <span class="text-xs font-medium" style="color:#E05040">\${modeLabel}</span>
       </div>
       <div class="flex justify-between items-center">
         <span class="text-gray-400">Statut</span>
@@ -1842,10 +1842,10 @@ function memberHTML(opts: MemberHTMLOpts = {}, branding: BrandingPublic = { logo
   // Logo HTML : image si dispo, sinon icône couronne fallback
   const logoImgMember = branding.logoUri
     ? `<img src="${branding.logoUri}" alt="${branding.networkName}" style="max-height:40px;max-width:140px;object-fit:contain;" class="block">`
-    : `<div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:linear-gradient(135deg,#791E15,#5A1510)"><i class="fas fa-crown text-white text-lg"></i></div>`
+    : `<div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:linear-gradient(135deg,#C03020,#8A1E10)"><i class="fas fa-crown text-white text-lg"></i></div>`
   const logoImgMemberLg = branding.logoUri
     ? `<img src="${branding.logoUri}" alt="${branding.networkName}" style="max-height:56px;max-width:180px;object-fit:contain;" class="block mx-auto">`
-    : `<div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 shadow-lg" style="background:linear-gradient(135deg,#791E15,#5A1510)"><i class="fas fa-crown text-white text-2xl"></i></div>`
+    : `<div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 shadow-lg" style="background:linear-gradient(135deg,#C03020,#8A1E10)"><i class="fas fa-crown text-white text-2xl"></i></div>`
   const networkName = branding.networkName || 'LEADER'
   return `<!DOCTYPE html>
 <html lang="fr">
@@ -1886,13 +1886,13 @@ function memberHTML(opts: MemberHTMLOpts = {}, branding: BrandingPublic = { logo
           <label class="block text-sm text-gray-400 mb-1">Email</label>
           <input id="login-email" type="email" placeholder="votre@email.com"
             onkeydown="if(event.key==='Enter')doLogin()"
-            class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none" style="border-color:#12185A" onfocus="this.style.borderColor='#791E15'" onblur="this.style.borderColor='#12185A'">
+            class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none" style="border-color:#12185A" onfocus="this.style.borderColor='#C03020'" onblur="this.style.borderColor='#12185A'">
         </div>
         <div>
           <label class="block text-sm text-gray-400 mb-1">Mot de passe</label>
           <input id="login-password" type="password" placeholder="••••••••"
             onkeydown="if(event.key==='Enter')doLogin()"
-            class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none" style="border-color:#12185A" onfocus="this.style.borderColor='#791E15'" onblur="this.style.borderColor='#12185A'">
+            class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none" style="border-color:#12185A" onfocus="this.style.borderColor='#C03020'" onblur="this.style.borderColor='#12185A'">
         </div>
         <div id="login-error" class="hidden text-red-400 text-sm bg-red-900/20 rounded-lg p-3"></div>
         <button type="button" onclick="doLogin()" class="w-full font-bold py-3 rounded-xl transition btn-rouge">
@@ -1900,7 +1900,7 @@ function memberHTML(opts: MemberHTMLOpts = {}, branding: BrandingPublic = { logo
         </button>
       </div>
       <div class="mt-4 text-center">
-        <button type="button" onclick="showRegister()" class="text-sm hover:underline" style="color:#A02820">Pas encore membre ? S'inscrire</button>
+        <button type="button" onclick="showRegister()" class="text-sm hover:underline" style="color:#E05040">Pas encore membre ? S'inscrire</button>
       </div>
       <div class="mt-2 text-center">
         <a href="/admin" class="text-gray-500 text-xs hover:text-gray-300">Espace administrateur →</a>
@@ -1910,7 +1910,7 @@ function memberHTML(opts: MemberHTMLOpts = {}, branding: BrandingPublic = { logo
     <!-- REGISTER M1/M2/M3 -->
     <div id="register-form" class="hidden bg-dark-800 rounded-2xl p-8 shadow-2xl border border-dark-600">
       <!-- Bandeau sponsor (M2/M3) -->
-      <div id="sponsor-banner" class="hidden mb-4 rounded-xl px-4 py-3 text-sm flex items-center gap-2" style="background:rgba(121,30,21,0.1);border:1px solid rgba(121,30,21,0.3);color:#C03020">
+      <div id="sponsor-banner" class="hidden mb-4 rounded-xl px-4 py-3 text-sm flex items-center gap-2" style="background:rgba(192,48,32,0.1);border:1px solid rgba(192,48,32,0.3);color:#C03020">
         <i class="fas fa-user-check"></i>
         <span id="sponsor-banner-text"></span>
       </div>
@@ -1925,8 +1925,8 @@ function memberHTML(opts: MemberHTMLOpts = {}, branding: BrandingPublic = { logo
       <div id="reg-ms-progress" class="hidden mb-4" style="display:none">
         <div style="display:flex;align-items:center;margin-bottom:0.75rem">
           <div style="flex:1;text-align:center">
-            <div id="reg-ms-c1" style="width:2rem;height:2rem;border-radius:50%;border:2px solid #791E15;background:rgba(121,30,21,0.15);display:inline-flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:#791E15">1</div>
-            <div id="reg-ms-l1" style="font-size:0.65rem;color:#791E15;margin-top:2px">Identité</div>
+            <div id="reg-ms-c1" style="width:2rem;height:2rem;border-radius:50%;border:2px solid #C03020;background:rgba(192,48,32,0.15);display:inline-flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:#C03020">1</div>
+            <div id="reg-ms-l1" style="font-size:0.65rem;color:#C03020;margin-top:2px">Identité</div>
           </div>
           <div id="reg-ms-line1" style="flex:1;height:2px;background:#22223A;margin-bottom:1rem"></div>
           <div style="flex:1;text-align:center">
@@ -1947,28 +1947,28 @@ function memberHTML(opts: MemberHTMLOpts = {}, branding: BrandingPublic = { logo
           <div>
             <label class="block text-sm text-gray-400 mb-1">Prénom <span class="text-red-400">*</span></label>
             <input id="reg-firstname" type="text" placeholder="Prénom" autocomplete="given-name"
-              class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none" style="border-color:#12185A" onfocus="this.style.borderColor='#791E15'" onblur="this.style.borderColor='#12185A'">
+              class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none" style="border-color:#12185A" onfocus="this.style.borderColor='#C03020'" onblur="this.style.borderColor='#12185A'">
           </div>
           <div>
             <label class="block text-sm text-gray-400 mb-1">Nom <span class="text-red-400">*</span></label>
             <input id="reg-lastname" type="text" placeholder="Nom" autocomplete="family-name"
-              class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none" style="border-color:#12185A" onfocus="this.style.borderColor='#791E15'" onblur="this.style.borderColor='#12185A'">
+              class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none" style="border-color:#12185A" onfocus="this.style.borderColor='#C03020'" onblur="this.style.borderColor='#12185A'">
           </div>
         </div>
         <div class="mt-4">
           <label class="block text-sm text-gray-400 mb-1">Email <span class="text-red-400">*</span></label>
           <input id="reg-email" type="email" placeholder="votre@email.com" autocomplete="email"
-            class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none" style="border-color:#12185A" onfocus="this.style.borderColor='#791E15'" onblur="this.style.borderColor='#12185A'">
+            class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none" style="border-color:#12185A" onfocus="this.style.borderColor='#C03020'" onblur="this.style.borderColor='#12185A'">
         </div>
         <div class="mt-4" id="reg-birthdate-wrap">
           <label class="block text-sm text-gray-400 mb-1">Date de naissance <span id="reg-birthdate-req" class="text-red-400 hidden">*</span></label>
           <input id="reg-birthdate" type="date" autocomplete="bday"
-            class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none" style="border-color:#12185A" onfocus="this.style.borderColor='#791E15'" onblur="this.style.borderColor='#12185A'">
+            class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none" style="border-color:#12185A" onfocus="this.style.borderColor='#C03020'" onblur="this.style.borderColor='#12185A'">
         </div>
         <div class="mt-4" id="reg-nationality-wrap">
           <label class="block text-sm text-gray-400 mb-1">Nationalité <span id="reg-nationality-req" class="text-red-400 hidden">*</span></label>
           <input id="reg-nationality" type="text" placeholder="Française"
-            class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none" style="border-color:#12185A" onfocus="this.style.borderColor='#791E15'" onblur="this.style.borderColor='#12185A'">
+            class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none" style="border-color:#12185A" onfocus="this.style.borderColor='#C03020'" onblur="this.style.borderColor='#12185A'">
         </div>
       </div>
 
@@ -1984,26 +1984,26 @@ function memberHTML(opts: MemberHTMLOpts = {}, branding: BrandingPublic = { logo
         <div class="mt-4" id="reg-phone-wrap">
           <label class="block text-sm text-gray-400 mb-1">Numéro de téléphone <span id="reg-phone-req" class="text-red-400 hidden">*</span></label>
           <div class="flex gap-2 items-center">
-            <span id="reg-dial-display" style="background:#1a1a2e;border:1px solid #374151;border-radius:0.75rem;padding:0.75rem 0.6rem;color:#791E15;font-weight:600;font-size:0.85rem;white-space:nowrap;flex-shrink:0">+33</span>
+            <span id="reg-dial-display" style="background:#1a1a2e;border:1px solid #374151;border-radius:0.75rem;padding:0.75rem 0.6rem;color:#C03020;font-weight:600;font-size:0.85rem;white-space:nowrap;flex-shrink:0">+33</span>
             <input id="reg-phone" type="tel" placeholder="6 00 00 00 00" autocomplete="tel"
-              class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none" style="border-color:#12185A" onfocus="this.style.borderColor='#791E15'" onblur="this.style.borderColor='#12185A'">
+              class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none" style="border-color:#12185A" onfocus="this.style.borderColor='#C03020'" onblur="this.style.borderColor='#12185A'">
           </div>
         </div>
         <div class="mt-4" id="reg-address-wrap">
           <label class="block text-sm text-gray-400 mb-1">Adresse <span id="reg-address-req" class="text-red-400 hidden">*</span></label>
           <input id="reg-address" type="text" placeholder="Numéro et nom de rue" autocomplete="street-address"
-            class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none" style="border-color:#12185A" onfocus="this.style.borderColor='#791E15'" onblur="this.style.borderColor='#12185A'">
+            class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none" style="border-color:#12185A" onfocus="this.style.borderColor='#C03020'" onblur="this.style.borderColor='#12185A'">
         </div>
         <div class="mt-4 grid grid-cols-2 gap-4">
           <div id="reg-postal-wrap">
             <label class="block text-sm text-gray-400 mb-1">Code postal <span id="reg-postal-req" class="text-red-400 hidden">*</span></label>
             <input id="reg-postal" type="text" placeholder="75001" autocomplete="postal-code"
-              class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none" style="border-color:#12185A" onfocus="this.style.borderColor='#791E15'" onblur="this.style.borderColor='#12185A'">
+              class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none" style="border-color:#12185A" onfocus="this.style.borderColor='#C03020'" onblur="this.style.borderColor='#12185A'">
           </div>
           <div id="reg-city-wrap">
             <label class="block text-sm text-gray-400 mb-1">Ville <span id="reg-city-req" class="text-red-400 hidden">*</span></label>
             <input id="reg-city" type="text" placeholder="Paris" autocomplete="address-level2"
-              class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none" style="border-color:#12185A" onfocus="this.style.borderColor='#791E15'" onblur="this.style.borderColor='#12185A'">
+              class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none" style="border-color:#12185A" onfocus="this.style.borderColor='#C03020'" onblur="this.style.borderColor='#12185A'">
           </div>
         </div>
       </div>
@@ -2013,23 +2013,23 @@ function memberHTML(opts: MemberHTMLOpts = {}, branding: BrandingPublic = { logo
         <div class="mt-0">
           <label class="block text-sm text-gray-400 mb-1">Mot de passe <span class="text-red-400">*</span></label>
           <input id="reg-password" type="password" placeholder="Min. 8 caractères" autocomplete="new-password"
-            class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none" style="border-color:#12185A" onfocus="this.style.borderColor='#791E15'" onblur="this.style.borderColor='#12185A'">
+            class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none" style="border-color:#12185A" onfocus="this.style.borderColor='#C03020'" onblur="this.style.borderColor='#12185A'">
         </div>
         <div class="mt-4">
           <label class="block text-sm text-gray-400 mb-1">Confirmer le mot de passe <span class="text-red-400">*</span></label>
           <input id="reg-password2" type="password" placeholder="Répétez le mot de passe" autocomplete="new-password"
-            class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none" style="border-color:#12185A" onfocus="this.style.borderColor='#791E15'" onblur="this.style.borderColor='#12185A'">
+            class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none" style="border-color:#12185A" onfocus="this.style.borderColor='#C03020'" onblur="this.style.borderColor='#12185A'">
         </div>
         <!-- Code parrain — affiché seulement en M1 -->
         <div class="mt-4" id="reg-sponsor-field">
           <label class="block text-sm text-gray-400 mb-1">Code parrain (optionnel)</label>
           <input id="reg-sponsor" type="text" placeholder="LDR000000"
-            class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none" style="border-color:#12185A" onfocus="this.style.borderColor='#791E15'" onblur="this.style.borderColor='#12185A'">
+            class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none" style="border-color:#12185A" onfocus="this.style.borderColor='#C03020'" onblur="this.style.borderColor='#12185A'">
         </div>
         <!-- CGU -->
         <div class="mt-4 flex items-start gap-3">
           <input id="reg-cgu" type="checkbox" class="mt-1 rounded">
-          <label for="reg-cgu" class="text-sm text-gray-400">J'accepte les <span class="cursor-pointer" style="color:#A02820">conditions générales d'utilisation</span></label>
+          <label for="reg-cgu" class="text-sm text-gray-400">J'accepte les <span class="cursor-pointer" style="color:#E05040">conditions générales d'utilisation</span></label>
         </div>
       </div>
 
@@ -2054,14 +2054,14 @@ function memberHTML(opts: MemberHTMLOpts = {}, branding: BrandingPublic = { logo
         </button>
       </div>
       <div class="mt-4 text-center">
-        <button type="button" onclick="showLogin()" class="text-sm hover:underline" style="color:#A02820">Déjà membre ? Se connecter</button>
+        <button type="button" onclick="showLogin()" class="text-sm hover:underline" style="color:#E05040">Déjà membre ? Se connecter</button>
       </div>
     </div>
 
     <!-- PAGE CONFIRMATION PIN — affichée UNE SEULE FOIS après inscription -->
-    <div id="pin-confirmation" class="hidden bg-dark-800 rounded-2xl p-8 shadow-2xl" style="border:1px solid rgba(121,30,21,0.4)">
+    <div id="pin-confirmation" class="hidden bg-dark-800 rounded-2xl p-8 shadow-2xl" style="border:1px solid rgba(192,48,32,0.4)">
       <div class="text-center mb-6">
-        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4" style="background:linear-gradient(135deg,#791E15,#5A1510)">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4" style="background:linear-gradient(135deg,#C03020,#8A1E10)">
           <i class="fas fa-shield-halved text-dark-900 text-2xl"></i>
         </div>
         <h2 class="text-2xl font-bold text-white">Compte créé !</h2>
@@ -2095,7 +2095,7 @@ function memberHTML(opts: MemberHTMLOpts = {}, branding: BrandingPublic = { logo
     <div class="p-4 border-b border-dark-600 flex items-center justify-between" style="min-height:72px;">
       <div class="flex items-center justify-center flex-1">
         ${logoImgMember}
-        ${!branding.logoUri ? `<div class="ml-3"><div class="font-bold text-white">${networkName}</div><div class="text-xs" style="color:#A02820">Network</div></div>` : ''}
+        ${!branding.logoUri ? `<div class="ml-3"><div class="font-bold text-white">${networkName}</div><div class="text-xs" style="color:#E05040">Network</div></div>` : ''}
       </div>
       <button onclick="closeSidebar()" class="md:hidden text-gray-400 hover:text-white p-1 ml-2 flex-shrink-0" aria-label="Fermer le menu">
         <i class="fas fa-times text-lg"></i>
@@ -2105,15 +2105,15 @@ function memberHTML(opts: MemberHTMLOpts = {}, branding: BrandingPublic = { logo
     <!-- Member Info -->
     <div id="sidebar-member-info" class="p-4 border-b border-dark-600">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm" id="sidebar-avatar" style="background:linear-gradient(135deg,#791E15,#5A1510)">JD</div>
+        <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm" id="sidebar-avatar" style="background:linear-gradient(135deg,#C03020,#8A1E10)">JD</div>
         <div class="flex-1 min-w-0">
           <div class="font-semibold text-sm truncate" id="sidebar-name">Jean Dupont</div>
-          <div class="text-xs" id="sidebar-uid" style="color:#A02820">LDR000001</div>
+          <div class="text-xs" id="sidebar-uid" style="color:#E05040">LDR000001</div>
         </div>
       </div>
       <div class="mt-3 flex items-center justify-between">
         <span class="text-xs text-gray-400" data-i18n="Statut">Statut</span>
-        <span id="sidebar-status" class="text-xs px-2 py-0.5 rounded-full font-medium" style="background:rgba(121,30,21,0.2);color:#A02820">AMI</span>
+        <span id="sidebar-status" class="text-xs px-2 py-0.5 rounded-full font-medium" style="background:rgba(192,48,32,0.2);color:#E05040">AMI</span>
       </div>
       <div class="mt-1 flex items-center justify-between">
         <span class="text-xs text-gray-400" data-i18n="Rang">Rang</span>
@@ -2162,7 +2162,7 @@ function memberHTML(opts: MemberHTMLOpts = {}, branding: BrandingPublic = { logo
         <span id="reservoir-badge" class="hidden ml-auto bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">0</span>
       </button>
       <button onclick="showPage('services');closeSidebar()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="services">
-        <i class="fas fa-th-large w-5 text-center" style="color:#791E15"></i>
+        <i class="fas fa-th-large w-5 text-center" style="color:#C03020"></i>
         <span data-i18n="Services">Services</span>
       </button>
       <button onclick="showPage('campus');closeSidebar()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="campus">
@@ -2190,7 +2190,7 @@ function memberHTML(opts: MemberHTMLOpts = {}, branding: BrandingPublic = { logo
         <i class="fas fa-user w-5 text-center"></i> <span data-i18n="Mon Profil">Mon Profil</span>
       </button>
       <button onclick="showPage('member-card');closeSidebar()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="member-card">
-        <i class="fas fa-id-badge w-5 text-center" style="color:#A02820"></i> <span data-i18n="Carte de Membre">Carte de Membre</span>
+        <i class="fas fa-id-badge w-5 text-center" style="color:#E05040"></i> <span data-i18n="Carte de Membre">Carte de Membre</span>
       </button>
     </nav>
 
@@ -2212,7 +2212,7 @@ function memberHTML(opts: MemberHTMLOpts = {}, branding: BrandingPublic = { logo
       <div class="flex items-center gap-4">
         <div id="header-balance" class="text-sm">
           <span class="text-gray-400" data-i18n="Solde :">Solde : </span>
-          <span class="font-bold" style="color:#791E15">$0.00</span>
+          <span class="font-bold" style="color:#C03020">$0.00</span>
         </div>
         <!-- Bouton Rafraîchir — recharge la page courante sans déconnecter -->
         <button onclick="refreshCurrentPage()" id="header-refresh-btn"
@@ -2277,7 +2277,7 @@ function regMsRender() {
     if (g('reg-ms-prev')) g('reg-ms-prev').classList.toggle('hidden', step === 1)
     if (g('reg-ms-next')) g('reg-ms-next').classList.toggle('hidden', step === 3)
     if (g('reg-submit-btn')) g('reg-submit-btn').style.display = step === 3 ? '' : 'none'
-    var GOLD='#791E15', GREEN='#10B981', GRAY='#6B7280', DARK='#0A1240', BORDER_D='#12185A'
+    var GOLD='#C03020', GREEN='#10B981', GRAY='#6B7280', DARK='#0A1240', BORDER_D='#12185A'
     for (var i=1; i<=3; i++) {
       var c=g('reg-ms-c'+i), l=g('reg-ms-l'+i), ln=g('reg-ms-line'+i)
       if (!c) continue
@@ -2563,13 +2563,13 @@ function adminHTML(branding: BrandingPublic = { logoUri: '', networkName: 'LEADE
         <i class="fas fa-envelope w-5 text-center text-purple-400"></i> Emails
       </button>
       <button onclick="showAdminPage('member-cards');closeAdminSidebar()" class="admin-nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="member-cards">
-        <i class="fas fa-id-badge w-5 text-center" style="color:#A02820"></i> Cartes de Membre
+        <i class="fas fa-id-badge w-5 text-center" style="color:#E05040"></i> Cartes de Membre
       </button>
       <button onclick="showAdminPage('broker');closeAdminSidebar()" class="admin-nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="broker">
         <i class="fas fa-building-columns w-5 text-center text-orange-400"></i> Broker Triomarkets
       </button>
       <button onclick="showAdminPage('landing');closeAdminSidebar()" class="admin-nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="landing">
-        <i class="fas fa-rocket w-5 text-center" style="color:#A02820"></i> Landing Page
+        <i class="fas fa-rocket w-5 text-center" style="color:#E05040"></i> Landing Page
       </button>
       <button onclick="showAdminPage('i18n-languages');closeAdminSidebar()" class="admin-nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition text-sm" data-page="i18n-languages">
         <i class="fas fa-language w-5 text-center text-sky-400"></i> Langues & Traductions
@@ -2598,7 +2598,7 @@ function adminHTML(branding: BrandingPublic = { logoUri: '', networkName: 'LEADE
         <div id="admin-header-info" class="hidden md:block text-sm text-gray-400"></div>
         <button id="admin-header-refresh"
           title="Rafraîchir la page (rechargement complet)"
-          class="group flex items-center justify-center w-9 h-9 rounded-xl bg-dark-700 border border-dark-500 hover:bg-dark-600" style="--hover-border:rgba(121,30,21,0.6) transition-all duration-200"
+          class="group flex items-center justify-center w-9 h-9 rounded-xl bg-dark-700 border border-dark-500 hover:bg-dark-600" style="--hover-border:rgba(192,48,32,0.6) transition-all duration-200"
           onclick="window.location.reload()">
           <i class="fas fa-rotate-right text-gray-400 group-hover:text-rouge-400 text-sm group-hover:rotate-180 transition-all duration-500"></i>
         </button>

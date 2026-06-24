@@ -14,20 +14,32 @@
 }
 
 /* ── Boutons charte LEADER ── */
+/* Sur fond bleu nuit sombre, le rouge #791E15 pur disparaît.
+   On l'éclaircit à #C0392B + bordure lumineuse + texte blanc pour le contraste. */
 .btn-rouge {
-  background: linear-gradient(135deg, #791E15 0%, #A02820 50%, #791E15 100%);
-  color: #FFFFFF; font-weight: 700; border: none; cursor: pointer;
+  background: linear-gradient(135deg, #B02818 0%, #D03828 50%, #B02818 100%);
+  color: #FFFFFF; font-weight: 700; border: 1px solid rgba(220,80,60,0.4); cursor: pointer;
   border-radius: 0.75rem; padding: 0.875rem; font-size: 1rem;
-  transition: opacity .2s; width: 100%;
+  transition: all .2s; width: 100%;
+  box-shadow: 0 2px 12px rgba(176,40,24,0.35);
 }
-.btn-rouge:hover { opacity: .9; }
-.btn-rouge:disabled { opacity: .5; cursor: not-allowed; }
+.btn-rouge:hover {
+  background: linear-gradient(135deg, #C02E1E 0%, #E04030 50%, #C02E1E 100%);
+  box-shadow: 0 4px 18px rgba(200,50,30,0.45);
+}
+.btn-rouge:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
 .btn-outline-rouge {
-  background: transparent; border: 1.5px solid rgba(121,30,21,0.6); color: #A02820;
+  background: transparent;
+  border: 1.5px solid rgba(192,56,40,0.7);
+  color: #E05040;
   border-radius: 0.75rem; padding: 0.75rem 1.5rem; cursor: pointer;
   font-weight: 600; transition: all .2s;
 }
-.btn-outline-rouge:hover { background: rgba(121,30,21,0.1); }
+.btn-outline-rouge:hover {
+  background: rgba(176,40,24,0.15);
+  border-color: rgba(220,80,60,0.9);
+  color: #F06050;
+}
 
 * { box-sizing: border-box; }
 
@@ -40,13 +52,13 @@ body {
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: #040B24; }
 ::-webkit-scrollbar-thumb { background: #12185A; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #791E15; }
+::-webkit-scrollbar-thumb:hover { background: #B02818; }
 
 /* Nav active */
 .nav-btn.active, .admin-nav-btn.active {
-  background: linear-gradient(135deg, rgba(121,30,21,0.18), rgba(121,30,21,0.08));
-  color: #791E15 !important;
-  border-right: 2px solid #791E15;
+  background: linear-gradient(135deg, rgba(192,56,40,0.22), rgba(176,40,24,0.10));
+  color: #E05040 !important;
+  border-right: 2px solid #D03828;
 }
 .admin-nav-btn.active {
   background: linear-gradient(135deg, rgba(239,68,68,0.15), rgba(239,68,68,0.05));
@@ -57,7 +69,7 @@ body {
 /* Cards */
 .stat-card {
   background: linear-gradient(135deg, #040B24, #0A1240);
-  border: 1px solid #12185A;
+  border: 1px solid rgba(18,24,90,0.9);
   border-radius: 16px;
   padding: 20px;
   transition: transform 0.2s, box-shadow 0.2s;
@@ -127,7 +139,7 @@ body {
   transition: all 0.2s;
   min-width: 110px;
 }
-.tree-node-card:hover { border-color: #791E15; background: #12185A; }
+.tree-node-card:hover { border-color: #C03020; background: #12185A; }
 .tree-node-card.empty {
   border-style: dashed;
   border-color: #374151;
@@ -166,7 +178,7 @@ body {
 .progress-fill {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #791E15, #EF4444);
+  background: linear-gradient(90deg, #C03020, #EF5555);
   transition: width 0.6s ease;
 }
 
@@ -183,7 +195,7 @@ body {
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 .fade-in { animation: fadeIn 0.3s ease forwards; }
 
-@keyframes pulse-rouge { 0%, 100% { box-shadow: 0 0 0 0 rgba(121,30,21,0.45); } 50% { box-shadow: 0 0 0 8px rgba(121,30,21,0); } }
+@keyframes pulse-rouge { 0%, 100% { box-shadow: 0 0 0 0 rgba(192,48,32,0.55); } 50% { box-shadow: 0 0 0 8px rgba(192,48,32,0); } }
 .pulse-rouge { animation: pulse-rouge 2s infinite; }
 
 /* Input */
@@ -198,7 +210,7 @@ body {
   outline: none;
   transition: border-color 0.2s;
 }
-.form-input:focus { border-color: #791E15; }
+.form-input:focus { border-color: #C03020; box-shadow: 0 0 0 2px rgba(192,48,32,0.2); }
 .form-label { display: block; font-size: 12px; color: #9CA3AF; margin-bottom: 6px; font-weight: 500; }
 
 /* Modal */
@@ -207,8 +219,8 @@ body {
 /* Loader */
 .loader {
   width: 36px; height: 36px;
-  border: 3px solid #12185A;
-  border-top-color: #791E15;
+  border: 3px solid #1a2070;
+  border-top-color: #D03828;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -230,7 +242,7 @@ body {
   transition: background 0.12s ease;
 }
 .tree-search-result:hover {
-  background: rgba(121,30,21,0.08) !important;
+  background: rgba(192,48,32,0.12) !important;
 }
 
 #tree-search-input:focus + kbd,
@@ -278,15 +290,15 @@ body {
 }
 
 .pagination-btn:hover:not(:disabled):not(.active) {
-  background: rgba(121,30,21,0.14);
-  border-color: rgba(121,30,21,0.45);
-  color: #791E15;
+  background: rgba(192,56,40,0.18);
+  border-color: rgba(208,56,40,0.55);
+  color: #E05040;
 }
 
 .pagination-btn.active {
-  background: linear-gradient(135deg, rgba(121,30,21,0.28), rgba(121,30,21,0.14));
-  border-color: rgba(121,30,21,0.65);
-  color: #791E15;
+  background: linear-gradient(135deg, rgba(192,56,40,0.32), rgba(176,40,24,0.18));
+  border-color: rgba(208,56,40,0.75);
+  color: #F06050;
   font-weight: 700;
   cursor: default;
 }
@@ -325,8 +337,8 @@ body {
 
 .pagination-perpage:hover,
 .pagination-perpage:focus {
-  border-color: rgba(121,30,21,0.45);
-  color: #791E15;
+  border-color: rgba(208,56,40,0.55);
+  color: #E05040;
   outline: none;
 }
 
@@ -551,4 +563,131 @@ main {
     display: block;
     height: 0;
   }
+}
+
+/* ============================================================
+   OVERRIDE CONTRASTE — Thème bleu nuit
+   bg-rouge-500 (#791E15) est trop sombre sur fond bleu nuit.
+   On l'éclaircit globalement pour un contraste premium visible.
+   ============================================================ */
+
+/* Fond des boutons rouge : plus lumineux */
+.bg-rouge-500 {
+  background-color: #C03020 !important;
+}
+.hover\:bg-rouge-500:hover,
+.hover\:bg-rouge-600:hover {
+  background-color: #D03828 !important;
+}
+.bg-rouge-600 {
+  background-color: #A82818 !important;
+}
+
+/* Texte rouge sur fond sombre : plus lisible */
+.text-rouge-400 {
+  color: #F06858 !important;
+}
+.text-rouge-500 {
+  color: #E05040 !important;
+}
+
+/* Bordures rouge : plus visibles */
+.border-rouge-500 {
+  border-color: #C03020 !important;
+}
+.border-rouge-500\/30 {
+  border-color: rgba(192,48,32,0.30) !important;
+}
+.border-rouge-500\/40 {
+  border-color: rgba(192,48,32,0.40) !important;
+}
+.border-rouge-500\/25 {
+  border-color: rgba(192,48,32,0.25) !important;
+}
+.border-rouge-500\/20 {
+  border-color: rgba(192,48,32,0.20) !important;
+}
+
+/* Fond rouge transparent : plus visible */
+.bg-rouge-500\/10 {
+  background-color: rgba(192,48,32,0.12) !important;
+}
+.bg-rouge-500\/15 {
+  background-color: rgba(192,48,32,0.18) !important;
+}
+.bg-rouge-500\/20 {
+  background-color: rgba(192,48,32,0.22) !important;
+}
+.bg-rouge-500\/5 {
+  background-color: rgba(192,48,32,0.08) !important;
+}
+
+/* CRITIQUE : text-dark-900 SUR bouton rouge = bleu nuit illisible.
+   On remplace par blanc partout où c'est sur fond rouge-500 */
+.bg-rouge-500.text-dark-900,
+button.bg-rouge-500,
+.bg-rouge-500 {
+  color: #FFFFFF;
+}
+
+/* Boutons rouge inline (Tailwind utilities) : toujours texte blanc */
+button.bg-rouge-500,
+a.bg-rouge-500,
+[class*="bg-rouge-500"]:not([class*="bg-rouge-500\/"]) {
+  color: #FFFFFF !important;
+}
+
+/* Barre de progression rouge */
+.bg-rouge-500.h-1\.5,
+.bg-rouge-500.h-1 {
+  background-color: #D03828 !important;
+}
+
+/* Nav active — contraste amélioré */
+.nav-btn.active {
+  color: #F06858 !important;
+  border-right-color: #D03828 !important;
+}
+
+/* Commissions : prime_leadership */
+.comm-prime_leadership {
+  color: #E05040;
+}
+
+/* Tabs wizard retrait : actif */
+.bg-rouge-500.text-dark-900 {
+  color: #FFFFFF !important;
+  background-color: #C03020 !important;
+}
+
+/* data-table hover rouge visible */
+.data-table tr:hover td {
+  background: rgba(192,48,32,0.08);
+}
+
+/* btn-primary générique (admin) */
+.btn-primary {
+  background: linear-gradient(135deg, #B02818 0%, #D03828 60%, #B02818 100%) !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(208,56,40,0.45) !important;
+  box-shadow: 0 2px 10px rgba(176,40,24,0.30) !important;
+  transition: all .2s !important;
+}
+.btn-primary:hover {
+  background: linear-gradient(135deg, #C02E1E 0%, #E04030 60%, #C02E1E 100%) !important;
+  box-shadow: 0 3px 16px rgba(200,50,30,0.40) !important;
+}
+.btn-primary:disabled {
+  opacity: .45 !important;
+  box-shadow: none !important;
+}
+
+/* Loader petit */
+.loader-sm {
+  width: 18px; height: 18px;
+  border: 2px solid rgba(255,255,255,0.25);
+  border-top-color: #FFFFFF;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
 }
