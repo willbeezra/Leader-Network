@@ -1077,6 +1077,33 @@ members.get('/transactions', async (c) => {
       FROM credit_croissance cc
       WHERE cc.member_id = ?
 
+      UNION ALL
+
+      -- ── Source 6 : achats de formations campus ──
+      SELECT
+        cco.id,
+        'campus_purchase'  AS tx_type,
+        'purchase'         AS category,
+        -cco.amount_usd    AS amount,
+        NULL AS balance_before,
+        NULL AS balance_after,
+        'Achat formation : ' || COALESCE(cc2.title, cco.course_id) AS description,
+        CASE cco.payment_method
+          WHEN 'wallet' THEN 'principal'
+          ELSE 'external'
+        END                AS wallet_type,
+        cco.created_at,
+        cco.status,
+        NULL AS source_name,
+        NULL AS source_unique_id,
+        NULL AS comm_period,
+        COALESCE(cc2.title, cco.course_id) AS package_name,
+        'campus_course'    AS product_type,
+        cco.payment_method AS payment_method
+      FROM campus_course_orders cco
+      LEFT JOIN campus_courses cc2 ON cc2.id = cco.course_id
+      WHERE cco.member_id = ?
+
     ) unified
     ORDER BY created_at DESC
     LIMIT ? OFFSET ?
@@ -1093,15 +1120,17 @@ members.get('/transactions', async (c) => {
       SELECT COUNT(*) FROM withdrawals              WHERE member_id = ?
     ) + (
       SELECT COUNT(*) FROM credit_croissance        WHERE member_id = ?
+    ) + (
+      SELECT COUNT(*) FROM campus_course_orders     WHERE member_id = ?
     ) AS total
   `
 
   const [rows, countRow] = await Promise.all([
     c.env.DB.prepare(unifiedSQL)
-      .bind(memberId, memberId, memberId, memberId, memberId, limit, offset)
+      .bind(memberId, memberId, memberId, memberId, memberId, memberId, limit, offset)
       .all(),
     c.env.DB.prepare(countSQL)
-      .bind(memberId, memberId, memberId, memberId, memberId)
+      .bind(memberId, memberId, memberId, memberId, memberId, memberId)
       .first() as any,
   ])
 
