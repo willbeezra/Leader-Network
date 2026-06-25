@@ -1996,11 +1996,13 @@ members.post('/packages/order', async (c) => {
   let licenseId: string | null = null
   let licenseAmount = 0
   if (add_license) {
-    // Vérifier que la licence n'est pas déjà active sur ce compte
+    // Vérifier que la licence n'a JAMAIS été achetée sur ce compte
+    // (ni active, ni expirée) — une fois achetée, seul le renouvellement est permis
     const memberLic = await c.env.DB.prepare(
-      `SELECT license_active FROM members WHERE id = ?`
+      `SELECT license_active, license_expires_at FROM members WHERE id = ?`
     ).bind(memberId).first() as any
-    if (!memberLic?.license_active) {
+    const licenceJamaisAchetee = !memberLic?.license_active && !memberLic?.license_expires_at
+    if (licenceJamaisAchetee) {
       // Lire le prix depuis compensation_config (pas de hardcode)
       const licCfgForOrder = await getLicenseConfig(c.env.DB)
       licenseId = generateId()
@@ -2014,7 +2016,8 @@ members.post('/packages/order', async (c) => {
         `UPDATE package_orders SET linked_license_id = ? WHERE id = ?`
       ).bind(licenseId, id).run()
     }
-    // Si licence déjà active : on ignore silencieusement (pas d'erreur, juste pas de double licence)
+    // Si licence déjà achetée (active ou expirée) : on ignore silencieusement
+    // Le membre devra utiliser le renouvellement depuis sa page Licence
   }
 
   return c.json({
@@ -2307,22 +2310,30 @@ members.post('/license/order', async (c) => {
     `SELECT license_active, license_expires_at, admin_fee_paid FROM members WHERE id = ?`
   ).bind(memberId).first() as any
 
-  if (memberData?.license_active) {
+  // ── GUARD : une licence déjà achetée (active OU expirée) ne peut pas être rachetée ──
+  // Seul le renouvellement annuel est autorisé une fois la première licence obtenue.
+  if (memberData?.license_active || memberData?.license_expires_at) {
     const now = new Date()
     const expiresAt = memberData.license_expires_at ? new Date(memberData.license_expires_at) : null
 
     if (expiresAt) {
       const daysLeft = Math.ceil((expiresAt.getTime() - now.getTime()) / 86_400_000)
-      // Bloquer si la licence est active ET que la fenêtre anticipée n'est pas ouverte
-      if (daysLeft > licCfg.renewEarlyDays) {
-        return c.json({
-          error: `Votre licence est encore active. Le renouvellement anticipé est possible uniquement dans les ${licCfg.renewEarlyDays} jours avant l'expiration (expire le ${expiresAt.toLocaleDateString('fr-FR')}, dans ${daysLeft} jours).`,
-          days_left: daysLeft,
-          renew_early_days: licCfg.renewEarlyDays,
-          can_renew_at: new Date(expiresAt.getTime() - licCfg.renewEarlyDays * 86_400_000).toISOString(),
-        }, 409)
+
+      if (memberData?.license_active) {
+        // Licence encore active : bloquer sauf dans la fenêtre de renouvellement anticipé
+        if (daysLeft > licCfg.renewEarlyDays) {
+          return c.json({
+            error: `Votre licence est encore active. Le renouvellement anticipé est possible uniquement dans les ${licCfg.renewEarlyDays} jours avant l'expiration (expire le ${expiresAt.toLocaleDateString('fr-FR')}, dans ${daysLeft} jours).`,
+            days_left: daysLeft,
+            renew_early_days: licCfg.renewEarlyDays,
+            can_renew_at: new Date(expiresAt.getTime() - licCfg.renewEarlyDays * 86_400_000).toISOString(),
+          }, 409)
+        }
+        // Renouvellement anticipé autorisé : on continue
+      } else {
+        // Licence expirée : renouvellement autorisé (on continue — pas de blocage)
+        // La licence a déjà existé, c'est un renouvellement, pas un 1er achat
       }
-      // Renouvellement anticipé autorisé : on continue
     } else {
       // Licence active sans date d'expiration connue → bloquer par sécurité
       return c.json({ error: 'Vous possédez déjà une licence active.' }, 409)

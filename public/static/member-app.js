@@ -2896,7 +2896,7 @@ async function serviceRedirect(type, btnEl) {
 
 
 
-  );}function wizardStep2() {if (currentMember && currentMember.license_active || _wizardData.isUpgrade) return _wizardData.addLicense = !1, void wizardStep3();_wizardShow("\n\n  ".concat(
+  );}function wizardStep2() {if ((currentMember && (currentMember.license_active || currentMember.license_expires_at)) || _wizardData.isUpgrade) return _wizardData.addLicense = !1, void wizardStep3();_wizardShow("\n\n  ".concat(
     _wizardProgress(2, 7), "\n\n  <div class=\"p-6 space-y-5\">\n\n    <div>\n\n      <h3 class=\"text-lg font-bold text-white\">Ajouter la Licence Finstrategia ?</h3>\n\n      <p class=\"text-sm text-gray-400 mt-1\">La licence annuelle est n\xE9cessaire pour \xEAtre \xE9ligible aux commissions LEADER.</p>\n\n    </div>\n\n    <div class=\"space-y-3\">\n\n      <button onclick=\"wizardSetLicense(true)\" id=\"btn-yes-lic\"\n\n        class=\"w-full border-2 border-dark-500 rounded-xl p-4 text-left hover:border-rouge-500 transition group\">\n\n        <div class=\"flex items-start gap-4\">\n\n          <div class=\"w-10 h-10 rounded-xl bg-rouge-500/15 flex items-center justify-center flex-shrink-0 group-hover:bg-rouge-500/20 transition\">\n\n            <i class=\"fas fa-key text-rouge-400\"></i>\n\n          </div>\n\n          <div class=\"flex-1\">\n\n            <div class=\"font-bold text-white flex justify-between\">\n\n              <span>Oui \u2014 Ajouter la licence</span>\n\n              <span class=\"text-rouge-400\">+$").concat(
 
 
