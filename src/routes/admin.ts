@@ -1395,10 +1395,10 @@ admin.put('/config/rank/:name', requirePermission('settings.edit'), async (c) =>
     monthly_prime, monthly_cap, min_bv_leg, min_directs,
     bv_rank_use_total, badge_url,
     // Champs Prime de Leadership mensuelle
-    min_monthly_bv_leg, min_monthly_directs, min_monthly_package_value, monthly_floor_ranks
+    min_monthly_bv_leg, min_monthly_directs, min_monthly_package_value, monthly_floor_ranks,
+    // Type de package requis (affiché dans Config MLM, persisté en DB)
+    required_package_type
   } = await c.req.json()
-  // Note : required_package_type est obsolète et ignoré — la qualification des directs
-  // repose uniquement sur min_monthly_package_value (configurable admin).
   await c.env.DB.prepare(
     `UPDATE rank_config SET
       monthly_prime=?, monthly_cap=?, min_bv_leg=?, min_directs=?,
@@ -1408,6 +1408,7 @@ admin.put('/config/rank/:name', requirePermission('settings.edit'), async (c) =>
       min_monthly_directs=COALESCE(?,min_monthly_directs),
       min_monthly_package_value=COALESCE(?,min_monthly_package_value),
       monthly_floor_ranks=COALESCE(?,monthly_floor_ranks),
+      required_package_type=COALESCE(?,required_package_type),
       updated_at=datetime('now')
      WHERE rank_name=?`
   ).bind(
@@ -1418,6 +1419,7 @@ admin.put('/config/rank/:name', requirePermission('settings.edit'), async (c) =>
     min_monthly_directs != null ? min_monthly_directs : null,
     min_monthly_package_value != null ? min_monthly_package_value : null,
     monthly_floor_ranks != null ? monthly_floor_ranks : null,
+    required_package_type ?? null,
     c.req.param('name')
   ).run()
   return c.json({ success: true })
