@@ -1,4 +1,41 @@
-const API="";function openImg(el){var img=el.querySelector("img");if(!img||!img.src)return;var src=img.src;var w=window.open("","_blank","width=960,height=720,scrollbars=yes,resizable=yes");if(!w){alert("Autorisez les popups pour voir l'image");return;}w.document.write("<!DOCTYPE html><html><head><meta charset=\"UTF-8\">"+"<style>"+"*{margin:0;padding:0;box-sizing:border-box}"+"body{background:#111;display:flex;flex-direction:column;align-items:center;min-height:100vh}"+"div.bar{background:#1a1a2e;width:100%;padding:10px 16px;display:flex;align-items:center;"+"gap:10px;border-bottom:1px solid #333;position:sticky;top:0}"+"div.bar a{background:#2563eb;color:#fff;font:bold 12px sans-serif;padding:5px 14px;"+"border-radius:6px;text-decoration:none}"+"div.wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:16px;width:100%}"+"img{max-width:100%;max-height:calc(100vh - 60px);object-fit:contain;border-radius:8px}"+"</style></head><body>"+"<div class=\"bar\"><a href=\""+src+"\" download>&#11015; Télécharger</a></div>"+"<div class=\"wrap\"><img src=\""+src+"\" /></div>"+"</body></html>");w.document.close();}function catPal(c){const p={gold:{bg:"bg-yellow-500/10",text:"text-yellow-400",border:"border-yellow-500/30"},blue:{bg:"bg-blue-500/10",text:"text-blue-400",border:"border-blue-500/30"},purple:{bg:"bg-purple-500/10",text:"text-purple-400",border:"border-purple-500/30"},pink:{bg:"bg-pink-500/10",text:"text-pink-400",border:"border-pink-500/30"},red:{bg:"bg-red-500/10",text:"text-red-400",border:"border-red-500/30"},green:{bg:"bg-green-500/10",text:"text-green-400",border:"border-green-500/30"}};return p[c]||p.gold;}const MKTG_TYPE_COLORS={pdf:"red",video:"purple",image:"blue",link:"green",doc:"orange",audio:"yellow",zip:"gray"};const MKTG_TYPE_ICONS={pdf:"fa-file-pdf",video:"fa-video",image:"fa-image",link:"fa-link",doc:"fa-file-word",audio:"fa-music",zip:"fa-file-archive"};let adminToken=localStorage.getItem("leader_admin_token"),currentAdmin=null;function renderPagination(containerId,total,page,perPage,onPageChange,onPerPageChange){var totalPages=Math.ceil(total/perPage);var el=document.getElementById(containerId);if(!el)return;if(total===0){el.innerHTML="";return;}var selectHtml="<select class=\"pagination-perpage\" onchange=\""+onPerPageChange+"(parseInt(this.value),1)\">"+"<option value=\"10\""+( perPage===10?" selected":"")+">10 / page</option>"+"<option value=\"25\""+( perPage===25?" selected":"")+">25 / page</option>"+"<option value=\"50\""+( perPage===50?" selected":"")+">50 / page</option>"+"</select>";var info="<span class=\"text-xs text-gray-400\">"+((page-1)*perPage+1)+"-"+Math.min(page*perPage,total)+" sur "+total+"</span>";var buttons="";var WINDOW=2;var start=Math.max(1,page-WINDOW);var end=Math.min(totalPages,page+WINDOW);if(start>1){  buttons+="<button class=\"pagination-btn\" onclick=\""+onPageChange+"(1)\">1</button>";  if(start>2)buttons+="<span class=\"pagination-ellipsis\">\u2026</span>";}for(var p=start;p<=end;p++){  var active=p===page?"pagination-btn active":"pagination-btn";  buttons+="<button class=\""+active+"\" onclick=\""+onPageChange+"("+p+")\">"+p+"</button>";}if(end<totalPages){  if(end<totalPages-1)buttons+="<span class=\"pagination-ellipsis\">\u2026</span>";  buttons+="<button class=\"pagination-btn\" onclick=\""+onPageChange+"("+totalPages+")\">"+totalPages+"</button>";}var prevBtn="<button class=\"pagination-btn\""+( page<=1?" disabled":"")+' onclick=\"if('+page+">1)"+onPageChange+"("+(page-1)+')\">&larr;</button>';var nextBtn="<button class=\"pagination-btn\""+(page>=totalPages?" disabled":"")+' onclick=\"if('+page+"<"+totalPages+")"+onPageChange+"("+(page+1)+')\">&rarr;</button>';el.innerHTML="<div class=\"admin-pagination pagination-bar\">"+info+selectHtml+"<div class=\"pagination-pages\">"+prevBtn+buttons+nextBtn+"</div></div>";}
+const API="";function openImg(el){var img=el.querySelector("img");if(!img||!img.src)return;var src=img.src;var w=window.open("","_blank","width=960,height=720,scrollbars=yes,resizable=yes");if(!w){alert("Autorisez les popups pour voir l'image");return;}w.document.write("<!DOCTYPE html><html><head><meta charset=\"UTF-8\">"+"<style>"+"*{margin:0;padding:0;box-sizing:border-box}"+"body{background:#111;display:flex;flex-direction:column;align-items:center;min-height:100vh}"+"div.bar{background:#1a1a2e;width:100%;padding:10px 16px;display:flex;align-items:center;"+"gap:10px;border-bottom:1px solid #333;position:sticky;top:0}"+"div.bar a{background:#2563eb;color:#fff;font:bold 12px sans-serif;padding:5px 14px;"+"border-radius:6px;text-decoration:none}"+"div.wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:16px;width:100%}"+"img{max-width:100%;max-height:calc(100vh - 60px);object-fit:contain;border-radius:8px}"+"</style></head><body>"+"<div class=\"bar\"><a href=\""+src+"\" download>&#11015; Télécharger</a></div>"+"<div class=\"wrap\"><img src=\""+src+"\" /></div>"+"</body></html>");w.document.close();}function catPal(c){const p={gold:{bg:"bg-yellow-500/10",text:"text-yellow-400",border:"border-yellow-500/30"},blue:{bg:"bg-blue-500/10",text:"text-blue-400",border:"border-blue-500/30"},purple:{bg:"bg-purple-500/10",text:"text-purple-400",border:"border-purple-500/30"},pink:{bg:"bg-pink-500/10",text:"text-pink-400",border:"border-pink-500/30"},red:{bg:"bg-red-500/10",text:"text-red-400",border:"border-red-500/30"},green:{bg:"bg-green-500/10",text:"text-green-400",border:"border-green-500/30"}};return p[c]||p.gold;}const MKTG_TYPE_COLORS={pdf:"red",video:"purple",image:"blue",link:"green",doc:"orange",audio:"yellow",zip:"gray"};const MKTG_TYPE_ICONS={pdf:"fa-file-pdf",video:"fa-video",image:"fa-image",link:"fa-link",doc:"fa-file-word",audio:"fa-music",zip:"fa-file-archive"};let adminToken=localStorage.getItem("leader_admin_token"),currentAdmin=null;function renderPagination(containerId,total,page,perPage,onPageChange,onPerPageChange){
+  var el=document.getElementById(containerId);
+  if(!el)return;
+  if(!total||total===0){el.innerHTML="";return;}
+  var totalPages=Math.ceil(total/perPage);
+  // Stocker les callbacks dans window pour les attributs onclick HTML
+  var cbId=containerId.replace(/[^a-zA-Z0-9]/g,"_");
+  window["__pgPage_"+cbId]=onPageChange;
+  window["__pgPer_"+cbId]=onPerPageChange;
+  var goPage="window['__pgPage_"+cbId+"']";
+  var goPer="window['__pgPer_"+cbId+"']";
+  var info="<span class=\"text-xs text-gray-400\">"+((page-1)*perPage+1)+"-"+Math.min(page*perPage,total)+" sur "+total+"</span>";
+  var selectHtml="<select class=\"pagination-perpage\" onchange=\""+goPer+"(parseInt(this.value),1)\">"
+    +"<option value=\"10\""+(perPage===10?" selected":"")+">10 / page</option>"
+    +"<option value=\"25\""+(perPage===25?" selected":"")+">25 / page</option>"
+    +"<option value=\"50\""+(perPage===50?" selected":"")+">50 / page</option>"
+    +"<option value=\"100\""+(perPage===100?" selected":"")+">100 / page</option>"
+    +"</select>";
+  var WINDOW=2;
+  var rangeStart=Math.max(1,page-WINDOW);
+  var rangeEnd=Math.min(totalPages,page+WINDOW);
+  var buttons="";
+  if(rangeStart>1){
+    buttons+="<button class=\"pagination-btn\" onclick=\""+goPage+"(1)\">1</button>";
+    if(rangeStart>2)buttons+="<span class=\"pagination-ellipsis\">\u2026</span>";
+  }
+  for(var p=rangeStart;p<=rangeEnd;p++){
+    var active=p===page?"pagination-btn active":"pagination-btn";
+    buttons+="<button class=\""+active+"\" onclick=\""+goPage+"("+p+")\">"+p+"</button>";
+  }
+  if(rangeEnd<totalPages){
+    if(rangeEnd<totalPages-1)buttons+="<span class=\"pagination-ellipsis\">\u2026</span>";
+    buttons+="<button class=\"pagination-btn\" onclick=\""+goPage+"("+totalPages+")\">"+totalPages+"</button>";
+  }
+  var prevBtn="<button class=\"pagination-btn\""+(page<=1?" disabled":"")+" onclick=\"if("+page+">1)"+goPage+"("+(page-1)+")\">&#8592;</button>";
+  var nextBtn="<button class=\"pagination-btn\""+(page>=totalPages?" disabled":"")+" onclick=\"if("+page+"<"+totalPages+")"+goPage+"("+(page+1)+")\">&#8594;</button>";
+  el.innerHTML="<div class=\"admin-pagination pagination-bar\">"+info+selectHtml+"<div class=\"pagination-pages\">"+prevBtn+buttons+nextBtn+"</div></div>";
+}
 /* ── Mobile responsive fix — appliqué après chaque rendu de page ── */
 function _applyMobileFixes(){
   if(window.innerWidth>=768)return;
