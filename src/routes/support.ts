@@ -8,6 +8,63 @@ import { requirePermission, requireAnyPermission } from '../middleware/permissio
 
 export const support = new Hono<{ Bindings: Bindings }>()
 
+// ── Helper IA : DeepSeek prioritaire, fallback OpenAI ────────────────────────
+// DeepSeek est compatible API OpenAI — même format, URL différente
+async function callAIWithFallback(
+  deepseekKey: string,
+  openaiKey: string,
+  systemPrompt: string,
+  messages: any[],
+  opts: { temperature?: number; max_tokens?: number } = {}
+): Promise<{ ok: boolean; data?: any; status?: number; error?: string; provider?: string }> {
+  const body = {
+    model:           deepseekKey ? 'deepseek-chat' : 'gpt-4o',
+    temperature:     opts.temperature ?? 0.3,
+    max_tokens:      opts.max_tokens  ?? 1200,
+    response_format: { type: 'json_object' },
+    messages:        [{ role: 'system', content: systemPrompt }, ...messages],
+  }
+
+  // ── Tentative 1 : DeepSeek ─────────────────────────────────
+  if (deepseekKey) {
+    try {
+      const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${deepseekKey}` },
+        body: JSON.stringify({ ...body, model: 'deepseek-chat' }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        return { ok: true, data, provider: 'deepseek' }
+      }
+      console.warn('[AI] DeepSeek failed:', res.status, '— fallback OpenAI')
+    } catch (e: any) {
+      console.warn('[AI] DeepSeek error:', e.message, '— fallback OpenAI')
+    }
+  }
+
+  // ── Tentative 2 : OpenAI (fallback) ───────────────────────
+  if (openaiKey) {
+    try {
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${openaiKey}` },
+        body: JSON.stringify({ ...body, model: 'gpt-4o' }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        return { ok: true, data, provider: 'openai' }
+      }
+      const errText = await res.text()
+      return { ok: false, status: res.status, error: errText.substring(0, 300), provider: 'openai' }
+    } catch (e: any) {
+      return { ok: false, error: e.message, provider: 'openai' }
+    }
+  }
+
+  return { ok: false, error: 'Aucune clé IA configurée (DeepSeek ni OpenAI)' }
+}
+
 // ── Middleware auth membre ────────────────────────────────────
 support.use('/*', async (c, next) => {
   const auth = c.req.header('Authorization')
@@ -507,41 +564,25 @@ Ne donne PAS de réponse générique — cite les montants, dates et statuts exa
 
 DERNIER MESSAGE DU MEMBRE : "${lastMemberMsg}"`
 
-    // 5. Appel GPT-4o
-    // On envoie : system prompt + historique (sans dernier msg) + userPrompt enrichi (avec contexte + dernier msg)
+    // 5. Appel IA — DeepSeek en priorité, fallback OpenAI
     const historyWithoutLast = conversation.slice(0, -1)
 
-    const gptRes = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        temperature: 0.3,
-        max_tokens: 1200,
-        response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: LEADER_SYSTEM_PROMPT },
-          // Historique des échanges précédents (sans le dernier message)
-          ...historyWithoutLast,
-          // Dernier message du membre enrichi du contexte complet
-          { role: 'user', content: userPrompt },
-        ],
-      }),
-    })
+    const aiResponse = await callAIWithFallback(
+      env.DEEPSEEK_API_KEY || '',
+      env.OPENAI_API_KEY || '',
+      LEADER_SYSTEM_PROMPT,
+      [...historyWithoutLast, { role: 'user', content: userPrompt }],
+      { temperature: 0.3, max_tokens: 1200 }
+    )
 
-    if (!gptRes.ok) {
-      const errText = await gptRes.text()
-      console.error('[AI Support] GPT-4o error:', gptRes.status, errText)
-      // Escalade admin — erreur API OpenAI
+    if (!aiResponse.ok) {
+      console.error('[AI Support] Erreur IA (DeepSeek + OpenAI):', aiResponse.error)
       await _escaladeAdmin(db, ticketId,
-        `L'IA n'a pas pu traiter ce ticket — erreur API OpenAI (HTTP ${gptRes.status}). Détail technique : ${errText.substring(0, 300)}`)
+        `L'IA n'a pas pu traiter ce ticket — erreur API (HTTP ${aiResponse.status}). Détail : ${aiResponse.error}`)
       return
     }
 
-    const gptData = await gptRes.json() as any
+    const gptData = aiResponse.data as any
     const rawContent = gptData?.choices?.[0]?.message?.content || ''
 
     let parsed: { reply: string; needs_human: boolean; confidence: number; internal_note?: string }

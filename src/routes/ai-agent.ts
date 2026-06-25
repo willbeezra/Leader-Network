@@ -439,18 +439,42 @@ function sseEvent(type: string, data: object): string {
   return `data: ${JSON.stringify({ type, ...data })}\n\n`
 }
 
-// ── Helper : appel GPT-4o ─────────────────────────────────────
-async function callGPT(apiKey: string, systemPrompt: string, messages: any[], maxTokens = 2000): Promise<{ content: string; tokens: number }> {
+// ── Helper : appel IA — DeepSeek prioritaire, fallback GPT-4o ──
+// DeepSeek utilise le même format API qu'OpenAI (compatible)
+async function callGPT(apiKey: string, systemPrompt: string, messages: any[], maxTokens = 2000, deepseekKey = ''): Promise<{ content: string; tokens: number }> {
+  const body = {
+    temperature:     0.1,
+    max_tokens:      maxTokens,
+    response_format: { type: 'json_object' },
+    messages:        [{ role: 'system', content: systemPrompt }, ...messages],
+  }
+
+  // ── Tentative 1 : DeepSeek ─────────────────────────────────
+  if (deepseekKey) {
+    try {
+      const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${deepseekKey}` },
+        body: JSON.stringify({ ...body, model: 'deepseek-chat' }),
+      })
+      if (res.ok) {
+        const data = await res.json() as any
+        return {
+          content: data?.choices?.[0]?.message?.content || '{}',
+          tokens:  data?.usage?.total_tokens || 0,
+        }
+      }
+      console.warn('[AI Agent] DeepSeek failed:', res.status, '— fallback OpenAI')
+    } catch (e: any) {
+      console.warn('[AI Agent] DeepSeek error:', e.message, '— fallback OpenAI')
+    }
+  }
+
+  // ── Tentative 2 : OpenAI (fallback) ───────────────────────
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model: 'gpt-4o',
-      temperature: 0.1,
-      max_tokens: maxTokens,
-      response_format: { type: 'json_object' },
-      messages: [{ role: 'system', content: systemPrompt }, ...messages],
-    }),
+    body: JSON.stringify({ ...body, model: 'gpt-4o' }),
   })
   if (!res.ok) {
     const err = await res.text()
@@ -459,7 +483,7 @@ async function callGPT(apiKey: string, systemPrompt: string, messages: any[], ma
   const data = await res.json() as any
   return {
     content: data?.choices?.[0]?.message?.content || '{}',
-    tokens: data?.usage?.total_tokens || 0,
+    tokens:  data?.usage?.total_tokens || 0,
   }
 }
 
@@ -473,7 +497,8 @@ aiAgent.post('/chat', requirePermission('members.view'), async (c) => {
 
   const sessionId = session_id || genId()
   const db = c.env.DB
-  const openaiKey = c.env.OPENAI_API_KEY
+  const openaiKey   = c.env.OPENAI_API_KEY
+  const deepseekKey = c.env.DEEPSEEK_API_KEY || ''
 
   // Sauvegarder le message utilisateur
   await db.prepare(
@@ -506,7 +531,7 @@ aiAgent.post('/chat', requirePermission('members.view'), async (c) => {
           const p1 = await callGPT(openaiKey, PROMPT_PHASE1, [
             ...historyMessages,
             { role: 'user', content: message.trim() }
-          ], 1500)
+          ], 1500, deepseekKey)
           totalTokens += p1.tokens
           phase1 = JSON.parse(p1.content)
         } catch (err: any) {
@@ -594,7 +619,7 @@ Analyse ces données et réponds à l'admin de façon claire et complète.`
           const p2 = await callGPT(openaiKey, PROMPT_PHASE2, [
             ...historyMessages,
             { role: 'user', content: phase2UserContent }
-          ], 2500)
+          ], 2500, deepseekKey)
           totalTokens += p2.tokens
           phase2 = JSON.parse(p2.content)
         } catch (err: any) {
