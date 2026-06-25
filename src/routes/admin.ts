@@ -90,8 +90,14 @@ admin.get('/dashboard', async (c) => {
        SELECT po.member_id, p.name AS package_name
        FROM package_orders po
        JOIN packages p ON p.id = po.package_id
-       WHERE po.status = 'active'
-       ORDER BY po.created_at DESC
+       WHERE po.status = 'validated'
+         AND po.id = (
+           SELECT id FROM package_orders po2
+           WHERE po2.member_id = po.member_id
+             AND po2.status = 'validated'
+           ORDER BY po2.created_at DESC
+           LIMIT 1
+         )
      ) ap ON ap.member_id = m.id
      ORDER BY m.created_at DESC LIMIT 8`
   ).all()
