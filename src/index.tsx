@@ -20,7 +20,7 @@ import { landingPublic, landingAdmin, buildLandingPage } from './routes/landing.
 import { i18nPublic, i18nAdmin } from './routes/i18n-admin.js'
 import { campus } from './routes/campus.js'
 import type { Bindings } from './types/index.js'
-import { processDailyPayments, getMauritiusDateStr, processBVQueue, processRankQueue, activateAndReward, createNotification, orchestrateur } from './lib/mlm.js'
+import { processDailyPayments, getMauritiusDateStr, processBVQueue, processRankQueue, activateAndReward, createNotification, orchestrateur, processSubscriptionCBRetries, sendSubscriptionReminderEmails } from './lib/mlm.js'
 import { sendEmail } from './lib/mailer.js'
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -2691,7 +2691,19 @@ export const scheduled = {
         // Toutes les heures ou toutes les 5 min : orchestrateur complet
         await orchestrateur(env.DB)
       } else if (cron === '0 0 * * *') {
-        // Chaque jour à minuit UTC : vérification licences expirées + alertes
+        // Chaque jour à minuit UTC : vérifications quotidiennes
+
+        // ── Relance CB automatique J+1/J+3/J+5 ──────────────
+        await processSubscriptionCBRetries(env.DB).catch((e: any) =>
+          console.error('[CRON] processSubscriptionCBRetries:', e?.message)
+        )
+
+        // ── Rappels J-3 avant prélèvement abonnement ─────────
+        await sendSubscriptionReminderEmails(env.DB).catch((e: any) =>
+          console.error('[CRON] sendSubscriptionReminderEmails:', e?.message)
+        )
+
+        // ── Vérification licences expirées + alertes ──────────
         await runLicenseCheckExpired(env.DB)
 
         // ── Alertes package expirant bientôt (J-7) ──────────

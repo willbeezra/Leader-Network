@@ -1220,12 +1220,34 @@ members.get('/wallet-history', async (c) => {
       reserve_strategique:               'Réserve Stratégique',
       withdrawal:                        'Retrait PayPal',
       retrait_paypal:                    'Retrait PayPal',
+      withdrawal_paypal:                 'Retrait PayPal',
+      withdrawal_crypto:                 'Retrait Crypto',
+      withdrawal_bank:                   'Retrait virement bancaire',
       credit_transfer:                   'Virement reçu',
       debit_transfer:                    'Libération vers portefeuille',
       upgrade_cancel:                    'Annulation upgrade',
       admin_credit:                      'Crédit administrateur',
       admin_debit:                       'Débit administrateur',
       reconciliation:                    'Réconciliation',
+      // Achats & abonnements
+      subscription_renewal:              'Renouvellement abonnement mensuel',
+      subscription_payment:              'Paiement abonnement',
+      license_purchase:                  'Achat licence',
+      license_renewal:                   'Renouvellement licence',
+      package_purchase:                  'Achat package',
+      package_upgrade:                   'Upgrade package',
+      // Recharges & conversions
+      topup:                             'Recharge wallet',
+      topup_wallet:                      'Recharge wallet',
+      topup_crypto:                      'Recharge crypto',
+      topup_card:                        'Recharge par carte',
+      dreamiles_convert:                 'Conversion Dreamiles → USD',
+      dreamiles_credit:                  'Crédit Dreamiles',
+      // Frais & ajustements
+      fee:                               'Frais',
+      commission_fee:                    'Frais de traitement',
+      adjustment:                        'Ajustement de solde',
+      refund:                            'Remboursement',
     }
 
     // Enrichir : direction selon le signe du montant + libellé lisible
@@ -1256,6 +1278,11 @@ members.get('/wallet-history', async (c) => {
       ])
       const all = [...(commRows.results || []), ...(wdRows.results || [])]
         .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .map((t: any) => ({
+          ...t,
+          direction:  t.direction || (t.amount >= 0 ? 'credit' : 'debit'),
+          type_label: TX_TYPE_LABELS[t.transaction_type] || t.description || t.transaction_type,
+        }))
       return c.json({ type, transactions: all.slice(offset, offset + limit), total: all.length })
     }
 
@@ -5301,3 +5328,242 @@ members.get('/subscription', async (c) => {
 })
 
 export { members }
+
+// ============================================================
+// ─── GESTION CARTE BANCAIRE (STRIPE SAVED PAYMENTS) ─────────
+// ============================================================
+
+/**
+ * GET /api/members/saved-payment
+ * Retourne la carte Stripe sauvegardée du membre (s'il en a une).
+ */
+members.get('/saved-payment', async (c) => {
+  const memberId = (c as any).get('memberId')
+  if (!memberId) return c.json({ error: 'Non authentifié' }, 401)
+
+  const card = await c.env.DB.prepare(
+    `SELECT id, provider, card_brand, card_last4, card_exp_month, card_exp_year,
+            is_default, is_active, created_at
+     FROM member_saved_payments
+     WHERE member_id = ? AND provider = 'stripe' AND is_active = 1
+     ORDER BY is_default DESC, created_at DESC
+     LIMIT 1`
+  ).bind(memberId).first() as any
+
+  return c.json({ card: card || null })
+})
+
+/**
+ * POST /api/members/saved-payment/setup-intent
+ * Crée un Stripe SetupIntent pour enregistrer une nouvelle carte.
+ * Le frontend utilise l'ID retourné pour afficher Stripe Elements.
+ */
+members.post('/saved-payment/setup-intent', async (c) => {
+  const memberId = (c as any).get('memberId')
+  if (!memberId) return c.json({ error: 'Non authentifié' }, 401)
+
+  // Récupérer config Stripe
+  const stripeCfg = await c.env.DB.prepare(
+    `SELECT key, value FROM payment_gateway_config WHERE gateway = 'stripe_api'`
+  ).all()
+  const stripeCfgMap: Record<string, string> = {}
+  for (const r of (stripeCfg.results as any[])) stripeCfgMap[r.key] = r.value
+  const stripeSecretKey = stripeCfgMap['secret_key'] || ''
+  const stripePublicKey = stripeCfgMap['public_key'] || ''
+
+  if (!stripeSecretKey) {
+    return c.json({ error: 'Paiement par carte non configuré' }, 503)
+  }
+
+  // Récupérer ou créer le customer Stripe
+  const member = await c.env.DB.prepare(
+    `SELECT email, first_name, last_name FROM members WHERE id = ?`
+  ).bind(memberId).first() as any
+
+  let stripeCustomerId: string | null = null
+
+  // Chercher si le membre a déjà un customer_id Stripe
+  const existingPayment = await c.env.DB.prepare(
+    `SELECT stripe_customer_id FROM member_saved_payments
+     WHERE member_id = ? AND provider = 'stripe'
+       AND stripe_customer_id IS NOT NULL
+     LIMIT 1`
+  ).bind(memberId).first() as any
+
+  if (existingPayment?.stripe_customer_id) {
+    stripeCustomerId = existingPayment.stripe_customer_id
+  } else {
+    // Créer un nouveau customer Stripe
+    const customerRes = await fetch('https://api.stripe.com/v1/customers', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${stripeSecretKey}`,
+        'Content-Type':  'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        email:       member?.email || '',
+        name:        `${member?.first_name || ''} ${member?.last_name || ''}`.trim(),
+        'metadata[member_id]': memberId,
+      }).toString(),
+    })
+    const customerJson = await customerRes.json() as any
+    if (customerJson.error) {
+      return c.json({ error: `Erreur Stripe: ${customerJson.error.message}` }, 500)
+    }
+    stripeCustomerId = customerJson.id
+  }
+
+  // Créer un SetupIntent
+  const setupRes = await fetch('https://api.stripe.com/v1/setup_intents', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${stripeSecretKey}`,
+      'Content-Type':  'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({
+      customer:                 stripeCustomerId!,
+      'payment_method_types[]': 'card',
+      usage:                    'off_session',
+      'metadata[member_id]':    memberId,
+    }).toString(),
+  })
+  const setupJson = await setupRes.json() as any
+
+  if (setupJson.error) {
+    return c.json({ error: `Erreur Stripe: ${setupJson.error.message}` }, 500)
+  }
+
+  return c.json({
+    client_secret:      setupJson.client_secret,
+    setup_intent_id:    setupJson.id,
+    stripe_customer_id: stripeCustomerId,
+    stripe_public_key:  stripePublicKey,
+  })
+})
+
+/**
+ * POST /api/members/saved-payment/confirm
+ * Appelé après confirmation du SetupIntent côté frontend.
+ * Sauvegarde les infos de la carte en base.
+ * Body: { setup_intent_id, stripe_customer_id }
+ */
+members.post('/saved-payment/confirm', async (c) => {
+  const memberId = (c as any).get('memberId')
+  if (!memberId) return c.json({ error: 'Non authentifié' }, 401)
+
+  const { setup_intent_id, stripe_customer_id } = await c.req.json()
+  if (!setup_intent_id || !stripe_customer_id) {
+    return c.json({ error: 'setup_intent_id et stripe_customer_id requis' }, 400)
+  }
+
+  // Récupérer config Stripe
+  const stripeCfg = await c.env.DB.prepare(
+    `SELECT key, value FROM payment_gateway_config WHERE gateway = 'stripe_api'`
+  ).all()
+  const stripeCfgMap: Record<string, string> = {}
+  for (const r of (stripeCfg.results as any[])) stripeCfgMap[r.key] = r.value
+  const stripeSecretKey = stripeCfgMap['secret_key'] || ''
+
+  if (!stripeSecretKey) return c.json({ error: 'Stripe non configuré' }, 503)
+
+  // Récupérer le SetupIntent pour obtenir le payment_method
+  const siRes = await fetch(`https://api.stripe.com/v1/setup_intents/${setup_intent_id}`, {
+    headers: { 'Authorization': `Bearer ${stripeSecretKey}` },
+  })
+  const siJson = await siRes.json() as any
+
+  if (siJson.error) return c.json({ error: `Erreur Stripe: ${siJson.error.message}` }, 500)
+  if (siJson.status !== 'succeeded') return c.json({ error: `SetupIntent non confirmé (status: ${siJson.status})` }, 400)
+
+  const pmId = siJson.payment_method
+  if (!pmId) return c.json({ error: 'payment_method absent du SetupIntent' }, 400)
+
+  // Récupérer les détails de la carte
+  const pmRes = await fetch(`https://api.stripe.com/v1/payment_methods/${pmId}`, {
+    headers: { 'Authorization': `Bearer ${stripeSecretKey}` },
+  })
+  const pmJson = await pmRes.json() as any
+  if (pmJson.error) return c.json({ error: `Erreur Stripe PM: ${pmJson.error.message}` }, 500)
+
+  const card = pmJson.card || {}
+  const cardBrand    = card.brand    || null
+  const cardLast4    = card.last4    || null
+  const cardExpMonth = card.exp_month || null
+  const cardExpYear  = card.exp_year  || null
+
+  // Désactiver les anciennes cartes de ce membre
+  await c.env.DB.prepare(
+    `UPDATE member_saved_payments
+     SET is_active=0, is_default=0, updated_at=datetime('now')
+     WHERE member_id = ? AND provider = 'stripe'`
+  ).bind(memberId).run()
+
+  // Insérer la nouvelle carte
+  const newId = crypto.randomUUID()
+  await c.env.DB.prepare(
+    `INSERT INTO member_saved_payments
+       (id, member_id, provider, stripe_customer_id, stripe_pm_id,
+        card_brand, card_last4, card_exp_month, card_exp_year,
+        stripe_setup_intent_id, is_default, is_active,
+        created_at, updated_at)
+     VALUES (?, ?, 'stripe', ?, ?, ?, ?, ?, ?, ?, 1, 1, datetime('now'), datetime('now'))`
+  ).bind(
+    newId, memberId, stripe_customer_id, pmId,
+    cardBrand, cardLast4, cardExpMonth, cardExpYear,
+    setup_intent_id
+  ).run()
+
+  return c.json({
+    success:    true,
+    card: {
+      id:              newId,
+      card_brand:      cardBrand,
+      card_last4:      cardLast4,
+      card_exp_month:  cardExpMonth,
+      card_exp_year:   cardExpYear,
+    }
+  })
+})
+
+/**
+ * DELETE /api/members/saved-payment
+ * Supprime (désactive) la carte sauvegardée du membre.
+ * Détache également le payment_method de Stripe.
+ */
+members.delete('/saved-payment', async (c) => {
+  const memberId = (c as any).get('memberId')
+  if (!memberId) return c.json({ error: 'Non authentifié' }, 401)
+
+  const existingCard = await c.env.DB.prepare(
+    `SELECT stripe_pm_id FROM member_saved_payments
+     WHERE member_id = ? AND provider = 'stripe' AND is_active = 1
+     LIMIT 1`
+  ).bind(memberId).first() as any
+
+  if (existingCard?.stripe_pm_id) {
+    // Récupérer config Stripe pour détacher le PM
+    const stripeCfg = await c.env.DB.prepare(
+      `SELECT key, value FROM payment_gateway_config WHERE gateway = 'stripe_api'`
+    ).all()
+    const stripeCfgMap: Record<string, string> = {}
+    for (const r of (stripeCfg.results as any[])) stripeCfgMap[r.key] = r.value
+    const stripeSecretKey = stripeCfgMap['secret_key'] || ''
+
+    if (stripeSecretKey) {
+      // Détacher le payment_method de Stripe (best-effort)
+      await fetch(`https://api.stripe.com/v1/payment_methods/${existingCard.stripe_pm_id}/detach`, {
+        method:  'POST',
+        headers: { 'Authorization': `Bearer ${stripeSecretKey}` },
+      }).catch(() => {})
+    }
+  }
+
+  // Désactiver toutes les cartes en base
+  await c.env.DB.prepare(
+    `UPDATE member_saved_payments
+     SET is_active=0, is_default=0, updated_at=datetime('now')
+     WHERE member_id = ? AND provider = 'stripe'`
+  ).bind(memberId).run()
+
+  return c.json({ success: true })
+})

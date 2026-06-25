@@ -266,7 +266,7 @@ async function initRegistrationMode() {const e = window.__REGISTRATION__ || {},t
 
 
 }function pinConfirmOk() {document.getElementById("pin-confirmation").classList.add("hidden"), initApp();}async function doLogin() {const e = document.getElementById("login-email").value.trim(),t = document.getElementById("login-password").value,n = document.getElementById("login-error");n.classList.add("hidden");try {const n = await api("POST", "/auth/login", { email: e, password: t });memberToken = n.token, localStorage.setItem("leader_member_token", n.token), currentMember = n.member, initApp();} catch (e) {n.textContent = e.error || "Erreur de connexion", n.classList.remove("hidden");}}function doLogout() {localStorage.removeItem("leader_member_token"), memberToken = null, currentMember = null, document.getElementById("app").classList.add("hidden"), document.getElementById("auth-screen").classList.remove("hidden"), showLogin();}async function initApp() {if (memberToken) try {const e = await api("GET", "/members/me");currentMember = e.member, updateSidebar(), document.getElementById("auth-screen").classList.add("hidden"), document.getElementById("app").classList.remove("hidden"), showPage("dashboard"), loadNotifCount(), loadReservoirCount(), loadSupportUnread();} catch {doLogout();} else document.getElementById("auth-screen").classList.remove("hidden");}function updateSidebar() {const e = currentMember;if (!e) return;const t = ((e.first_name || "")[0] + (e.last_name || "")[0]).toUpperCase();document.getElementById("sidebar-avatar").textContent = t, document.getElementById("sidebar-name").textContent = "".concat(e.first_name, " ").concat(e.last_name), document.getElementById("sidebar-uid").textContent = e.unique_id;const n = document.getElementById("sidebar-status");n.textContent = e.member_status, n.className = "text-xs px-2 py-0.5 rounded-full font-medium ".concat({ AMI: "bg-rouge-500/15 text-rouge-400", Partenaire: "bg-green-500/20 text-green-400", Client: "bg-blue-500/20 text-blue-400", Membre: "bg-gray-500/20 text-gray-400" }[e.member_status] || ""), document.getElementById("sidebar-rank").textContent = "none" === e.current_rank ? "—" : e.current_rank;}async function loadNotifCount() {try {const e = ((await api("GET", "/members/notifications?per_page=100")).notifications || []).filter((e) => !e.is_read).length,t = document.getElementById("notif-badge"),n = document.getElementById("header-notif-badge");
-    e > 0 ? (t.textContent = e, t.classList.remove("hidden"), n.textContent = e, n.classList.remove("hidden")) : (t.classList.add("hidden"), n.classList.add("hidden"));} catch {}}async function loadReservoirCount() {try {const e = await api("GET", "/members/holding-tank"),t = document.getElementById("reservoir-badge");if (!t) return;(e.pending_count || 0) > 0 ? (t.textContent = e.pending_count, t.classList.remove("hidden")) : t.classList.add("hidden");} catch {}}function showPage(e) {window._prevPage = (typeof currentPage !== 'undefined' && currentPage !== e ? currentPage : window._prevPage) || 'wallet';currentPage = e, document.querySelectorAll(".nav-btn").forEach((t) => {t.classList.toggle("active", t.dataset.page === e);});const t = document.getElementById("page-content");t.className = "p-4 md:p-6 fade-in";const n = { dashboard: renderDashboard, team: renderTeam, tree: renderTree, bv: renderBV, commissions: renderCommissions, wallet: renderWallet, withdraw: renderWithdraw, transactions: renderTransactions, packages: renderPackages, license: renderLicense, kyc: renderKYC, marketing: renderMarketing, notifications: renderNotifications, profile: window.renderProfile, reservoir: renderReservoir, "cc-wallet": renderCCWallet, "reserve-strategique": renderReserveStrategique, "commissions-faq": renderCommissionsFAQ, support: window.renderSupport, earnings: window.renderEarnings, "member-card": window.renderMemberCard, services: renderServices, campus: showCampusPage, subscription: renderSubscription };n[e] ? (n[e](t), setTimeout(_applyMemberMobileFixes, 300)) : t.innerHTML = "<p class=\"text-gray-400\">Page \"".concat(e, "\" non disponible</p>");}function refreshCurrentPage() {const btn = document.getElementById("header-refresh-btn");if (btn) {btn.style.pointerEvents = "none";btn.style.opacity = "0.5";const icon = btn.querySelector("i");if (icon) icon.style.transform = "rotate(360deg)";}showPage(currentPage || "dashboard");setTimeout(() => {if (btn) {btn.style.pointerEvents = "";btn.style.opacity = "";const icon = btn.querySelector("i");if (icon) icon.style.transform = "";}}, 800);} /* ── Mobile responsive fix — appliqué après chaque rendu de page membre ── */
+    e > 0 ? (t.textContent = e, t.classList.remove("hidden"), n.textContent = e, n.classList.remove("hidden")) : (t.classList.add("hidden"), n.classList.add("hidden"));} catch {}}async function loadReservoirCount() {try {const e = await api("GET", "/members/holding-tank"),t = document.getElementById("reservoir-badge");if (!t) return;(e.pending_count || 0) > 0 ? (t.textContent = e.pending_count, t.classList.remove("hidden")) : t.classList.add("hidden");} catch {}}function showPage(e) {window._prevPage = (typeof currentPage !== 'undefined' && currentPage !== e ? currentPage : window._prevPage) || 'wallet';currentPage = e, document.querySelectorAll(".nav-btn").forEach((t) => {t.classList.toggle("active", t.dataset.page === e);});const t = document.getElementById("page-content");t.className = "p-4 md:p-6 fade-in";const n = { dashboard: renderDashboard, team: renderTeam, tree: renderTree, bv: renderBV, commissions: renderCommissions, wallet: renderWallet, withdraw: renderWithdraw, transactions: renderTransactions, packages: renderPackages, license: renderLicense, kyc: renderKYC, marketing: renderMarketing, notifications: renderNotifications, profile: window.renderProfile, reservoir: renderReservoir, "cc-wallet": renderCCWallet, "reserve-strategique": renderReserveStrategique, "commissions-faq": renderCommissionsFAQ, support: window.renderSupport, earnings: window.renderEarnings, "member-card": window.renderMemberCard, services: renderServices, campus: showCampusPage, subscription: renderSubscription, "saved-card": renderSavedCard };n[e] ? (n[e](t), setTimeout(_applyMemberMobileFixes, 300)) : t.innerHTML = "<p class=\"text-gray-400\">Page \"".concat(e, "\" non disponible</p>");}function refreshCurrentPage() {const btn = document.getElementById("header-refresh-btn");if (btn) {btn.style.pointerEvents = "none";btn.style.opacity = "0.5";const icon = btn.querySelector("i");if (icon) icon.style.transform = "rotate(360deg)";}showPage(currentPage || "dashboard");setTimeout(() => {if (btn) {btn.style.pointerEvents = "";btn.style.opacity = "";const icon = btn.querySelector("i");if (icon) icon.style.transform = "";}}, 800);} /* ── Mobile responsive fix — appliqué après chaque rendu de page membre ── */
 function _applyMemberMobileFixes() {
   if (window.innerWidth >= 768) return;
   const content = document.getElementById('page-content');
@@ -10427,8 +10427,295 @@ async function renderSubscription(el) {
       <div class="bg-dark-800/60 border border-dark-600 rounded-xl p-4 text-xs text-gray-400 space-y-1">
         <div class="font-semibold text-gray-300 mb-2"><i class="fas fa-info-circle mr-1.5 text-blue-400"></i>Comment fonctionne le prélèvement mensuel ?</div>
         <div class="flex items-start gap-2"><span class="text-emerald-400 font-bold w-5 shrink-0">1.</span><span>Chaque 1er du mois, votre wallet principal est prélevé en priorité.</span></div>
-        <div class="flex items-start gap-2"><span class="text-blue-400 font-bold w-5 shrink-0">2.</span><span>Si votre wallet est insuffisant, un prélèvement est effectué sur votre dépôt broker (traité manuellement par l'équipe).</span></div>
-        <div class="flex items-start gap-2"><span class="text-red-400 font-bold w-5 shrink-0">3.</span><span>Sans paiement sous 7 jours, l'abonnement est suspendu. Contactez le support pour le réactiver.</span></div>
+        <div class="flex items-start gap-2"><span class="text-blue-400 font-bold w-5 shrink-0">2.</span><span>Si insuffisant, votre carte bancaire sauvegardée est débitée automatiquement.</span></div>
+        <div class="flex items-start gap-2"><span class="text-orange-400 font-bold w-5 shrink-0">3.</span><span>En cas d'échec CB, 3 nouvelles tentatives à J+1, J+3, J+5, puis passage en paiement Triomarkets.</span></div>
+        <div class="flex items-start gap-2"><span class="text-red-400 font-bold w-5 shrink-0">4.</span><span>Sans paiement sous 7 jours, l'abonnement est suspendu. Contactez le support pour le réactiver.</span></div>
+      </div>
+
+      <!-- Gestion CB -->
+      <div class="bg-dark-800 border border-blue-500/20 rounded-2xl p-5">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-blue-500/15 flex items-center justify-center">
+              <i class="fas fa-credit-card text-blue-400"></i>
+            </div>
+            <div>
+              <div class="font-semibold text-white text-sm">Carte bancaire de secours</div>
+              <div class="text-xs text-gray-400">Utilisée si votre wallet est insuffisant</div>
+            </div>
+          </div>
+          <button onclick="showPage('saved-card')"
+                  class="flex items-center gap-2 bg-blue-600/20 hover:bg-blue-600/40 border border-blue-500/30 text-blue-300 text-xs px-3 py-1.5 rounded-lg transition">
+            <i class="fas fa-cog"></i> Gérer ma carte
+          </button>
+        </div>
       </div>
     </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PAGE GESTION CARTE BANCAIRE — renderSavedCard
+// ─────────────────────────────────────────────────────────────────────────────
+async function renderSavedCard(el) {
+  el.innerHTML = '<div class="flex items-center justify-center py-16"><div class="loader"></div></div>';
+  let savedCard = null;
+  let stripePublicKey = '';
+
+  try {
+    const r = await api('GET', '/members/saved-payment');
+    savedCard = r.card || null;
+  } catch(e) { console.warn('saved-payment GET:', e); }
+
+  const cardBrandIcon = (brand) => {
+    const icons = { visa: 'fab fa-cc-visa text-blue-400', mastercard: 'fab fa-cc-mastercard text-red-400', amex: 'fab fa-cc-amex text-blue-300', discover: 'fab fa-cc-discover text-orange-400' };
+    return icons[(brand||'').toLowerCase()] || 'fas fa-credit-card text-gray-400';
+  };
+
+  const cardHtml = savedCard
+    ? `<div class="bg-dark-700 border border-blue-500/30 rounded-2xl p-5 flex items-center justify-between gap-4">
+         <div class="flex items-center gap-4">
+           <div class="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-2xl">
+             <i class="${cardBrandIcon(savedCard.card_brand)}"></i>
+           </div>
+           <div>
+             <div class="font-semibold text-white">${(savedCard.card_brand||'Carte').toUpperCase()} •••• ${savedCard.card_last4||'????'}</div>
+             <div class="text-xs text-gray-400 mt-0.5">Expire ${savedCard.card_exp_month||'?'}/${savedCard.card_exp_year||'?'}</div>
+             <div class="text-xs text-green-400 mt-0.5"><i class="fas fa-check-circle mr-1"></i>Carte active pour le prélèvement automatique</div>
+           </div>
+         </div>
+         <button onclick="_deleteSavedCard()"
+                 class="text-xs text-red-400 hover:text-red-300 border border-red-500/30 hover:border-red-500/60 px-3 py-1.5 rounded-lg transition flex items-center gap-1.5">
+           <i class="fas fa-trash-alt"></i> Supprimer
+         </button>
+       </div>`
+    : `<div class="bg-dark-700/50 border border-dashed border-dark-500 rounded-2xl p-8 text-center">
+         <i class="fas fa-credit-card text-3xl text-gray-600 mb-3"></i>
+         <p class="text-gray-400 text-sm">Aucune carte bancaire enregistrée</p>
+         <p class="text-gray-500 text-xs mt-1">Ajoutez une carte pour activer le prélèvement automatique en cas de solde insuffisant</p>
+       </div>`;
+
+  el.innerHTML = `
+    <div class="space-y-6 max-w-2xl mx-auto">
+      <div class="flex items-center justify-between flex-wrap gap-3">
+        <div class="flex items-center gap-3">
+          <button onclick="showPage('subscription')"
+                  class="w-8 h-8 rounded-lg bg-dark-700 hover:bg-dark-600 border border-dark-600 flex items-center justify-center text-gray-400 hover:text-white transition">
+            <i class="fas fa-arrow-left text-sm"></i>
+          </button>
+          <div>
+            <h1 class="text-xl font-bold text-white flex items-center gap-2">
+              <i class="fas fa-credit-card text-blue-400"></i> Ma carte bancaire
+            </h1>
+            <p class="text-gray-400 text-xs mt-0.5">Carte utilisée pour le renouvellement automatique de l'abonnement</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Carte actuelle -->
+      <section aria-label="Carte enregistrée">
+        <h2 class="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
+          <i class="fas fa-wallet text-blue-400/70"></i> Carte enregistrée
+        </h2>
+        ${cardHtml}
+      </section>
+
+      <!-- Ajouter / Changer la carte -->
+      <section aria-label="Ajouter une nouvelle carte" id="add-card-section">
+        <h2 class="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
+          <i class="fas fa-plus-circle text-green-400/70"></i> ${savedCard ? 'Remplacer la carte' : 'Ajouter une carte'}
+        </h2>
+        <div class="bg-dark-800 border border-dark-600 rounded-2xl p-5 space-y-4">
+          <p class="text-xs text-gray-400">
+            <i class="fas fa-shield-alt text-green-400 mr-1"></i>
+            Vos données sont traitées directement par <strong class="text-gray-300">Stripe</strong>, certifié PCI DSS.
+            Aucune donnée sensible ne transite par nos serveurs.
+          </p>
+
+          <!-- Bouton déclencheur du flow Stripe -->
+          <button id="start-add-card-btn" onclick="_startAddCard()"
+                  class="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-xl transition text-sm">
+            <i class="fas fa-lock"></i>
+            ${savedCard ? 'Changer ma carte (paiement sécurisé Stripe)' : 'Ajouter ma carte (paiement sécurisé Stripe)'}
+          </button>
+
+          <!-- Zone Stripe Elements (injectée dynamiquement) -->
+          <div id="stripe-card-form" class="hidden space-y-4">
+            <div id="stripe-card-element" class="bg-dark-700 border border-dark-500 rounded-xl p-3 text-white min-h-[44px]"></div>
+            <div id="stripe-card-errors" class="text-red-400 text-xs hidden"></div>
+            <div class="flex gap-3">
+              <button onclick="_cancelAddCard()"
+                      class="flex-1 py-2.5 rounded-xl border border-dark-500 text-gray-400 hover:text-white text-sm transition">
+                Annuler
+              </button>
+              <button id="confirm-add-card-btn" onclick="_confirmAddCard()"
+                      class="flex-1 py-2.5 rounded-xl bg-green-600 hover:bg-green-500 text-white font-semibold text-sm transition flex items-center justify-center gap-2">
+                <i class="fas fa-check"></i> Confirmer
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Info sécurité -->
+      <div class="bg-dark-800/40 border border-dark-600/50 rounded-xl p-4 text-xs text-gray-500 space-y-1.5">
+        <div class="font-semibold text-gray-400 mb-1.5"><i class="fas fa-info-circle text-blue-400 mr-1.5"></i>Comment ça marche ?</div>
+        <div class="flex items-start gap-2"><span class="text-emerald-400 w-4 shrink-0">1.</span><span>Chaque 1er du mois, si votre wallet est insuffisant, votre carte est débitée automatiquement.</span></div>
+        <div class="flex items-start gap-2"><span class="text-orange-400 w-4 shrink-0">2.</span><span>En cas d'échec, 3 nouvelles tentatives auront lieu à J+1, J+3 et J+5.</span></div>
+        <div class="flex items-start gap-2"><span class="text-blue-400 w-4 shrink-0">3.</span><span>Vous recevrez un email à chaque tentative réussie ou échouée.</span></div>
+        <div class="flex items-start gap-2"><span class="text-red-400 w-4 shrink-0">4.</span><span>Vous pouvez supprimer ou changer votre carte à tout moment depuis cette page.</span></div>
+      </div>
+    </div>`;
+}
+
+// ── Helpers gestion CB ────────────────────────────────────────────────────────
+
+let _stripeInstance = null;
+let _stripeCardElement = null;
+let _setupIntentClientSecret = null;
+let _stripeCustomerId = null;
+let _currentSetupIntentId = null;
+
+async function _startAddCard() {
+  const btn = document.getElementById('start-add-card-btn');
+  const form = document.getElementById('stripe-card-form');
+  const errDiv = document.getElementById('stripe-card-errors');
+  if (!btn || !form) return;
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Chargement…';
+  if (errDiv) { errDiv.textContent = ''; errDiv.classList.add('hidden'); }
+
+  try {
+    // Créer le SetupIntent via notre API
+    const r = await api('POST', '/members/saved-payment/setup-intent');
+    if (!r.client_secret) throw new Error(r.error || 'Impossible de créer le SetupIntent');
+
+    _setupIntentClientSecret = r.client_secret;
+    _stripeCustomerId = r.stripe_customer_id;
+    _currentSetupIntentId = null; // sera récupéré après confirmation
+
+    // Charger Stripe.js dynamiquement si pas encore chargé
+    if (!window.Stripe) {
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://js.stripe.com/v3/';
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+    }
+
+    _stripeInstance = window.Stripe(r.stripe_public_key);
+    const elements = _stripeInstance.elements();
+    _stripeCardElement = elements.create('card', {
+      style: {
+        base: {
+          color: '#f1f5f9',
+          fontFamily: '"Inter", sans-serif',
+          fontSize: '15px',
+          '::placeholder': { color: '#64748b' },
+        },
+        invalid: { color: '#f87171' },
+      }
+    });
+
+    const mountDiv = document.getElementById('stripe-card-element');
+    if (mountDiv) {
+      mountDiv.innerHTML = '';
+      _stripeCardElement.mount('#stripe-card-element');
+      _stripeCardElement.on('change', (e) => {
+        const errDiv = document.getElementById('stripe-card-errors');
+        if (errDiv) {
+          if (e.error) {
+            errDiv.textContent = e.error.message;
+            errDiv.classList.remove('hidden');
+          } else {
+            errDiv.textContent = '';
+            errDiv.classList.add('hidden');
+          }
+        }
+      });
+    }
+
+    btn.classList.add('hidden');
+    form.classList.remove('hidden');
+
+  } catch(e) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-lock"></i> Ajouter ma carte (paiement sécurisé Stripe)';
+    if (errDiv) {
+      errDiv.textContent = e.message || 'Erreur lors du chargement du formulaire carte';
+      errDiv.classList.remove('hidden');
+    }
+  }
+}
+
+function _cancelAddCard() {
+  const btn = document.getElementById('start-add-card-btn');
+  const form = document.getElementById('stripe-card-form');
+  if (btn) { btn.disabled = false; btn.classList.remove('hidden'); }
+  if (form) form.classList.add('hidden');
+  if (_stripeCardElement) { try { _stripeCardElement.unmount(); } catch(e) {} _stripeCardElement = null; }
+  _setupIntentClientSecret = null;
+  _stripeCustomerId = null;
+}
+
+async function _confirmAddCard() {
+  if (!_stripeInstance || !_stripeCardElement || !_setupIntentClientSecret) return;
+
+  const confirmBtn = document.getElementById('confirm-add-card-btn');
+  const errDiv = document.getElementById('stripe-card-errors');
+  if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Vérification…'; }
+  if (errDiv) { errDiv.textContent = ''; errDiv.classList.add('hidden'); }
+
+  try {
+    const { setupIntent, error } = await _stripeInstance.confirmCardSetup(_setupIntentClientSecret, {
+      payment_method: { card: _stripeCardElement }
+    });
+
+    if (error) {
+      throw new Error(error.message || 'Carte refusée');
+    }
+    if (setupIntent.status !== 'succeeded') {
+      throw new Error(`Statut inattendu: ${setupIntent.status}`);
+    }
+
+    // Confirmer côté serveur
+    const r = await api('POST', '/members/saved-payment/confirm', {
+      setup_intent_id:    setupIntent.id,
+      stripe_customer_id: _stripeCustomerId,
+    });
+
+    if (!r.success) throw new Error(r.error || 'Erreur lors de la sauvegarde');
+
+    showToast('Carte bancaire enregistrée avec succès ✓', 'success');
+
+    // Recharger la page
+    const el = document.getElementById('page-content');
+    if (el) await renderSavedCard(el);
+
+  } catch(e) {
+    if (confirmBtn) {
+      confirmBtn.disabled = false;
+      confirmBtn.innerHTML = '<i class="fas fa-check"></i> Confirmer';
+    }
+    if (errDiv) {
+      errDiv.textContent = e.message || 'Erreur lors de la confirmation';
+      errDiv.classList.remove('hidden');
+    }
+  }
+}
+
+async function _deleteSavedCard() {
+  if (!confirm('Supprimer votre carte bancaire enregistrée ? Les futurs prélèvements automatiques ne pourront plus utiliser cette carte.')) return;
+
+  try {
+    const r = await api('DELETE', '/members/saved-payment');
+    if (!r.success) throw new Error(r.error || 'Erreur lors de la suppression');
+    showToast('Carte supprimée', 'success');
+    const el = document.getElementById('page-content');
+    if (el) await renderSavedCard(el);
+  } catch(e) {
+    showToast(e.message || 'Erreur lors de la suppression', 'error');
+  }
 }

@@ -4379,6 +4379,19 @@ export async function processMonthlySubscriptions(db: D1Database): Promise<{
               ' Abonnement suspendu',
               `Votre abonnement ${order.pkg_name} a été suspendu pour défaut de paiement. Contactez le support pour le réactiver.`,
               'error')
+
+            // Email suspension
+            await sendEmail(db, {
+              to: order.email, toName: order.first_name,
+              templateId: 'subscription_suspended',
+              variables: {
+                prenom:       order.first_name || '',
+                package_nom:  order.pkg_name   || '',
+                periode:      period,
+                dashboard_url:'https://willbeleader.pages.dev',
+              }
+            }).catch((e: any) => console.error('[email] subscription_suspended:', e?.message))
+
             console.warn(`[processMonthlySubscriptions] Suspendu: member=${memberId} pkg=${packageId}`)
           }
           alreadyDone++
@@ -4435,6 +4448,20 @@ export async function processMonthlySubscriptions(db: D1Database): Promise<{
               ' Abonnement renouvelé',
               `Votre abonnement ${order.pkg_name} a été renouvelé pour ${period} — ${amountDue}$ prélevés depuis votre wallet.`,
               'success')
+
+            // Email confirmation paiement wallet
+            await sendEmail(db, {
+              to: order.email, toName: order.first_name,
+              templateId: 'subscription_renewed',
+              variables: {
+                prenom:          order.first_name || '',
+                package_nom:     order.pkg_name   || '',
+                montant:         String(amountDue),
+                periode:         period,
+                methode_paiement:'wallet',
+                dashboard_url:   'https://willbeleader.pages.dev',
+              }
+            }).catch((e: any) => console.error('[email] subscription_renewed wallet:', e?.message))
 
             paidWallet++
             paid = true
@@ -4520,6 +4547,20 @@ export async function processMonthlySubscriptions(db: D1Database): Promise<{
                     `Votre abonnement ${order.pkg_name} a été renouvelé pour ${period} — ${amountDue}$ prélevés sur votre carte ${savedCard.card_brand?.toUpperCase()} **** ${savedCard.card_last4}.`,
                     'success')
 
+                  // Email confirmation paiement CB
+                  await sendEmail(db, {
+                    to: order.email, toName: order.first_name,
+                    templateId: 'subscription_renewed',
+                    variables: {
+                      prenom:          order.first_name || '',
+                      package_nom:     order.pkg_name   || '',
+                      montant:         String(amountDue),
+                      periode:         period,
+                      methode_paiement:`carte ${(savedCard.card_brand || 'CB').toUpperCase()} **** ${savedCard.card_last4 || ''}`,
+                      dashboard_url:   'https://willbeleader.pages.dev',
+                    }
+                  }).catch((e: any) => console.error('[email] subscription_renewed cb:', e?.message))
+
                   paidCB++
                   paid = true
                   console.log(`[processMonthlySubscriptions] CB OK: member=${memberId} amount=${amountDue}$ pi=${stripeJson.id}`)
@@ -4532,6 +4573,21 @@ export async function processMonthlySubscriptions(db: D1Database): Promise<{
                          updated_at=datetime('now')
                      WHERE id=?`
                   ).bind(declineCode, renewalId).run()
+
+                  // Email échec CB
+                  await sendEmail(db, {
+                    to: order.email, toName: order.first_name,
+                    templateId: 'subscription_cb_failed',
+                    variables: {
+                      prenom:       order.first_name || '',
+                      package_nom:  order.pkg_name   || '',
+                      montant:      String(amountDue),
+                      periode:      period,
+                      decline_code: declineCode,
+                      dashboard_url:'https://willbeleader.pages.dev',
+                    }
+                  }).catch((e: any) => console.error('[email] subscription_cb_failed:', e?.message))
+
                   console.warn(`[processMonthlySubscriptions] CB échouée: member=${memberId} code=${declineCode}`)
                 }
               }
@@ -4647,6 +4703,23 @@ export async function processMonthlySubscriptions(db: D1Database): Promise<{
         ' Abonnement suspendu',
         `Votre abonnement ${sr.pkg_name} a été suspendu faute de paiement confirmé. Contactez le support.`,
         'error')
+
+      // Email suspension (trio expiré)
+      const srMember = await db.prepare(
+        `SELECT email, first_name FROM members WHERE id = ?`
+      ).bind(sr.member_id).first() as any
+      if (srMember?.email) {
+        await sendEmail(db, {
+          to: srMember.email, toName: srMember.first_name,
+          templateId: 'subscription_suspended',
+          variables: {
+            prenom:       srMember.first_name || '',
+            package_nom:  sr.pkg_name         || '',
+            periode:      sr.period            || '',
+            dashboard_url:'https://willbeleader.pages.dev',
+          }
+        }).catch((e: any) => console.error('[email] subscription_suspended trio:', e?.message))
+      }
     }
   } catch (suspErr: any) {
     console.error('[processMonthlySubscriptions] Vérification suspensions échouée:', suspErr?.message)
@@ -4654,4 +4727,290 @@ export async function processMonthlySubscriptions(db: D1Database): Promise<{
 
   console.log(`[processMonthlySubscriptions] Résultat période ${period}: processed=${processed} paid_wallet=${paidWallet} paid_cb=${paidCB} trio_pending=${trioPending} bv_credited=${bvCredited} already_done=${alreadyDone} errors=${errors}`)
   return { processed, paid_wallet: paidWallet, paid_cb: paidCB, trio_pending: trioPending, already_done: alreadyDone, bv_credited: bvCredited, errors }
+}
+
+// ============================================================
+// ─── RETRY CB AUTOMATIQUE J+1 / J+3 / J+5 ─────────────────
+// ============================================================
+/**
+ * processSubscriptionCBRetries
+ * À appeler chaque jour (cron 0 0 * * *).
+ * Retraite les subscription_renewals avec cb_result != 'ok'
+ * et retry_count < 3, aux jours J+1, J+3, J+5 après l'échec initial.
+ */
+export async function processSubscriptionCBRetries(db: D1Database): Promise<{
+  retried: number
+  succeeded: number
+  failed: number
+}> {
+  const RETRY_DAYS = [1, 3, 5] // Jours après cb_tried_at pour relancer
+
+  // Récupérer config Stripe
+  const stripeCfg = await db.prepare(
+    `SELECT key, value FROM payment_gateway_config WHERE gateway = 'stripe_api'`
+  ).all()
+  const stripeCfgMap: Record<string, string> = {}
+  for (const r of (stripeCfg.results as any[])) stripeCfgMap[r.key] = r.value
+  const stripeSecretKey = stripeCfgMap['secret_key'] || ''
+
+  if (!stripeSecretKey) {
+    console.warn('[processSubscriptionCBRetries] Stripe non configuré — abandon')
+    return { retried: 0, succeeded: 0, failed: 0 }
+  }
+
+  // Sélectionner les renouvellements CB échoués à retraiter
+  const toRetry = await db.prepare(
+    `SELECT sr.id, sr.member_id, sr.package_id, sr.package_order_id,
+            sr.amount_due, sr.period, sr.cb_tried_at,
+            COALESCE(sr.cb_retry_count, 0) AS retry_count,
+            p.name AS pkg_name,
+            m.email, m.first_name, m.last_name
+     FROM subscription_renewals sr
+     JOIN packages p  ON p.id  = sr.package_id
+     JOIN members  m  ON m.id  = sr.member_id
+     WHERE sr.status NOT IN ('paid_wallet','paid_cb','trio_confirmed','suspended','failed')
+       AND sr.cb_result IS NOT NULL
+       AND sr.cb_result NOT IN ('ok','no_card','no_gateway_config')
+       AND COALESCE(sr.cb_retry_count, 0) < 3
+       AND sr.cb_tried_at IS NOT NULL`
+  ).all()
+
+  const rows = (toRetry.results || []) as any[]
+  let retried = 0, succeeded = 0, failed = 0
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  for (const sr of rows) {
+    const cbTriedAt = new Date(sr.cb_tried_at + (sr.cb_tried_at.includes('Z') ? '' : 'Z'))
+    cbTriedAt.setHours(0, 0, 0, 0)
+    const daysSince = Math.round((today.getTime() - cbTriedAt.getTime()) / 86400000)
+
+    // N'effectuer le retry qu'aux jours J+1, J+3, J+5
+    if (!RETRY_DAYS.includes(daysSince)) continue
+
+    retried++
+    const memberId = sr.member_id
+
+    try {
+      // Récupérer la CB sauvegardée
+      const savedCard = await db.prepare(
+        `SELECT stripe_customer_id, stripe_pm_id, card_brand, card_last4
+         FROM member_saved_payments
+         WHERE member_id = ? AND provider = 'stripe'
+           AND is_active = 1 AND is_default = 1
+         LIMIT 1`
+      ).bind(memberId).first() as any
+
+      if (!savedCard?.stripe_customer_id || !savedCard?.stripe_pm_id) {
+        // Plus de CB → passer directement en trio_pending
+        await db.prepare(
+          `UPDATE subscription_renewals
+           SET status='trio_pending', trio_listed_at=datetime('now'), updated_at=datetime('now')
+           WHERE id=?`
+        ).bind(sr.id).run()
+        await createNotification(db, memberId,
+          'Renouvellement en attente',
+          `Aucune carte valide trouvée. Votre abonnement ${sr.pkg_name} sera prélevé sur votre dépôt Triomarkets.`,
+          'warning')
+        failed++
+        continue
+      }
+
+      // Tentative Stripe off_session
+      const stripeBody = new URLSearchParams({
+        amount:               String(Math.round(sr.amount_due * 100)),
+        currency:             'usd',
+        customer:             savedCard.stripe_customer_id,
+        payment_method:       savedCard.stripe_pm_id,
+        confirm:              'true',
+        off_session:          'true',
+        description:          `Renouvellement ${sr.pkg_name} — ${sr.period} (retry J+${daysSince})`,
+        'metadata[member_id]':  memberId,
+        'metadata[renewal_id]': sr.id,
+        'metadata[period]':     sr.period,
+        'metadata[retry]':      String(daysSince),
+      })
+
+      const stripeRes = await fetch('https://api.stripe.com/v1/payment_intents', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${stripeSecretKey}`,
+          'Content-Type':  'application/x-www-form-urlencoded',
+        },
+        body: stripeBody.toString(),
+      })
+      const stripeJson = await stripeRes.json() as any
+
+      if (stripeJson.status === 'succeeded') {
+        // Succès !
+        await db.prepare(
+          `UPDATE subscription_renewals
+           SET status='paid_cb', payment_method='stripe',
+               cb_tried_at=datetime('now'), cb_result='ok',
+               cb_charge_id=?,
+               cb_retry_count=COALESCE(cb_retry_count,0)+1,
+               updated_at=datetime('now')
+           WHERE id=?`
+        ).bind(stripeJson.id, sr.id).run()
+
+        await createNotification(db, memberId,
+          'Abonnement renouvelé',
+          `Votre abonnement ${sr.pkg_name} a été renouvelé — ${sr.amount_due}$ prélevés sur votre carte ${savedCard.card_brand?.toUpperCase()} **** ${savedCard.card_last4}.`,
+          'success')
+
+        await sendEmail(db, {
+          to: sr.email, toName: sr.first_name,
+          templateId: 'subscription_renewed',
+          variables: {
+            prenom:          sr.first_name || '',
+            package_nom:     sr.pkg_name   || '',
+            montant:         String(sr.amount_due),
+            periode:         sr.period,
+            methode_paiement:`carte ${(savedCard.card_brand || 'CB').toUpperCase()} **** ${savedCard.card_last4 || ''} (relance automatique)`,
+            dashboard_url:   'https://willbeleader.pages.dev',
+          }
+        }).catch((e: any) => console.error('[email] subscription_renewed retry:', e?.message))
+
+        succeeded++
+        console.log(`[processSubscriptionCBRetries] Succès J+${daysSince}: member=${memberId} pi=${stripeJson.id}`)
+
+      } else {
+        // Encore un échec
+        const declineCode = stripeJson.last_payment_error?.decline_code || stripeJson.last_payment_error?.code || stripeJson.error?.code || 'declined'
+        const newRetryCount = (sr.retry_count || 0) + 1
+
+        if (newRetryCount >= 3 || daysSince >= 5) {
+          // 3ème échec ou J+5 dépassé → passer en trio_pending
+          await db.prepare(
+            `UPDATE subscription_renewals
+             SET status='trio_pending', trio_listed_at=datetime('now'),
+                 cb_tried_at=datetime('now'), cb_result=?,
+                 cb_retry_count=?,
+                 updated_at=datetime('now')
+             WHERE id=?`
+          ).bind(declineCode, newRetryCount, sr.id).run()
+
+          await createNotification(db, memberId,
+            'Renouvellement en attente',
+            `Votre carte a été refusée ${newRetryCount} fois. Votre abonnement ${sr.pkg_name} sera prélevé via Triomarkets.`,
+            'warning')
+
+          await sendEmail(db, {
+            to: sr.email, toName: sr.first_name,
+            templateId: 'subscription_cb_failed',
+            variables: {
+              prenom:       sr.first_name || '',
+              package_nom:  sr.pkg_name   || '',
+              montant:      String(sr.amount_due),
+              periode:      sr.period,
+              decline_code: `${declineCode} (tentative ${newRetryCount}/3)`,
+              dashboard_url:'https://willbeleader.pages.dev',
+            }
+          }).catch((e: any) => console.error('[email] subscription_cb_failed retry final:', e?.message))
+
+        } else {
+          // Encore des retries possibles → juste mettre à jour le compteur
+          await db.prepare(
+            `UPDATE subscription_renewals
+             SET cb_tried_at=datetime('now'), cb_result=?,
+                 cb_retry_count=?,
+                 updated_at=datetime('now')
+             WHERE id=?`
+          ).bind(declineCode, newRetryCount, sr.id).run()
+        }
+
+        failed++
+        console.warn(`[processSubscriptionCBRetries] Échec J+${daysSince}: member=${memberId} code=${declineCode} retry=${newRetryCount}`)
+      }
+    } catch (err: any) {
+      console.error(`[processSubscriptionCBRetries] Erreur member=${memberId}:`, err?.message)
+      failed++
+    }
+  }
+
+  console.log(`[processSubscriptionCBRetries] retried=${retried} succeeded=${succeeded} failed=${failed}`)
+  return { retried, succeeded, failed }
+}
+
+// ============================================================
+// ─── EMAILS RAPPEL J-3 AVANT EXPIRY ABONNEMENT ─────────────
+// ============================================================
+/**
+ * sendSubscriptionReminderEmails
+ * Envoie un email J-3 aux membres dont l'abonnement mensuel
+ * n'a pas encore été prélevé pour la période en cours.
+ * Utilise system_config.subscription_notify_before_days (défaut: 3).
+ */
+export async function sendSubscriptionReminderEmails(db: D1Database): Promise<{ sent: number }> {
+  const cfgRows = await db.prepare(
+    `SELECT key, value FROM system_config WHERE key LIKE 'subscription_%'`
+  ).all()
+  const cfg: Record<string, string> = {}
+  for (const r of (cfgRows.results || []) as any[]) cfg[r.key] = r.value
+
+  const notifyDays = parseInt(cfg.subscription_notify_before_days || '3', 10)
+  const period = getMauritiusDateStr().substring(0, 7) // 'YYYY-MM'
+
+  // Calculer la date cible de prélèvement (1er du mois prochain)
+  const now = new Date()
+  const billingDay = parseInt(cfg.subscription_billing_day || '1', 10)
+  const nextBillingDate = new Date(now.getFullYear(), now.getMonth() + 1, billingDay)
+  const daysUntilBilling = Math.round((nextBillingDate.getTime() - now.getTime()) / 86400000)
+
+  // N'envoyer que si on est exactement à J-notifyDays
+  if (daysUntilBilling !== notifyDays) {
+    console.log(`[sendSubscriptionReminderEmails] Pas le bon jour (J-${daysUntilBilling} ≠ J-${notifyDays})`)
+    return { sent: 0 }
+  }
+
+  // Trouver tous les abonnements actifs qui n'ont pas encore de renewal pour ce mois
+  const toNotify = await db.prepare(
+    `SELECT po.id, po.member_id, po.package_id,
+            p.price_monthly, p.name AS pkg_name,
+            m.email, m.first_name
+     FROM package_orders po
+     JOIN packages p ON p.id = po.package_id
+     JOIN members  m ON m.id = po.member_id
+     WHERE po.status = 'validated'
+       AND po.activation_done = 1
+       AND p.payment_mode = 'subscription'
+       AND p.pricing_type = 'monthly'
+       AND p.price_monthly > 0
+       AND po.subscription_suspended_at IS NULL
+       AND NOT EXISTS (
+         SELECT 1 FROM subscription_renewals sr
+         WHERE sr.member_id = po.member_id
+           AND sr.package_id = po.package_id
+           AND sr.period = ?
+           AND sr.status IN ('paid_wallet','paid_cb','trio_pending','trio_confirmed')
+       )`
+  ).bind(period).all()
+
+  let sent = 0
+  const nextBillingStr = nextBillingDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+
+  for (const order of (toNotify.results || []) as any[]) {
+    try {
+      await sendEmail(db, {
+        to: order.email, toName: order.first_name,
+        templateId: 'subscription_reminder',
+        variables: {
+          prenom:        order.first_name || '',
+          package_nom:   order.pkg_name   || '',
+          montant:       String(order.price_monthly),
+          periode:       period,
+          date_echeance: nextBillingStr,
+          jours_restants:String(notifyDays),
+          dashboard_url: 'https://willbeleader.pages.dev',
+        }
+      })
+      sent++
+    } catch (e: any) {
+      console.error(`[sendSubscriptionReminderEmails] Erreur member=${order.member_id}:`, e?.message)
+    }
+  }
+
+  console.log(`[sendSubscriptionReminderEmails] ${sent} rappels J-${notifyDays} envoyés`)
+  return { sent }
 }
