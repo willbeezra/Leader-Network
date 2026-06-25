@@ -3423,8 +3423,10 @@ async function shouldResetBV(db: D1Database): Promise<boolean> {
  *   - Le 1er du mois à 02h : calcule les commissions du mois précédent
  */
 export async function orchestrateur(db: D1Database): Promise<any> {
-  const now            = new Date()
-  const isFirstOfMonth = now.getDate() === 1
+  // ⚠️ Cloudflare Workers tourne en UTC — on convertit en heure Maurice (UTC+4)
+  const now = new Date()
+  const nowMauritius = new Date(now.getTime() + 4 * 60 * 60 * 1000) // UTC+4
+  const isFirstOfMonth = nowMauritius.getUTCDate() === 1
 
   const bvResult   = await processBVQueue(db)
   const rankResult = await processRankQueue(db)   // W2 — processor rang
