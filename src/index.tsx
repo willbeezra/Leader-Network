@@ -1893,8 +1893,8 @@ function memberHTML(opts: MemberHTMLOpts = {}, branding: BrandingPublic = { logo
   <script src="/static/chart.min.js"></script>
   <script src="/static/country-selector.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="/static/style.css?v=${Date.now()}">
-  <link rel="stylesheet" href="/static/campus.css?v=${Date.now()}">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/campus.css">
 </head>
 <body class="bg-dark-900 text-white min-h-screen">
 
@@ -2274,7 +2274,7 @@ function memberHTML(opts: MemberHTMLOpts = {}, branding: BrandingPublic = { logo
   <div id="member-modal-content" class="bg-dark-800 rounded-2xl shadow-2xl border border-dark-600 w-full max-w-2xl max-h-[92vh] overflow-y-auto relative"></div>
 </div>
 
-<script src="/static/upload-zone.js?v=${Date.now()}"></script>
+<script src="/static/upload-zone.js"></script>
 
 <!-- Script multi-étapes formulaire d'inscription app membre -->
 <script>
@@ -2411,9 +2411,9 @@ async function regMsInit() {
 document.addEventListener('DOMContentLoaded', function() { regMsInit() })
 </script>
 
-<script src="/static/member-app.js?v=${Date.now()}"></script>
-<script src="/static/campus-app.js?v=${Date.now()}"></script>
-<script src="/static/i18n.js?v=${Date.now()}"></script>
+<script src="/static/member-app.js"></script>
+<script src="/static/campus-app.js"></script>
+<script src="/static/i18n.js"></script>
 </body>
 </html>`
 }
@@ -2468,8 +2468,8 @@ function adminHTML(branding: BrandingPublic = { logoUri: '', networkName: 'LEADE
   <link rel="stylesheet" href="/static/tailwind.compiled.css">
   <script src="/static/axios.min.js"></script>
   <script src="/static/chart.min.js"></script>
-  <link rel="stylesheet" href="/static/style.css?v=${Date.now()}">
-  <link rel="stylesheet" href="/static/campus.css?v=${Date.now()}">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/campus.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
 </head>
 <body class="bg-dark-900 text-white min-h-screen">
@@ -2653,10 +2653,10 @@ function adminHTML(branding: BrandingPublic = { logoUri: '', networkName: 'LEADE
   <div id="modal-content" class="bg-dark-800 rounded-2xl shadow-2xl border border-dark-600 w-full max-w-lg max-h-[90vh] overflow-y-auto"></div>
 </div>
 
-<script src="/static/upload-zone.js?v=${Date.now()}"></script>
-<script src="/static/campus-app.js?v=${Date.now()}"></script>
-<script src="/static/admin-app.js?v=${Date.now()}"></script>
-<script src="/static/admin-landing.js?v=${Date.now()}"></script>
+<script src="/static/upload-zone.js"></script>
+<script src="/static/campus-app.js"></script>
+<script src="/static/admin-app.js"></script>
+<script src="/static/admin-landing.js"></script>
 </body>
 </html>`
 }
