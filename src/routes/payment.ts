@@ -133,18 +133,36 @@ paymentRouter.post('/wallet/pay-order', async (c) => {
   ).bind(order_id, memberId).first() as any
   if (!order) return c.json({ error: 'Commande introuvable ou déjà traitée' }, 404)
 
+  // Calculer le montant total réel à débiter :
+  // = prix du package + frais d'administration + prix de la licence liée (si présente)
+  let licensePrice = 0
+  if (order.linked_license_id) {
+    const licRow = await c.env.DB.prepare(
+      `SELECT price_usd FROM finstrategia_licenses WHERE id = ? AND status = 'pending'`
+    ).bind(order.linked_license_id).first() as any
+    licensePrice = licRow?.price_usd ?? 0
+  }
+  const adminFeeAmount = order.admin_fee_amount ?? 0
+  const needed = (order.amount_usd ?? 0) + adminFeeAmount + licensePrice
+
   // Vérifier le solde
   const wallet = await c.env.DB.prepare(`SELECT balance FROM wallets WHERE member_id = ?`).bind(memberId).first() as any
   const balance = wallet?.balance ?? 0
-  const needed = order.amount_usd
 
   if (balance < needed) {
     return c.json({ error: `Solde insuffisant. Disponible : $${balance.toFixed(2)}, Requis : $${needed.toFixed(2)}` }, 400)
   }
 
-  // Débiter le wallet
+  // Débiter le wallet (montant complet : package + frais admin + licence)
   await walletOperation(c.env.DB, memberId, needed, 'debit', 'debit_order_wallet',
     `Paiement commande ${order_id.substring(0, 8)}…`, order_id)
+
+  // Marquer admin_fee_paid si des frais d'administration ont été inclus dans le débit
+  if (adminFeeAmount > 0) {
+    await c.env.DB.prepare(
+      `UPDATE members SET admin_fee_paid = 1, updated_at = datetime('now') WHERE id = ?`
+    ).bind(memberId).run()
+  }
 
   // Mettre la commande en validated
   await c.env.DB.prepare(
