@@ -52,18 +52,35 @@ admin.use('/*', async (c, next) => {
 // ── DASHBOARD ──────────────────────────────────────────────
 admin.get('/dashboard', async (c) => {
   // Nettoyage préventif des orphelins holding_tank avant tout calcul de badge
-  // (membres dont holding_tank.status='waiting' mais members.in_holding_tank=0)
   await c.env.DB.prepare(
     `UPDATE holding_tank SET status='placed'
      WHERE status='waiting'
        AND member_id IN (SELECT id FROM members WHERE in_holding_tank=0)`
   ).run()
 
+  const now = new Date()
+  const thisMois  = now.toISOString().substring(0, 7)  // 'YYYY-MM'
+  const lastMoisD = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const lastMois  = lastMoisD.toISOString().substring(0, 7)
+  const thisWeekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10)
+  const todayStr  = now.toISOString().substring(0, 10)
+
   const [
     totalMembers, activeAMI, partenaires, pendingOrders,
     pendingWithdrawals, pendingKYC, holdingTank,
-    totalCommissions, totalWithdrawn, pendingBVQueue, pendingCCWithdrawals
+    totalCommissions, totalWithdrawn, pendingBVQueue, pendingCCWithdrawals,
+    // KPI Bloc 1 — CA
+    caThisMois, caLastMois,
+    // KPI Bloc 2 — Membres
+    newThisMois, newThisWeek, totalActifs,
+    // KPI Bloc 3 — Wallets
+    walletsMain, walletsPending, commissionsThisMois,
+    // KPI Bloc 4 — Primes Leadership
+    primesActives, primesEngagees, versementsJour, versementsMois,
+    // KPI Bloc 5 — Alertes
+    lastCronRun, lastDailyPayment, licencesExpirees, retraits48h,
   ] = await Promise.all([
+    // ── existants ──────────────────────────────────────────────────────────
     c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM members`).first() as any,
     c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM members WHERE member_status='AMI' AND license_active=1`).first() as any,
     c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM members WHERE member_status='Partenaire' AND license_active=1`).first() as any,
@@ -79,7 +96,60 @@ admin.get('/dashboard', async (c) => {
     c.env.DB.prepare(`SELECT SUM(net_amount) as total FROM withdrawals WHERE status='completed'`).first() as any,
     c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM bv_queue WHERE status='pending'`).first() as any,
     c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM cc_withdrawals WHERE status='pending'`).first() as any,
+    // ── Bloc 1 : CA — souscriptions (package_orders validées) ─────────────
+    c.env.DB.prepare(`SELECT COALESCE(SUM(p.price),0) as total
+      FROM package_orders po JOIN packages p ON p.id=po.package_id
+      WHERE po.status='validated' AND strftime('%Y-%m',po.created_at)=?`).bind(thisMois).first() as any,
+    c.env.DB.prepare(`SELECT COALESCE(SUM(p.price),0) as total
+      FROM package_orders po JOIN packages p ON p.id=po.package_id
+      WHERE po.status='validated' AND strftime('%Y-%m',po.created_at)=?`).bind(lastMois).first() as any,
+    // ── Bloc 2 : Membres ───────────────────────────────────────────────────
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM members WHERE strftime('%Y-%m',created_at)=?`).bind(thisMois).first() as any,
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM members WHERE date(created_at) >= ?`).bind(thisWeekStart).first() as any,
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM members WHERE license_active=1`).first() as any,
+    // ── Bloc 3 : Wallets ───────────────────────────────────────────────────
+    c.env.DB.prepare(`SELECT COALESCE(SUM(balance),0) as total FROM wallets`).first() as any,
+    c.env.DB.prepare(`SELECT COALESCE(SUM(pending_balance),0) as total FROM wallets`).first() as any,
+    c.env.DB.prepare(`SELECT COALESCE(SUM(amount),0) as total
+      FROM wallet_transactions
+      WHERE transaction_type LIKE '%_daily'
+        AND strftime('%Y-%m',created_at)=?`).bind(thisMois).first() as any,
+    // ── Bloc 4 : Primes Leadership ─────────────────────────────────────────
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM pending_wallet_entries
+      WHERE commission_type='prime_leadership' AND status IN ('active','pending_release')`).first() as any,
+    c.env.DB.prepare(`SELECT COALESCE(SUM((days_in_month - days_paid) * amount_per_day),0) as total
+      FROM pending_wallet_entries
+      WHERE commission_type='prime_leadership' AND status IN ('active','pending_release')`).first() as any,
+    c.env.DB.prepare(`SELECT COALESCE(SUM(amount),0) as total
+      FROM wallet_transactions
+      WHERE transaction_type LIKE '%_daily' AND date(created_at)=?`).bind(todayStr).first() as any,
+    c.env.DB.prepare(`SELECT COALESCE(SUM(amount),0) as total
+      FROM wallet_transactions
+      WHERE commission_type='prime_leadership_daily' OR transaction_type='prime_leadership_daily'
+        AND strftime('%Y-%m',created_at)=?`).bind(thisMois).first() as any,
+    // ── Bloc 5 : Alertes ───────────────────────────────────────────────────
+    c.env.DB.prepare(`SELECT value, updated_at FROM system_config WHERE key='last_orchestrator_run'`).first() as any,
+    c.env.DB.prepare(`SELECT value, updated_at FROM system_config WHERE key='last_daily_payment'`).first() as any,
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM members
+      WHERE license_active=1 AND license_expires_at IS NOT NULL AND license_expires_at < datetime('now')`).first() as any,
+    c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM withdrawals
+      WHERE status='pending' AND created_at < datetime('now','-48 hours')`).first() as any,
   ])
+
+  // Calcul évolution CA M/M-1
+  const caM  = caThisMois?.total  || 0
+  const caMm1 = caLastMois?.total || 0
+  const caEvo = caMm1 > 0 ? Math.round(((caM - caMm1) / caMm1) * 100) : null
+
+  // Taux de conversion : membres actifs (licence active) / total membres
+  const total = totalMembers?.cnt || 1
+  const actifs = totalActifs?.cnt || 0
+  const tauxConversion = Math.round((actifs / total) * 100)
+
+  // Statut cron : OK si dernière exécution < 2h
+  const lastCronDate = lastCronRun?.updated_at ? new Date(lastCronRun.updated_at + 'Z') : null
+  const cronAgeMin   = lastCronDate ? Math.floor((Date.now() - lastCronDate.getTime()) / 60000) : null
+  const cronOk       = cronAgeMin !== null && cronAgeMin < 120
 
   const recentMembers = await c.env.DB.prepare(
     `SELECT m.id, m.unique_id, m.first_name, m.last_name, m.email,
@@ -113,17 +183,43 @@ admin.get('/dashboard', async (c) => {
 
   return c.json({
     stats: {
-      totalMembers:      totalMembers?.cnt       || 0,
-      activeAMI:         activeAMI?.cnt          || 0,
-      partenaires:       partenaires?.cnt        || 0,
-      pendingOrders:     pendingOrders?.cnt      || 0,
-      pendingWithdrawals:pendingWithdrawals?.cnt || 0,
-      pendingKYC:        pendingKYC?.cnt         || 0,
-      holdingTankCount:  holdingTank?.cnt        || 0,
-      totalCommissions:  totalCommissions?.total || 0,
-      totalWithdrawn:    totalWithdrawn?.total   || 0,
-      pendingBVQueue:          pendingBVQueue?.cnt          || 0,
-      pendingCCWithdrawals:    pendingCCWithdrawals?.cnt    || 0,
+      // ── existants (inchangés) ──────────────────────────────────────────
+      totalMembers:        totalMembers?.cnt        || 0,
+      activeAMI:           activeAMI?.cnt           || 0,
+      partenaires:         partenaires?.cnt         || 0,
+      pendingOrders:       pendingOrders?.cnt       || 0,
+      pendingWithdrawals:  pendingWithdrawals?.cnt  || 0,
+      pendingKYC:          pendingKYC?.cnt          || 0,
+      holdingTankCount:    holdingTank?.cnt         || 0,
+      totalCommissions:    totalCommissions?.total  || 0,
+      totalWithdrawn:      totalWithdrawn?.total    || 0,
+      pendingBVQueue:      pendingBVQueue?.cnt       || 0,
+      pendingCCWithdrawals:pendingCCWithdrawals?.cnt || 0,
+      // ── Bloc 1 : CA ───────────────────────────────────────────────────
+      caThisMois:          caM,
+      caLastMois:          caMm1,
+      caEvoPct:            caEvo,        // null si pas de M-1
+      // ── Bloc 2 : Membres ──────────────────────────────────────────────
+      newThisMois:         newThisMois?.cnt  || 0,
+      newThisWeek:         newThisWeek?.cnt  || 0,
+      totalActifs:         actifs,
+      tauxConversion:      tauxConversion,  // %
+      // ── Bloc 3 : Wallets ──────────────────────────────────────────────
+      walletsMain:         walletsMain?.total    || 0,
+      walletsPending:      walletsPending?.total || 0,
+      commissionsThisMois: commissionsThisMois?.total || 0,
+      // ── Bloc 4 : Primes Leadership ────────────────────────────────────
+      primesActives:       primesActives?.cnt    || 0,
+      primesEngagees:      primesEngagees?.total || 0,
+      versementsJour:      versementsJour?.total || 0,
+      versementsMois:      versementsMois?.total || 0,
+      // ── Bloc 5 : Alertes ──────────────────────────────────────────────
+      cronOk:              cronOk,
+      cronLastRun:         lastCronRun?.updated_at  || null,
+      cronAgeMin:          cronAgeMin,
+      lastDailyPayment:    lastDailyPayment?.value  || null,
+      licencesExpirees:    licencesExpirees?.cnt    || 0,
+      retraits48h:         retraits48h?.cnt         || 0,
     },
     recentMembers:    recentMembers.results,
     rankDistribution: rankDistribution.results,
