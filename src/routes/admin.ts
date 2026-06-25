@@ -156,6 +156,9 @@ admin.get('/members', requirePermission('members.view'), async (c) => {
         (SELECT p.slug FROM package_orders po JOIN packages p ON p.id=po.package_id
          WHERE po.member_id=m.id AND po.status='validated'
            AND p.slug != 'licence' ORDER BY po.created_at DESC LIMIT 1) as package_slug,
+        (SELECT p.name FROM package_orders po JOIN packages p ON p.id=po.package_id
+         WHERE po.member_id=m.id AND po.status='validated'
+           AND p.slug != 'licence' ORDER BY po.created_at DESC LIMIT 1) as package_name,
         (SELECT sp.first_name || ' ' || sp.last_name FROM members sp WHERE sp.id = m.sponsor_id) as sponsor_name,
         (SELECT sp.unique_id FROM members sp WHERE sp.id = m.sponsor_id) as sponsor_unique_id
        FROM members m ${where} ORDER BY m.created_at DESC LIMIT ? OFFSET ?`
