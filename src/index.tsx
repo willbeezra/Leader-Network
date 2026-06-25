@@ -265,6 +265,44 @@ app.post('/api/cron/orchestrateur', async (c) => {
   return c.json({ ok: true, message: 'Orchestrateur démarré en arrière-plan', ts: new Date().toISOString() })
 })
 
+// ── Route admin : forcer les paiements journaliers ─────────
+// POST /api/admin/trigger-daily-payments
+// Bypasse le cache mémoire Worker et lance directement processDailyPayments
+// Utile quand le cache retient lastDaily=today mais que les paiements n'ont pas terminé
+app.post('/api/admin/trigger-daily-payments', async (c) => {
+  const adminToken = c.req.header('Authorization')?.replace('Bearer ', '') || ''
+  if (!adminToken) return c.json({ error: 'Non autorisé' }, 401)
+  try {
+    const payload = await verifyJWT(adminToken, (c.env as any).JWT_SECRET || 'leader-secret-2024') as any
+    if (!payload || payload.role !== 'admin') return c.json({ error: 'Non autorisé' }, 401)
+  } catch { return c.json({ error: 'Token invalide' }, 401) }
+
+  const db = c.env.DB
+  const execCtx = (c as any).executionCtx
+  const todayMauritius = getMauritiusDateStr()
+
+  // Reset du cache mémoire pour forcer le re-trigger
+  if (_orchCache) _orchCache.lastDaily = '1970-01-01'
+
+  // Lancer processDailyPayments en arrière-plan (waitUntil)
+  const task = processDailyPayments(db)
+    .then((paid: number) => {
+      console.log(`[ADMIN trigger-daily] Terminé — ${paid} versements effectués`)
+    })
+    .catch((err: any) => {
+      console.error('[ADMIN trigger-daily] Erreur:', err?.message || err)
+    })
+
+  if (execCtx?.waitUntil) execCtx.waitUntil(task)
+
+  return c.json({
+    ok: true,
+    message: 'processDailyPayments lancé en arrière-plan',
+    date_mauritius: todayMauritius,
+    ts: new Date().toISOString()
+  })
+})
+
 // ── Route cron status — état de configuration ──────────────
 // GET /api/cron/status — retourne si CRON_SECRET est configuré et le prochain cycle
 app.get('/api/cron/status', async (c) => {

@@ -2450,20 +2450,17 @@ export async function processDailyPayments(db: D1Database): Promise<number> {
 
     let currentDaysPaid = entry.days_paid
 
-    // ── Boucle : une transaction par jour dû ──────────────────────────────
-    for (let dayIndex = firstDueDayIndex; dayIndex <= lastDueDayIndex; dayIndex++) {
-      // Guard anti-doublon : re-lire days_paid depuis DB avant chaque versement
-      // Protection contre race condition (2 Workers en parallèle sur la même entrée)
-      const freshEntry = await db.prepare(
-        `SELECT days_paid, status FROM pending_wallet_entries WHERE id = ?`
-      ).bind(entry.id).first() as any
-      if (!freshEntry || freshEntry.status === 'completed' || freshEntry.status === 'cancelled') break
-      if (freshEntry.days_paid !== currentDaysPaid) {
-        // Un autre Worker a déjà avancé days_paid — on recalcule depuis son état
-        console.warn(`[processDailyPayments] Race condition détectée sur ${entry.id} : days_paid DB=${freshEntry.days_paid} vs local=${currentDaysPaid} — abandon`)
-        break
-      }
+    // ── Pré-lecture des soldes AVANT la boucle (1 seule requête D1) ──────
+    const walletSnapInit = await db.prepare(
+      `SELECT balance, pending_balance FROM wallets WHERE member_id = ?`
+    ).bind(entry.member_id).first() as any
+    let balPrincipalRunning = walletSnapInit?.balance ?? 0
+    let balPendingRunning   = walletSnapInit?.pending_balance ?? 0
 
+    // ── Boucle : une transaction par jour dû ──────────────────────────────
+    // Chaque itération = 1 db.batch() de 4 statements au lieu de 7 requêtes séquentielles
+    // → ~4x moins de round-trips D1, évite le timeout Worker sur les gros backlogs
+    for (let dayIndex = firstDueDayIndex; dayIndex <= lastDueDayIndex; dayIndex++) {
       // Date calendaire de ce jour (pour le libellé)
       const dayDate = new Date(startMs + dayIndex * 24 * 60 * 60 * 1000)
       const dayLabel = dayDate.toLocaleDateString('fr-FR', {
@@ -2473,95 +2470,103 @@ export async function processDailyPayments(db: D1Database): Promise<number> {
       const amountForThisDay = entry.amount_per_day
 
       // ── IDs déterministes — clé d'idempotence anti-doublon ────────────────
-      // Format : "dpay-{pwe_id_8chars}-d{dayIndex:02d}-out/in"
-      // Si la transaction existe déjà (INSERT OR IGNORE la rejette silencieusement),
-      // on skip ce jour sans toucher aux wallets ni à days_paid.
+      // Format : "dpay-{pwe_id_12chars}-d{dayIndex:03d}-out/in"
+      // INSERT OR IGNORE : si la transaction existe déjà → silencieux, pas de doublon
       const pweShort   = entry.id.replace(/-/g, '').substring(0, 12)
       const txIdDebit  = `dpay-${pweShort}-d${String(dayIndex).padStart(3,'0')}-out`
       const txIdCredit = `dpay-${pweShort}-d${String(dayIndex).padStart(3,'0')}-in`
 
-      // Vérifier si ce jour a déjà été versé (idempotence stricte)
+      // Vérifier si ce jour a déjà été versé (idempotence stricte — 1 requête)
       const alreadyPaid = await db.prepare(
         `SELECT id FROM wallet_transactions WHERE id = ?`
       ).bind(txIdCredit).first()
       if (alreadyPaid) {
         // Transaction déjà présente : days_paid est peut-être en retard, on le rattrape
         currentDaysPaid++
+        // Actualiser les soldes courants depuis DB pour rester cohérent
+        const freshWallet = await db.prepare(
+          `SELECT balance, pending_balance FROM wallets WHERE member_id = ?`
+        ).bind(entry.member_id).first() as any
+        if (freshWallet) {
+          balPrincipalRunning = freshWallet.balance
+          balPendingRunning   = freshWallet.pending_balance
+        }
         continue
       }
 
-      // Lire les soldes avant ce versement
-      const walletSnap = await db.prepare(
-        `SELECT balance, pending_balance FROM wallets WHERE member_id = ?`
-      ).bind(entry.member_id).first() as any
-      const balPrincipalBefore = walletSnap?.balance ?? 0
-      const balPendingBefore   = walletSnap?.pending_balance ?? 0
-
-      // Déduire du pending_balance
-      await db.prepare(
-        `UPDATE wallets
-         SET pending_balance = MAX(0, pending_balance - ?),
-             updated_at = datetime('now')
-         WHERE member_id = ?`
-      ).bind(amountForThisDay, entry.member_id).run()
-
-      // Transaction de sortie du wallet pending (ID déterministe → INSERT OR IGNORE)
-      await db.prepare(
-        `INSERT OR IGNORE INTO wallet_transactions
-           (id, member_id, wallet_type, transaction_type, amount,
-            balance_before, balance_after, description, reference_id)
-         VALUES (?, ?, 'pending', 'debit_transfer', ?, ?, ?, ?, ?)`
-      ).bind(
-        txIdDebit,
-        entry.member_id,
-        -amountForThisDay,
-        balPendingBefore,
-        Math.max(0, balPendingBefore - amountForThisDay),
-        `Libération vers portefeuille principal — ${labelForSource(entry.commission_type)} · ${dayLabel}`,
-        entry.id
-      ).run()
-
-      // Créditer le portefeuille principal (ID déterministe → INSERT OR IGNORE)
       const mauritiusNowStr = new Date(Date.now() + MAURITIUS_OFFSET_HOURS * 60 * 60 * 1000).toISOString().replace('T', ' ').substring(0, 19)
-      await db.prepare(
-        `UPDATE members SET wallet_balance = wallet_balance + ?, updated_at = datetime('now') WHERE id = ?`
-      ).bind(amountForThisDay, entry.member_id).run()
-      await db.prepare(
-        `UPDATE wallets SET balance = balance + ?, total_earned = total_earned + ?, updated_at = datetime('now') WHERE member_id = ?`
-      ).bind(amountForThisDay, amountForThisDay, entry.member_id).run()
-      await db.prepare(
-        `INSERT OR IGNORE INTO wallet_transactions
-           (id, member_id, wallet_type, transaction_type, amount,
-            balance_before, balance_after, description, reference_id, created_at)
-         VALUES (?, ?, 'principal', ?, ?, ?, ?, ?, ?, ?)`
-      ).bind(
-        txIdCredit,
-        entry.member_id,
-        entry.commission_type + '_daily',
-        amountForThisDay,
-        balPrincipalBefore,
-        balPrincipalBefore + amountForThisDay,
-        `${labelForSource(entry.commission_type + '_daily')} · ${dayLabel} · $${amountForThisDay.toFixed(2)}/j`,
-        entry.id,
-        mauritiusNowStr
-      ).run()
-
+      const newPendingBal   = Math.max(0, balPendingRunning - amountForThisDay)
+      const newPrincipalBal = balPrincipalRunning + amountForThisDay
       currentDaysPaid++
-      paid++
-
-      // ── Mise à jour atomique après CHAQUE versement journalier ─────────
-      // CRITIQUE : si le Worker est tué (timeout CPU Cloudflare), les jours
-      // déjà versés sont persistés immédiatement en DB, empêchant les re-paiements.
-      // Sans cet UPDATE ici, days_paid reste à sa valeur d'origine et le prochain
-      // run recommencerait tout depuis le début (cause des doublons observés).
       const isCompletedSoFar = currentDaysPaid >= entry.days_in_month
-      await db.prepare(
-        `UPDATE pending_wallet_entries
-         SET days_paid    = ?,
-             status       = ?,
-             last_paid_at = datetime('now')
-         WHERE id = ?`
-      ).bind(currentDaysPaid, isCompletedSoFar ? 'completed' : 'active', entry.id).run()
+
+      // ── db.batch() : 5 statements → 1 seul round-trip D1 ─────────────────
+      // Ordre : débit pending → tx_debit → crédit principal → tx_credit → update PWE
+      await db.batch([
+        // 1. Déduire du pending_balance
+        db.prepare(
+          `UPDATE wallets
+           SET pending_balance = MAX(0, pending_balance - ?),
+               updated_at = datetime('now')
+           WHERE member_id = ?`
+        ).bind(amountForThisDay, entry.member_id),
+
+        // 2. Transaction de sortie wallet pending
+        db.prepare(
+          `INSERT OR IGNORE INTO wallet_transactions
+             (id, member_id, wallet_type, transaction_type, amount,
+              balance_before, balance_after, description, reference_id)
+           VALUES (?, ?, 'pending', 'debit_transfer', ?, ?, ?, ?, ?)`
+        ).bind(
+          txIdDebit, entry.member_id,
+          -amountForThisDay,
+          balPendingRunning, newPendingBal,
+          `Libération vers portefeuille principal — ${labelForSource(entry.commission_type)} · ${dayLabel}`,
+          entry.id
+        ),
+
+        // 3. Créditer le portefeuille principal (members + wallets)
+        db.prepare(
+          `UPDATE wallets
+           SET balance = balance + ?, total_earned = total_earned + ?, updated_at = datetime('now')
+           WHERE member_id = ?`
+        ).bind(amountForThisDay, amountForThisDay, entry.member_id),
+
+        // 4. Transaction de crédit wallet principal
+        db.prepare(
+          `INSERT OR IGNORE INTO wallet_transactions
+             (id, member_id, wallet_type, transaction_type, amount,
+              balance_before, balance_after, description, reference_id, created_at)
+           VALUES (?, ?, 'principal', ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(
+          txIdCredit, entry.member_id,
+          entry.commission_type + '_daily',
+          amountForThisDay,
+          balPrincipalRunning, newPrincipalBal,
+          `${labelForSource(entry.commission_type + '_daily')} · ${dayLabel} · $${amountForThisDay.toFixed(2)}/j`,
+          entry.id, mauritiusNowStr
+        ),
+
+        // 5. Mise à jour atomique PWE après CHAQUE versement
+        // CRITIQUE : persisté immédiatement → idempotent si Worker tué entre deux jours
+        db.prepare(
+          `UPDATE pending_wallet_entries
+           SET days_paid    = ?,
+               status       = ?,
+               last_paid_at = datetime('now')
+           WHERE id = ?`
+        ).bind(currentDaysPaid, isCompletedSoFar ? 'completed' : 'active', entry.id),
+
+        // 6. Créditer wallet_balance sur members (dénormalisation)
+        db.prepare(
+          `UPDATE members SET wallet_balance = wallet_balance + ?, updated_at = datetime('now') WHERE id = ?`
+        ).bind(amountForThisDay, entry.member_id),
+      ])
+
+      // Mettre à jour les soldes courants pour le prochain jour (évite une requête SELECT)
+      balPendingRunning   = newPendingBal
+      balPrincipalRunning = newPrincipalBal
+      paid++
     }
 
     // ── Post-boucle : notifications et commission parente ────────────────
