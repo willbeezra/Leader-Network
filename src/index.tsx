@@ -122,21 +122,28 @@ app.use('/api/*', async (c, next) => {
     }
 
     // ── 1. Paiements journaliers (1x/jour, heure Maurice) ────────
+    // NOTE : on ne pré-écrit plus last_daily_payment ICI.
+    // C'est processDailyPayments qui gère son propre verrou (daily_payment_lock_YYYY-MM-DD)
+    // et écrit last_daily_payment APRÈS avoir versé. Ainsi, si le Worker crashe avant
+    // de payer, last_daily_payment n'est pas posé prématurément et le prochain run relance.
     if (_orchCache!.lastDaily < todayMauritius) {
-      // Mettre à jour le cache immédiatement pour éviter les appels concurrents
+      // Mettre à jour le cache mémoire pour éviter les appels concurrents dans ce Worker
       _orchCache!.lastDaily = todayMauritius
       _orchCache!.ts = Date.now()
 
-      // Persister en DB de façon non-bloquante
-      const writeDaily = db.prepare(
-        `INSERT OR REPLACE INTO system_config (key, value, updated_at)
-         VALUES ('last_daily_payment', ?, datetime('now'))`
-      ).bind(todayMauritius).run()
-
       if (execContext?.waitUntil) {
-        execContext.waitUntil(writeDaily.then(() => processDailyPayments(db)))
+        execContext.waitUntil(
+          processDailyPayments(db).catch((err: any) => {
+            // En cas d'erreur, réinitialiser le cache pour que le prochain run réessaie
+            if (_orchCache) _orchCache.lastDaily = '1970-01-01'
+            console.error('[AUTO-DAILY] Erreur processDailyPayments:', err)
+          })
+        )
       } else {
-        writeDaily.then(() => processDailyPayments(db)).catch(() => {})
+        processDailyPayments(db).catch((err: any) => {
+          if (_orchCache) _orchCache.lastDaily = '1970-01-01'
+          console.error('[AUTO-DAILY] Erreur processDailyPayments:', err)
+        })
       }
     }
 

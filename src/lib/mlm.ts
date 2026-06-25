@@ -2324,26 +2324,32 @@ export async function processDailyPayments(db: D1Database): Promise<number> {
   const todayStr = getMauritiusDateStr()
 
   // ── VERROU GLOBAL : une seule exécution par jour (clé système) ────────────
-  // Protection contre les appels concurrents (plusieurs Workers en parallèle)
-  // TTL 23h : si le verrou est plus vieux que 23h (run planté après pose du verrou),
-  // il est considéré orphelin et supprimé pour permettre le rattrapage.
+  // IMPORTANT : le verrou passe de 'locked' (en cours) à 'done' (terminé).
+  // Seul 'done' bloque les runs suivants. 'locked' seul (run planté) est ignoré.
+  // Cela évite le bug où le cron de minuit Maurice (20:00 UTC) pose 'locked'
+  // sans payer (aucun entry dû à cet instant exact), puis le cron suivant
+  // (02:00 UTC = 06:00 Maurice) est bloqué par ce verrou 'locked' de 6h.
   const lockKey = `daily_payment_lock_${todayStr}`
   const existingLock = await db.prepare(
     `SELECT value, updated_at FROM system_config WHERE key = ?`
   ).bind(lockKey).first() as any
   if (existingLock) {
     const lockAgeMs = Date.now() - new Date(existingLock.updated_at + 'Z').getTime()
-    if (lockAgeMs < 23 * 60 * 60 * 1000) {
-      // Verrou frais (< 23h) : run déjà effectué aujourd'hui, on skip normalement
-      console.log(`[processDailyPayments] Déjà exécuté aujourd'hui (${todayStr}) — verrou actif`)
+    if (existingLock.value === 'done' && lockAgeMs < 23 * 60 * 60 * 1000) {
+      // Paiement déjà effectué aujourd'hui (valeur 'done') — skip
+      console.log(`[processDailyPayments] Déjà exécuté aujourd'hui (${todayStr}) — verrou 'done' actif`)
       return 0
     }
-    // Verrou orphelin (> 23h) : le run précédent a planté après avoir posé le verrou
-    // On le supprime pour rejouer le rattrapage
-    console.warn(`[processDailyPayments] Verrou orphelin détecté (${todayStr}, âge ${Math.round(lockAgeMs/3600000)}h) — suppression et relance`)
+    if (existingLock.value === 'locked' && lockAgeMs < 5 * 60 * 1000) {
+      // Verrou 'locked' très frais (< 5 min) : un autre Worker tourne en ce moment — skip
+      console.log(`[processDailyPayments] Run en cours (verrou locked < 5min) — skip`)
+      return 0
+    }
+    // Verrou orphelin (locked > 5min, ou done > 23h) : on le supprime et on relance
+    console.warn(`[processDailyPayments] Verrou obsolète détecté (${todayStr}, value=${existingLock.value}, âge ${Math.round(lockAgeMs/3600000)}h) — suppression et relance`)
     await db.prepare(`DELETE FROM system_config WHERE key = ?`).bind(lockKey).run()
   }
-  // Poser le verrou atomiquement (INSERT OR IGNORE évite les doublons)
+  // Poser le verrou 'locked' (run en cours)
   await db.prepare(
     `INSERT OR IGNORE INTO system_config (key, value, updated_at) VALUES (?, 'locked', datetime('now'))`
   ).bind(lockKey).run()
@@ -2647,11 +2653,15 @@ export async function processDailyPayments(db: D1Database): Promise<number> {
   }
 
   // Écrire la date du dernier run dans system_config
-  if (paid > 0) {
-    await db.prepare(
-      `INSERT OR REPLACE INTO system_config (key, value, updated_at) VALUES ('last_daily_payment', ?, datetime('now'))`
-    ).bind(todayStr).run()
-  }
+  await db.prepare(
+    `INSERT OR REPLACE INTO system_config (key, value, updated_at) VALUES ('last_daily_payment', ?, datetime('now'))`
+  ).bind(todayStr).run()
+
+  // Passer le verrou de 'locked' à 'done' — marque le run comme terminé
+  // Les runs suivants du même jour verront 'done' et skipperont proprement
+  await db.prepare(
+    `INSERT OR REPLACE INTO system_config (key, value, updated_at) VALUES (?, 'done', datetime('now'))`
+  ).bind(lockKey).run()
 
   return paid
 }
