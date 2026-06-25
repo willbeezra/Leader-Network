@@ -125,7 +125,7 @@ admin.get('/dashboard', async (c) => {
       WHERE transaction_type LIKE '%_daily' AND date(created_at)=?`).bind(todayStr).first() as any,
     c.env.DB.prepare(`SELECT COALESCE(SUM(amount),0) as total
       FROM wallet_transactions
-      WHERE commission_type='prime_leadership_daily' OR transaction_type='prime_leadership_daily'
+      WHERE transaction_type='prime_leadership_daily'
         AND strftime('%Y-%m',created_at)=?`).bind(thisMois).first() as any,
     // ── Bloc 5 : Alertes ───────────────────────────────────────────────────
     c.env.DB.prepare(`SELECT value, updated_at FROM system_config WHERE key='last_orchestrator_run'`).first() as any,
