@@ -983,27 +983,39 @@ brokerAdmin.get('/subscriptions/renewals', async (c) => {
 
 // ── GET /api/admin/broker/subscriptions/trio-list ─────────────────────────────
 // Liste des prélèvements Trio en attente — export CSV pour Triomarkets
+// Paramètre `ready_only=1` : uniquement les entrées J+2 (wallet ET CB échoués depuis ≥2 jours)
 brokerAdmin.get('/subscriptions/trio-list', async (c) => {
-  const period = c.req.query('period') || new Date().toISOString().substring(0, 7)
-  const format = c.req.query('format') || 'json'  // 'json' | 'csv'
+  const period    = c.req.query('period')     || new Date().toISOString().substring(0, 7)
+  const format    = c.req.query('format')     || 'json'       // 'json' | 'csv'
+  const readyOnly = c.req.query('ready_only') === '1'         // true = uniquement J+2
+
+  // J+2 : les entrées dont trio_listed_at <= maintenant - 2 jours
+  const whereExtra = readyOnly
+    ? `AND sr.trio_listed_at <= datetime('now', '-2 days')`
+    : ''
 
   const rows = await c.env.DB.prepare(
     `SELECT sr.id, sr.member_id, sr.period, sr.amount_due,
             sr.trio_listed_at, sr.grace_expires_at,
+            sr.wallet_result, sr.cb_result,
             m.first_name, m.last_name, m.email, m.unique_id,
-            p.name as package_name
+            p.name as package_name,
+            CASE WHEN sr.trio_listed_at <= datetime('now', '-2 days') THEN 1 ELSE 0 END as csv_ready
      FROM subscription_renewals sr
      JOIN members m  ON m.id  = sr.member_id
      JOIN packages p ON p.id = sr.package_id
      WHERE sr.period = ? AND sr.status = 'trio_pending'
-     ORDER BY sr.created_at ASC`
+     ${whereExtra}
+     ORDER BY sr.trio_listed_at ASC`
   ).bind(period).all()
 
   const data = (rows.results || []) as any[]
 
   if (format === 'csv') {
-    const header = 'ID,Prénom,Nom,Email,ID Membre,Package,Montant,Période,Date listing\n'
-    const lines = data.map(r =>
+    // CSV généré uniquement pour les entrées J+2 (wallet + CB ayant échoué depuis ≥2j)
+    const csvData = readyOnly ? data : data.filter((r: any) => r.csv_ready === 1)
+    const header = 'ID Renouvellement,Prénom,Nom,Email,ID Backoffice,Package,Montant (USD),Période,Date listing Trio\n'
+    const lines = csvData.map((r: any) =>
       `"${r.id}","${r.first_name}","${r.last_name}","${r.email}","${r.unique_id}","${r.package_name}",${r.amount_due},"${r.period}","${r.trio_listed_at}"`
     ).join('\n')
     return new Response(header + lines, {
@@ -1014,7 +1026,9 @@ brokerAdmin.get('/subscriptions/trio-list', async (c) => {
     })
   }
 
-  return c.json({ renewals: data, period, count: data.length })
+  // En JSON : indiquer combien sont prêts (J+2)
+  const readyCount = data.filter((r: any) => r.csv_ready === 1).length
+  return c.json({ renewals: data, period, count: data.length, csv_ready_count: readyCount })
 })
 
 // ── POST /api/admin/broker/subscriptions/trio-confirm/:id ─────────────────────
@@ -1059,7 +1073,7 @@ brokerAdmin.post('/subscriptions/trio-confirm/:id', async (c) => {
 })
 
 // ── POST /api/admin/broker/subscriptions/trio-import ──────────────────────────
-// Import CSV batch — confirme plusieurs renouvellements Trio en une fois
+// Import batch JSON — confirme plusieurs renouvellements Trio en une fois
 // Body JSON : { confirmations: [{ id: 'sren-...', amount_received: 49 }, ...] }
 brokerAdmin.post('/subscriptions/trio-import', async (c) => {
   const adminId = (c as any).get?.('adminId') || 'admin'
@@ -1090,10 +1104,10 @@ brokerAdmin.post('/subscriptions/trio-import', async (c) => {
              trio_amount_received=?, notes=?,
              updated_at=datetime('now')
          WHERE id=?`
-      ).bind(adminId, item.amount_received || renewal.amount_due, item.notes || 'Import CSV', item.id).run()
+      ).bind(adminId, item.amount_received || renewal.amount_due, item.notes || 'Import JSON', item.id).run()
 
       await createNotification(c.env.DB, renewal.member_id,
-        ' Abonnement renouvelé',
+        '✅ Abonnement renouvelé',
         `Paiement Triomarkets confirmé pour votre abonnement — période ${renewal.id.slice(-6)}.`,
         'success')
 
@@ -1106,6 +1120,172 @@ brokerAdmin.post('/subscriptions/trio-import', async (c) => {
 
   return c.json({ confirmed, skipped, errors })
 })
+
+// ── POST /api/admin/broker/subscriptions/trio-import-file ─────────────────────
+// Import fichier multipart : CSV, PDF, JPG, PNG, XLSX
+// Le système parse le fichier, extrait les emails/IDs et valide automatiquement
+// les renouvellements trio_pending correspondants.
+brokerAdmin.post('/subscriptions/trio-import-file', async (c) => {
+  const adminId = (c as any).get?.('adminId') || 'admin'
+
+  let fileBuffer: ArrayBuffer
+  let fileName   = ''
+  let mimeType   = ''
+
+  // ── 1. Récupération du fichier (multipart ou raw body) ────────────────────
+  const contentType = c.req.header('content-type') || ''
+
+  if (contentType.includes('multipart/form-data')) {
+    const form = await c.req.formData()
+    const file = form.get('file') as File | null
+    if (!file) return c.json({ error: 'Champ "file" manquant dans le formulaire' }, 400)
+    fileBuffer = await file.arrayBuffer()
+    fileName   = file.name || ''
+    mimeType   = file.type || ''
+  } else {
+    // Fallback : body brut
+    fileBuffer = await c.req.arrayBuffer()
+    fileName   = c.req.header('x-filename') || 'import'
+    mimeType   = contentType.split(';')[0].trim()
+  }
+
+  if (!fileBuffer || fileBuffer.byteLength === 0) {
+    return c.json({ error: 'Fichier vide ou absent' }, 400)
+  }
+
+  // ── 2. Détection du type ──────────────────────────────────────────────────
+  const ext = fileName.split('.').pop()?.toLowerCase() || ''
+  const isCSV  = mimeType.includes('csv') || ext === 'csv'
+  const isPDF  = mimeType.includes('pdf') || ext === 'pdf'
+  const isIMG  = mimeType.includes('image') || ['jpg','jpeg','png','webp','gif'].includes(ext)
+
+  // ── 3. Extraction des emails / IDs selon le type ─────────────────────────
+  let rawText = ''
+
+  if (isCSV) {
+    // CSV : décodage texte direct
+    rawText = new TextDecoder('utf-8').decode(fileBuffer)
+
+  } else if (isPDF) {
+    // PDF : extraction des octets ASCII lisibles (texte brut embarqué)
+    rawText = extractTextFromPDF(fileBuffer)
+
+  } else if (isIMG) {
+    // Image : on extrait ce qu'on peut du buffer + on s'appuie sur les patterns
+    // (sans accès OCR natif dans CF Workers, on tente une extraction ASCII)
+    rawText = extractTextFromPDF(fileBuffer) // même algo, cherche bytes ASCII
+    // Note : pour les vraies images scannées, il faudrait un service OCR externe
+    // L'admin peut coller le texte OCR manuellement via l'onglet JSON import
+
+  } else {
+    // Texte générique (txt, xlsx en ASCII, etc.)
+    try {
+      rawText = new TextDecoder('utf-8').decode(fileBuffer)
+    } catch {
+      rawText = new TextDecoder('latin1').decode(fileBuffer)
+    }
+  }
+
+  // ── 4. Extraction des emails et IDs membres depuis le texte ──────────────
+  const emailPattern  = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g
+  const memberIdPattern = /\bLNET-[A-Z0-9]{4,10}\b|\b[A-Z]{2,4}-[0-9]{4,8}\b/g
+
+  const foundEmails    = Array.from(new Set(rawText.match(emailPattern)    || []))
+  const foundMemberIds = Array.from(new Set(rawText.match(memberIdPattern) || []))
+
+  // ── 5. Lecture des renouvellements trio_pending du mois en cours ──────────
+  const period = new Date().toISOString().substring(0, 7)
+
+  // Récupérer tous les trio_pending du mois
+  const pending = await c.env.DB.prepare(
+    `SELECT sr.id, sr.member_id, sr.amount_due, sr.period,
+            m.email, m.unique_id
+     FROM subscription_renewals sr
+     JOIN members m ON m.id = sr.member_id
+     WHERE sr.status IN ('trio_pending','pending')
+       AND sr.period = ?`
+  ).bind(period).all()
+
+  const pendingRows = (pending.results || []) as any[]
+
+  // ── 6. Matching email OU unique_id ────────────────────────────────────────
+  const emailSet    = new Set(foundEmails.map(e => e.toLowerCase()))
+  const memberIdSet = new Set(foundMemberIds.map(id => id.toUpperCase()))
+
+  const toConfirm = pendingRows.filter((r: any) =>
+    emailSet.has((r.email || '').toLowerCase()) ||
+    memberIdSet.has((r.unique_id || '').toUpperCase())
+  )
+
+  // ── 7. Confirmation de chaque renouvellement matché ───────────────────────
+  let confirmed = 0
+  let skipped   = 0
+  const errors: string[] = []
+  const confirmedDetails: Array<{ id: string; email: string; unique_id: string }> = []
+
+  for (const renewal of toConfirm) {
+    try {
+      await c.env.DB.prepare(
+        `UPDATE subscription_renewals
+         SET status='trio_confirmed', payment_method='trio_file_import',
+             trio_confirmed_at=datetime('now'), trio_confirmed_by=?,
+             trio_amount_received=amount_due,
+             notes=?,
+             updated_at=datetime('now')
+         WHERE id=?`
+      ).bind(
+        adminId,
+        `Import fichier ${fileName || 'upload'} — détection automatique`,
+        renewal.id
+      ).run()
+
+      await createNotification(c.env.DB, renewal.member_id,
+        '✅ Abonnement renouvelé',
+        `Votre paiement Triomarkets a été confirmé automatiquement via import fichier pour la période ${renewal.period}.`,
+        'success')
+
+      confirmedDetails.push({ id: renewal.id, email: renewal.email, unique_id: renewal.unique_id })
+      confirmed++
+    } catch (err: any) {
+      errors.push(`${renewal.id}: ${err.message}`)
+      skipped++
+    }
+  }
+
+  return c.json({
+    success: true,
+    file_name:       fileName,
+    file_type:       isCSV ? 'csv' : isPDF ? 'pdf' : isIMG ? 'image' : 'text',
+    emails_found:    foundEmails.length,
+    ids_found:       foundMemberIds.length,
+    matched:         toConfirm.length,
+    confirmed,
+    skipped,
+    errors,
+    confirmed_details: confirmedDetails,
+  })
+})
+
+// ── Utilitaire interne : extraire du texte lisible d'un buffer binaire (PDF / autre)
+function extractTextFromPDF(buffer: ArrayBuffer): string {
+  const bytes  = new Uint8Array(buffer)
+  const chunks: string[] = []
+  let current  = ''
+
+  for (let i = 0; i < bytes.length; i++) {
+    const b = bytes[i]
+    // Garder les caractères ASCII imprimables + espace + retour à la ligne
+    if ((b >= 32 && b <= 126) || b === 10 || b === 13) {
+      current += String.fromCharCode(b)
+    } else {
+      if (current.length >= 4) chunks.push(current)
+      current = ''
+    }
+  }
+  if (current.length >= 4) chunks.push(current)
+
+  return chunks.join(' ')
+}
 
 // ── POST /api/admin/broker/subscriptions/reactivate/:member_id ───────────────
 // Réactive un abonnement suspendu (admin uniquement)

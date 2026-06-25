@@ -12998,73 +12998,260 @@ async function adminSubscriptionsPage(el) {
       const period = currentPeriod;
       const r = await apiAdmin('GET', `/broker/subscriptions/trio-list?period=${period}&format=json`);
       const rows = r.renewals || [];
+      const csvReadyCount = r.csv_ready_count || 0;
+
+      // Badge J+2 pour chaque ligne
+      function j2Badge(csvReady) {
+        return csvReady
+          ? `<span class="text-xs px-2 py-0.5 rounded-full font-medium bg-emerald-500/20 text-emerald-400"><i class="fas fa-circle-check mr-1"></i>Prêt J+2</span>`
+          : `<span class="text-xs px-2 py-0.5 rounded-full font-medium bg-yellow-500/20 text-yellow-400"><i class="fas fa-clock mr-1"></i>En attente</span>`;
+      }
 
       panel.innerHTML = `
         <div class="space-y-4">
+
+          <!-- Bandeau info J+2 -->
+          ${csvReadyCount > 0 ? `
+          <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 flex flex-wrap items-center gap-3">
+            <i class="fas fa-circle-check text-emerald-400 text-lg"></i>
+            <span class="text-emerald-400 font-semibold">${csvReadyCount} prélèvement(s) prêt(s) à exporter</span>
+            <span class="text-gray-400 text-xs">Wallet et CB ont échoué il y a ≥ 2 jours — CSV disponible</span>
+          </div>` : `
+          <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-3 flex items-center gap-3">
+            <i class="fas fa-clock text-yellow-400"></i>
+            <span class="text-yellow-300 text-sm">Aucun prélèvement prêt J+2 pour l'instant — le CSV sera disponible 2 jours après l'échec wallet + CB.</span>
+          </div>`}
+
+          <!-- Barre d'actions -->
           <div class="flex flex-wrap items-center gap-3">
-            <span class="text-white font-semibold">Liste Trio — ${period} (${rows.length} membre(s))</span>
+            <span class="text-white font-semibold">Liste Trio — ${period} (${rows.length} en attente)</span>
+            <div class="flex-1"></div>
+
+            <!-- Export CSV J+2 uniquement -->
+            ${csvReadyCount > 0 ? `
+            <a id="btn-export-trio-csv"
+               href="/api/admin/broker/subscriptions/trio-list?period=${period}&format=csv&ready_only=1"
+               class="flex items-center gap-2 text-xs bg-blue-600/20 text-blue-400 border border-blue-500/30 px-3 py-2 rounded-lg hover:bg-blue-600/30 transition font-medium"
+               download="trio-prelevements-${period}.csv">
+              <i class="fas fa-file-csv"></i>Exporter CSV Trio (${csvReadyCount} prêts)
+            </a>` : ''}
+
+            <!-- Export CSV tout (même non prêts) -->
+            ${rows.length > 0 ? `
             <a href="/api/admin/broker/subscriptions/trio-list?period=${period}&format=csv"
-               class="flex items-center gap-2 text-xs bg-blue-600/20 text-blue-400 border border-blue-500/30 px-3 py-1.5 rounded-lg hover:bg-blue-600/30 transition"
-               download>
-              <i class="fas fa-download"></i>Exporter CSV
-            </a>
-            <button onclick="subImportCsv()" class="flex items-center gap-2 text-xs bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg hover:bg-emerald-600/30 transition">
-              <i class="fas fa-upload"></i>Import CSV retours Trio
+               class="flex items-center gap-2 text-xs bg-dark-700 text-gray-300 border border-dark-500 px-3 py-2 rounded-lg hover:bg-dark-600 transition"
+               download="trio-prelevements-complet-${period}.csv">
+              <i class="fas fa-download"></i>Export complet
+            </a>` : ''}
+
+            <!-- Import fichier Trio -->
+            <button onclick="subOpenImport()" class="flex items-center gap-2 text-xs bg-purple-600/20 text-purple-400 border border-purple-500/30 px-3 py-2 rounded-lg hover:bg-purple-600/30 transition font-medium">
+              <i class="fas fa-file-import"></i>Importer retours Trio
             </button>
           </div>
+
+          <!-- Tableau des renouvellements -->
           <div class="bg-dark-800 border border-dark-600 rounded-2xl overflow-hidden">
             <div class="overflow-x-auto">
               <table class="data-table">
-                <thead><tr><th>Membre</th><th>Email</th><th>ID Backoffice</th><th>Package</th><th>Montant</th><th>Date listing</th><th>Action</th></tr></thead>
+                <thead>
+                  <tr>
+                    <th>Membre</th><th>Email</th><th>ID Backoffice</th>
+                    <th>Package</th><th>Montant</th><th>Date listing</th>
+                    <th>Statut J+2</th><th>Action</th>
+                  </tr>
+                </thead>
                 <tbody>
                   ${rows.map(r => `
-                    <tr>
+                    <tr class="${r.csv_ready ? 'bg-emerald-500/5' : ''}">
                       <td class="font-medium text-sm">${r.first_name} ${r.last_name}</td>
                       <td class="text-xs text-gray-400">${r.email}</td>
                       <td class="text-xs text-gold-400 font-mono">${r.unique_id||''}</td>
                       <td class="text-xs text-gray-300">${r.package_name||''}</td>
                       <td class="text-emerald-400 font-bold">${fmt$(r.amount_due)}</td>
                       <td class="text-xs text-gray-400">${fmtDate(r.trio_listed_at)}</td>
+                      <td>${j2Badge(r.csv_ready)}</td>
                       <td>
                         <button onclick="subConfirmTrio('${r.id}')"
                                 class="text-xs bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 px-2 py-1 rounded hover:bg-emerald-600/30 transition">
-                          <i class="fas fa-check mr-1"></i>Confirmé
+                          <i class="fas fa-check mr-1"></i>Confirmer
                         </button>
                       </td>
-                    </tr>`).join('') || '<tr><td colspan="7" class="text-center text-gray-500 py-8">Aucun prélèvement Trio en attente</td></tr>'}
+                    </tr>`).join('') || '<tr><td colspan="8" class="text-center text-gray-500 py-8"><i class="fas fa-check-circle text-emerald-500/40 text-2xl block mb-2"></i>Aucun prélèvement Trio en attente</td></tr>'}
                 </tbody>
               </table>
             </div>
           </div>
         </div>`;
 
-      // Import CSV batch
-      window.subImportCsv = function() {
+      // ── Import fichier Trio (PDF / CSV / JPG / PNG / autre) ───────────────
+      window.subOpenImport = function() {
         showModal(`
-          <div class="p-6 space-y-4">
-            <h3 class="text-lg font-bold text-white">Import CSV retours Triomarkets</h3>
-            <p class="text-gray-400 text-sm">Collez le JSON des confirmations ou uploadez le CSV exporté après confirmation par Triomarkets.</p>
+          <div class="p-6 space-y-5 max-w-lg">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                <i class="fas fa-file-import text-purple-400"></i>
+              </div>
+              <div>
+                <h3 class="text-lg font-bold text-white">Import retours Triomarkets</h3>
+                <p class="text-gray-400 text-xs">PDF, CSV, JPG, PNG ou tout autre format</p>
+              </div>
+            </div>
+
+            <!-- Zone de drop fichier -->
+            <div id="trio-drop-zone"
+                 class="border-2 border-dashed border-dark-500 rounded-2xl p-8 text-center cursor-pointer hover:border-purple-500/50 hover:bg-purple-500/5 transition"
+                 onclick="document.getElementById('trio-file-input').click()"
+                 ondragover="event.preventDefault();this.classList.add('border-purple-500','bg-purple-500/10')"
+                 ondragleave="this.classList.remove('border-purple-500','bg-purple-500/10')"
+                 ondrop="event.preventDefault();this.classList.remove('border-purple-500','bg-purple-500/10');subHandleFileDrop(event.dataTransfer.files[0])">
+              <i class="fas fa-cloud-upload-alt text-3xl text-gray-600 mb-3 block"></i>
+              <div class="text-gray-300 font-medium text-sm">Glissez votre fichier ici</div>
+              <div class="text-gray-500 text-xs mt-1">ou cliquez pour sélectionner</div>
+              <div class="text-gray-600 text-xs mt-2">PDF · CSV · JPG · PNG · TXT</div>
+              <input id="trio-file-input" type="file" class="hidden"
+                     accept=".csv,.pdf,.jpg,.jpeg,.png,.txt,.xlsx"
+                     onchange="subHandleFileSelect(this.files[0])">
+            </div>
+
+            <!-- Aperçu fichier sélectionné -->
+            <div id="trio-file-preview" class="hidden bg-dark-700 rounded-xl p-3 flex items-center gap-3">
+              <i id="trio-file-icon" class="fas fa-file text-gray-400 text-xl"></i>
+              <div class="flex-1 min-w-0">
+                <div id="trio-file-name" class="text-white text-sm font-medium truncate"></div>
+                <div id="trio-file-size" class="text-gray-400 text-xs"></div>
+              </div>
+              <button onclick="subClearFile()" class="text-gray-500 hover:text-red-400 transition text-xs">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+
+            <!-- Séparateur -->
+            <div class="flex items-center gap-3">
+              <div class="flex-1 h-px bg-dark-600"></div>
+              <span class="text-gray-500 text-xs">ou import JSON manuel</span>
+              <div class="flex-1 h-px bg-dark-600"></div>
+            </div>
+
+            <!-- Fallback JSON -->
             <div>
-              <label class="text-xs text-gray-400 block mb-1">JSON batch (format : [{"id":"sren-...","amount_received":49},...] )</label>
-              <textarea id="trio-import-json" class="form-input w-full h-32 font-mono text-xs"
+              <label class="text-xs text-gray-400 block mb-1">JSON batch <span class="text-gray-600">(alternative au fichier)</span></label>
+              <textarea id="trio-import-json" class="form-input w-full h-24 font-mono text-xs"
                         placeholder='[{"id":"sren-xxxxx","amount_received":49},...]'></textarea>
             </div>
+
+            <!-- Actions -->
             <div class="flex gap-3">
-              <button onclick="subDoImport()" class="bg-emerald-600 text-white font-bold px-6 py-2.5 rounded-xl hover:bg-emerald-500 transition text-sm">
-                <i class="fas fa-check mr-2"></i>Importer
+              <button id="trio-import-btn" onclick="subDoFileImport()"
+                      class="flex-1 bg-purple-600 text-white font-bold px-6 py-2.5 rounded-xl hover:bg-purple-500 transition text-sm flex items-center justify-center gap-2">
+                <i class="fas fa-check"></i>Valider les abonnements
               </button>
               <button onclick="closeModal()" class="text-gray-400 hover:text-white px-4 py-2.5 rounded-xl border border-dark-600 text-sm">Annuler</button>
             </div>
+
+            <!-- Zone résultats -->
+            <div id="trio-import-result" class="hidden"></div>
           </div>`);
-        window.subDoImport = async function() {
+
+        // Fichier sélectionné via input
+        window._trioFile = null;
+
+        window.subHandleFileSelect = function(file) {
+          if (!file) return;
+          subPreviewFile(file);
+        };
+        window.subHandleFileDrop = function(file) {
+          if (!file) return;
+          subPreviewFile(file);
+        };
+        window.subPreviewFile = function(file) {
+          window._trioFile = file;
+          const icons = { pdf:'fa-file-pdf text-red-400', csv:'fa-file-csv text-green-400', jpg:'fa-file-image text-blue-400', jpeg:'fa-file-image text-blue-400', png:'fa-file-image text-blue-400', txt:'fa-file-alt text-gray-400' };
+          const ext = file.name.split('.').pop()?.toLowerCase() || '';
+          document.getElementById('trio-file-icon').className = 'fas ' + (icons[ext] || 'fa-file text-gray-400') + ' text-xl';
+          document.getElementById('trio-file-name').textContent = file.name;
+          document.getElementById('trio-file-size').textContent = (file.size / 1024).toFixed(1) + ' Ko';
+          document.getElementById('trio-file-preview').classList.remove('hidden');
+          document.getElementById('trio-drop-zone').classList.add('border-purple-500/50','bg-purple-500/5');
+        };
+        window.subClearFile = function() {
+          window._trioFile = null;
+          document.getElementById('trio-file-preview').classList.add('hidden');
+          document.getElementById('trio-drop-zone').classList.remove('border-purple-500/50','bg-purple-500/5');
+          document.getElementById('trio-file-input').value = '';
+        };
+
+        window.subDoFileImport = async function() {
+          const btn = document.getElementById('trio-import-btn');
+          const resultEl = document.getElementById('trio-import-result');
+          btn.disabled = true;
+          btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Traitement...';
+
           try {
-            const raw = document.getElementById('trio-import-json').value.trim();
-            const confirmations = JSON.parse(raw);
-            const r = await apiAdmin('POST', '/broker/subscriptions/trio-import', { confirmations });
-            showToast(`Import : ${r.confirmed} confirmés, ${r.skipped} ignorés`, 'success');
-            closeModal();
-            subTab('trio');
-          } catch(e) { showToast(e.error || 'JSON invalide', 'error'); }
+            let result;
+
+            if (window._trioFile) {
+              // ── Import fichier (multipart) ──
+              const form = new FormData();
+              form.append('file', window._trioFile);
+              const token = localStorage.getItem('leader_admin_token');
+              const resp = await fetch('/api/admin/broker/subscriptions/trio-import-file', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token },
+                body: form
+              });
+              if (!resp.ok) {
+                const err = await resp.json().catch(() => ({ error: 'Erreur serveur' }));
+                throw err;
+              }
+              result = await resp.json();
+
+            } else {
+              // ── Import JSON manuel ──
+              const raw = document.getElementById('trio-import-json').value.trim();
+              if (!raw) { showToast('Sélectionnez un fichier ou collez du JSON', 'error'); btn.disabled=false; btn.innerHTML='<i class="fas fa-check mr-2"></i>Valider les abonnements'; return; }
+              const confirmations = JSON.parse(raw);
+              result = await apiAdmin('POST', '/broker/subscriptions/trio-import', { confirmations });
+            }
+
+            // Afficher résultat
+            resultEl.classList.remove('hidden');
+            resultEl.innerHTML = `
+              <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 space-y-2">
+                <div class="flex items-center gap-2 text-emerald-400 font-bold">
+                  <i class="fas fa-check-circle"></i>
+                  Import réussi${result.file_name ? ' — ' + result.file_name : ''}
+                </div>
+                <div class="grid grid-cols-3 gap-3 text-center">
+                  <div class="bg-dark-800 rounded-lg p-2">
+                    <div class="text-2xl font-bold text-emerald-400">${result.confirmed}</div>
+                    <div class="text-xs text-gray-400">Confirmés</div>
+                  </div>
+                  <div class="bg-dark-800 rounded-lg p-2">
+                    <div class="text-2xl font-bold text-yellow-400">${result.skipped || 0}</div>
+                    <div class="text-xs text-gray-400">Ignorés</div>
+                  </div>
+                  ${result.emails_found !== undefined ? `
+                  <div class="bg-dark-800 rounded-lg p-2">
+                    <div class="text-2xl font-bold text-blue-400">${result.emails_found}</div>
+                    <div class="text-xs text-gray-400">Emails détectés</div>
+                  </div>` : `
+                  <div class="bg-dark-800 rounded-lg p-2">
+                    <div class="text-2xl font-bold text-red-400">${(result.errors||[]).length}</div>
+                    <div class="text-xs text-gray-400">Erreurs</div>
+                  </div>`}
+                </div>
+                ${(result.errors||[]).length > 0 ? `<div class="text-xs text-red-400 bg-red-500/10 rounded-lg p-2 font-mono">${result.errors.slice(0,5).join('<br>')}</div>` : ''}
+              </div>`;
+
+            showToast(`${result.confirmed} abonnement(s) validé(s) avec succès`, 'success');
+            setTimeout(() => { closeModal(); subTab('trio'); }, 2500);
+
+          } catch(e) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check mr-2"></i>Valider les abonnements';
+            showToast(e.error || e.message || 'Erreur lors de l\'import', 'error');
+          }
         };
       };
 
@@ -13073,7 +13260,7 @@ async function adminSubscriptionsPage(el) {
         if (notes === null) return;
         try {
           await apiAdmin('POST', '/broker/subscriptions/trio-confirm/' + id, { notes });
-          showToast('Renouvellement confirmé', 'success');
+          showToast('Renouvellement confirmé ✓', 'success');
           subTab('trio');
         } catch(e) { showToast(e.error || 'Erreur', 'error'); }
       };
