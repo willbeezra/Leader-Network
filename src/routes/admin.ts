@@ -97,10 +97,10 @@ admin.get('/dashboard', async (c) => {
     c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM bv_queue WHERE status='pending'`).first() as any,
     c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM cc_withdrawals WHERE status='pending'`).first() as any,
     // ── Bloc 1 : CA — souscriptions (package_orders validées) ─────────────
-    c.env.DB.prepare(`SELECT COALESCE(SUM(p.price),0) as total
+    c.env.DB.prepare(`SELECT COALESCE(SUM(p.price_usd),0) as total
       FROM package_orders po JOIN packages p ON p.id=po.package_id
       WHERE po.status='validated' AND strftime('%Y-%m',po.created_at)=?`).bind(thisMois).first() as any,
-    c.env.DB.prepare(`SELECT COALESCE(SUM(p.price),0) as total
+    c.env.DB.prepare(`SELECT COALESCE(SUM(p.price_usd),0) as total
       FROM package_orders po JOIN packages p ON p.id=po.package_id
       WHERE po.status='validated' AND strftime('%Y-%m',po.created_at)=?`).bind(lastMois).first() as any,
     // ── Bloc 2 : Membres ───────────────────────────────────────────────────
