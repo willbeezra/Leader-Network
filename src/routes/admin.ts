@@ -82,8 +82,18 @@ admin.get('/dashboard', async (c) => {
   ])
 
   const recentMembers = await c.env.DB.prepare(
-    `SELECT id,unique_id,first_name,last_name,email,member_status,current_rank,created_at
-     FROM members ORDER BY created_at DESC LIMIT 8`
+    `SELECT m.id, m.unique_id, m.first_name, m.last_name, m.email,
+            m.member_status, m.current_rank, m.created_at,
+            ap.package_name
+     FROM members m
+     LEFT JOIN (
+       SELECT po.member_id, p.name AS package_name
+       FROM package_orders po
+       JOIN packages p ON p.id = po.package_id
+       WHERE po.status = 'active'
+       ORDER BY po.created_at DESC
+     ) ap ON ap.member_id = m.id
+     ORDER BY m.created_at DESC LIMIT 8`
   ).all()
 
   const rankDistribution = await c.env.DB.prepare(
