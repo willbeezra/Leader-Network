@@ -688,10 +688,33 @@ admin.post('/members/:id/trigger-bonuses', requirePermission('members.edit'), as
     ).bind(effectiveRank, memberId).run()
 
     // 5. Déclencher la prime leadership + CC + RS + rayonnement + influence
-    await upgradePrimeLeadership(c.env.DB, memberId, effectiveRank, period)
+    // On tente upgradePrimeLeadership — si ça échoue on laisse passer et on retourne quand même succès partiel
+    let upgradeError: string | null = null
+    let retroError: string | null = null
+    try {
+      await upgradePrimeLeadership(c.env.DB, memberId, effectiveRank, period)
+    } catch (e1: any) {
+      upgradeError = e1.message || String(e1)
+      console.error('upgradePrimeLeadership error:', e1)
+    }
 
     // 6. Recalcul rétroactif rayonnement/influence vers les sponsors
-    const retro = await recalculBonusRetroactif(c.env.DB, memberId, period, true)
+    let retro = { rayonnement: 0, influence: 0, details: [] as string[] }
+    try {
+      retro = await recalculBonusRetroactif(c.env.DB, memberId, period, true)
+    } catch (e2: any) {
+      retroError = e2.message || String(e2)
+      console.error('recalculBonusRetroactif error:', e2)
+    }
+
+    // Si les deux ont échoué, retourner erreur
+    if (upgradeError && retroError) {
+      return c.json({
+        error: `Échec étape upgradePrimeLeadership: ${upgradeError}`,
+        upgradeError,
+        retroError,
+      }, 500)
+    }
 
     return c.json({
       success: true,
@@ -702,16 +725,10 @@ admin.post('/members/:id/trigger-bonuses', requirePermission('members.edit'), as
         rayonnement: retro.rayonnement,
         influence:   retro.influence,
       },
-      message: `Bonus déclenchés pour ${member.first_name} ${member.last_name} — rang ${effectiveRank} — période ${period}`,
+      upgradeError: upgradeError || undefined,
+      retroError:   retroError   || undefined,
+      message: `Bonus déclenchés pour ${member.first_name} ${member.last_name} — rang ${effectiveRank} — période ${period}${upgradeError ? ' (avec erreurs partielles)' : ''}`,
     })
-  } catch (e: any) {
-    console.error('POST trigger-bonuses error:', e)
-    return c.json({
-      error: e.message || 'Erreur déclenchement bonus',
-      detail: String(e),
-    }, 500)
-  }
-})
 
 // ── HOLDING TANK ───────────────────────────────────────────
 admin.get('/holding-tank', requirePermission('tree.view'), async (c) => {
