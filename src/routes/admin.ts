@@ -493,105 +493,102 @@ admin.get('/members/:id/overrides', requirePermission('members.edit'), async (c)
 // POST /members/:id/overrides — créer ou remplacer l'override
 admin.post('/members/:id/overrides', requirePermission('members.edit'), async (c) => {
   const memberId = c.req.param('id')
-  const {
-    bv_left_monthly_bonus  = 0,
-    bv_right_monthly_bonus = 0,
-    bv_left_total_bonus    = 0,
-    bv_right_total_bonus   = 0,
-    rank_override          = null,
-    reason                 = '',
-  } = await c.req.json()
-
-  // Récupérer l'admin connecté depuis le JWT
-  const authHeader = c.req.header('Authorization') || ''
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : ''
-  let adminId: string | null = null
   try {
-    const payload = await verifyJWT(token, (c.env as any).JWT_SECRET || 'leader-secret-2024') as any
-    adminId = payload?.adminId || payload?.sub || null
-  } catch { /* token invalide — on continue sans adminId */ }
+    const {
+      bv_left_monthly_bonus  = 0,
+      bv_right_monthly_bonus = 0,
+      bv_left_total_bonus    = 0,
+      bv_right_total_bonus   = 0,
+      rank_override          = null,
+      reason                 = '',
+    } = await c.req.json()
 
-  const id = crypto.randomUUID()
+    // adminId déjà résolu par le middleware d'auth
+    const adminId = (c.get('adminId' as any) as string) || null
 
-  // UPSERT : remplace si déjà existant (une seule ligne par membre)
-  await c.env.DB.prepare(
-    `INSERT INTO member_overrides
-       (id, member_id, bv_left_monthly_bonus, bv_right_monthly_bonus,
-        bv_left_total_bonus, bv_right_total_bonus, rank_override, reason, created_by, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-     ON CONFLICT(member_id) DO UPDATE SET
-       bv_left_monthly_bonus  = excluded.bv_left_monthly_bonus,
-       bv_right_monthly_bonus = excluded.bv_right_monthly_bonus,
-       bv_left_total_bonus    = excluded.bv_left_total_bonus,
-       bv_right_total_bonus   = excluded.bv_right_total_bonus,
-       rank_override          = excluded.rank_override,
-       reason                 = excluded.reason,
-       created_by             = excluded.created_by,
-       updated_at             = datetime('now')`
-  ).bind(
-    id, memberId,
-    bv_left_monthly_bonus, bv_right_monthly_bonus,
-    bv_left_total_bonus,   bv_right_total_bonus,
-    rank_override || null, reason || null, adminId
-  ).run()
+    const id = crypto.randomUUID()
 
-  // Log immuable
-  const logId = crypto.randomUUID()
-  await c.env.DB.prepare(
-    `INSERT INTO member_overrides_log
-       (id, member_id, admin_id, action,
-        bv_left_monthly_bonus, bv_right_monthly_bonus,
-        bv_left_total_bonus, bv_right_total_bonus,
-        rank_override, reason)
-     VALUES (?, ?, ?, 'set', ?, ?, ?, ?, ?, ?)`
-  ).bind(
-    logId, memberId, adminId,
-    bv_left_monthly_bonus, bv_right_monthly_bonus,
-    bv_left_total_bonus,   bv_right_total_bonus,
-    rank_override || null, reason || null
-  ).run()
-
-  // Si rang override → mettre à jour current_rank immédiatement
-  if (rank_override) {
+    // UPSERT : remplace si déjà existant (une seule ligne par membre)
     await c.env.DB.prepare(
-      `UPDATE members SET current_rank = ?, updated_at = datetime('now') WHERE id = ?`
-    ).bind(rank_override, memberId).run()
-  }
+      `INSERT INTO member_overrides
+         (id, member_id, bv_left_monthly_bonus, bv_right_monthly_bonus,
+          bv_left_total_bonus, bv_right_total_bonus, rank_override, reason, created_by, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+       ON CONFLICT(member_id) DO UPDATE SET
+         bv_left_monthly_bonus  = excluded.bv_left_monthly_bonus,
+         bv_right_monthly_bonus = excluded.bv_right_monthly_bonus,
+         bv_left_total_bonus    = excluded.bv_left_total_bonus,
+         bv_right_total_bonus   = excluded.bv_right_total_bonus,
+         rank_override          = excluded.rank_override,
+         reason                 = excluded.reason,
+         created_by             = excluded.created_by,
+         updated_at             = datetime('now')`
+    ).bind(
+      id, memberId,
+      bv_left_monthly_bonus, bv_right_monthly_bonus,
+      bv_left_total_bonus,   bv_right_total_bonus,
+      rank_override || null, reason || null, adminId
+    ).run()
 
-  return c.json({ success: true })
+    // Log immuable
+    const logId = crypto.randomUUID()
+    await c.env.DB.prepare(
+      `INSERT INTO member_overrides_log
+         (id, member_id, admin_id, action,
+          bv_left_monthly_bonus, bv_right_monthly_bonus,
+          bv_left_total_bonus, bv_right_total_bonus,
+          rank_override, reason)
+       VALUES (?, ?, ?, 'set', ?, ?, ?, ?, ?, ?)`
+    ).bind(
+      logId, memberId, adminId,
+      bv_left_monthly_bonus, bv_right_monthly_bonus,
+      bv_left_total_bonus,   bv_right_total_bonus,
+      rank_override || null, reason || null
+    ).run()
+
+    // Si rang override → mettre à jour current_rank immédiatement
+    if (rank_override) {
+      await c.env.DB.prepare(
+        `UPDATE members SET current_rank = ?, updated_at = datetime('now') WHERE id = ?`
+      ).bind(rank_override, memberId).run()
+    }
+
+    return c.json({ success: true })
+  } catch (e: any) {
+    console.error('POST overrides error:', e)
+    return c.json({ error: e.message || 'Erreur sauvegarde override' }, 500)
+  }
 })
 
 // DELETE /members/:id/overrides — supprimer l'override (réinitialiser)
 admin.delete('/members/:id/overrides', requirePermission('members.edit'), async (c) => {
   const memberId = c.req.param('id')
-
-  // Récupérer l'admin connecté
-  const authHeader = c.req.header('Authorization') || ''
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : ''
-  let adminId: string | null = null
   try {
-    const payload = await verifyJWT(token, (c.env as any).JWT_SECRET || 'leader-secret-2024') as any
-    adminId = payload?.adminId || payload?.sub || null
-  } catch { /* token invalide */ }
+    // adminId déjà résolu par le middleware d'auth
+    const adminId = (c.get('adminId' as any) as string) || null
 
-  await c.env.DB.prepare(
-    `DELETE FROM member_overrides WHERE member_id = ?`
-  ).bind(memberId).run()
+    await c.env.DB.prepare(
+      `DELETE FROM member_overrides WHERE member_id = ?`
+    ).bind(memberId).run()
 
-  // Log immuable (action reset)
-  const logId = crypto.randomUUID()
-  await c.env.DB.prepare(
-    `INSERT INTO member_overrides_log (id, member_id, admin_id, action, reason)
-     VALUES (?, ?, ?, 'reset', 'Réinitialisation complète par admin')`
-  ).bind(logId, memberId, adminId).run()
+    // Log immuable (action reset)
+    const logId = crypto.randomUUID()
+    await c.env.DB.prepare(
+      `INSERT INTO member_overrides_log (id, member_id, admin_id, action, reason)
+       VALUES (?, ?, ?, 'reset', 'Réinitialisation complète par admin')`
+    ).bind(logId, memberId, adminId).run()
 
-  // Recalculer le vrai rang et le remettre
-  const realRank = await calculateMemberRank(c.env.DB, memberId)
-  await c.env.DB.prepare(
-    `UPDATE members SET current_rank = ?, updated_at = datetime('now') WHERE id = ?`
-  ).bind(realRank, memberId).run()
+    // Recalculer le vrai rang et le remettre
+    const realRank = await calculateMemberRank(c.env.DB, memberId)
+    await c.env.DB.prepare(
+      `UPDATE members SET current_rank = ?, updated_at = datetime('now') WHERE id = ?`
+    ).bind(realRank, memberId).run()
 
-  return c.json({ success: true, realRank })
+    return c.json({ success: true, realRank })
+  } catch (e: any) {
+    console.error('DELETE overrides error:', e)
+    return c.json({ error: e.message || 'Erreur réinitialisation override' }, 500)
+  }
 })
 
 // ── HOLDING TANK ───────────────────────────────────────────
