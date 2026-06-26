@@ -465,6 +465,130 @@ admin.delete('/members/:id', requirePermission('members.delete'), async (c) => {
   return c.json({ success: true })
 })
 
+// ── MEMBER OVERRIDES — Ajustements manuels BV & Rang ──────────────────────
+
+// GET /members/:id/overrides — lire l'override actuel + historique
+admin.get('/members/:id/overrides', requirePermission('members.edit'), async (c) => {
+  const memberId = c.req.param('id')
+  const [current, logs] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT * FROM member_overrides WHERE member_id = ?`
+    ).bind(memberId).first(),
+    c.env.DB.prepare(
+      `SELECT mol.*, au.username as admin_username
+       FROM member_overrides_log mol
+       LEFT JOIN admin_users au ON au.id = mol.admin_id
+       WHERE mol.member_id = ?
+       ORDER BY mol.created_at DESC LIMIT 50`
+    ).bind(memberId).all(),
+  ])
+  return c.json({ override: current || null, logs: logs.results })
+})
+
+// POST /members/:id/overrides — créer ou remplacer l'override
+admin.post('/members/:id/overrides', requirePermission('members.edit'), async (c) => {
+  const memberId = c.req.param('id')
+  const {
+    bv_left_monthly_bonus  = 0,
+    bv_right_monthly_bonus = 0,
+    bv_left_total_bonus    = 0,
+    bv_right_total_bonus   = 0,
+    rank_override          = null,
+    reason                 = '',
+  } = await c.req.json()
+
+  // Récupérer l'admin connecté depuis le JWT
+  const authHeader = c.req.header('Authorization') || ''
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : ''
+  let adminId: string | null = null
+  try {
+    const payload = await verifyJWT(token, (c.env as any).JWT_SECRET || 'leader-secret-2024') as any
+    adminId = payload?.adminId || payload?.sub || null
+  } catch { /* token invalide — on continue sans adminId */ }
+
+  const id = crypto.randomUUID()
+
+  // UPSERT : remplace si déjà existant (une seule ligne par membre)
+  await c.env.DB.prepare(
+    `INSERT INTO member_overrides
+       (id, member_id, bv_left_monthly_bonus, bv_right_monthly_bonus,
+        bv_left_total_bonus, bv_right_total_bonus, rank_override, reason, created_by, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+     ON CONFLICT(member_id) DO UPDATE SET
+       bv_left_monthly_bonus  = excluded.bv_left_monthly_bonus,
+       bv_right_monthly_bonus = excluded.bv_right_monthly_bonus,
+       bv_left_total_bonus    = excluded.bv_left_total_bonus,
+       bv_right_total_bonus   = excluded.bv_right_total_bonus,
+       rank_override          = excluded.rank_override,
+       reason                 = excluded.reason,
+       created_by             = excluded.created_by,
+       updated_at             = datetime('now')`
+  ).bind(
+    id, memberId,
+    bv_left_monthly_bonus, bv_right_monthly_bonus,
+    bv_left_total_bonus,   bv_right_total_bonus,
+    rank_override || null, reason || null, adminId
+  ).run()
+
+  // Log immuable
+  const logId = crypto.randomUUID()
+  await c.env.DB.prepare(
+    `INSERT INTO member_overrides_log
+       (id, member_id, admin_id, action,
+        bv_left_monthly_bonus, bv_right_monthly_bonus,
+        bv_left_total_bonus, bv_right_total_bonus,
+        rank_override, reason)
+     VALUES (?, ?, ?, 'set', ?, ?, ?, ?, ?, ?)`
+  ).bind(
+    logId, memberId, adminId,
+    bv_left_monthly_bonus, bv_right_monthly_bonus,
+    bv_left_total_bonus,   bv_right_total_bonus,
+    rank_override || null, reason || null
+  ).run()
+
+  // Si rang override → mettre à jour current_rank immédiatement
+  if (rank_override) {
+    await c.env.DB.prepare(
+      `UPDATE members SET current_rank = ?, updated_at = datetime('now') WHERE id = ?`
+    ).bind(rank_override, memberId).run()
+  }
+
+  return c.json({ success: true })
+})
+
+// DELETE /members/:id/overrides — supprimer l'override (réinitialiser)
+admin.delete('/members/:id/overrides', requirePermission('members.edit'), async (c) => {
+  const memberId = c.req.param('id')
+
+  // Récupérer l'admin connecté
+  const authHeader = c.req.header('Authorization') || ''
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : ''
+  let adminId: string | null = null
+  try {
+    const payload = await verifyJWT(token, (c.env as any).JWT_SECRET || 'leader-secret-2024') as any
+    adminId = payload?.adminId || payload?.sub || null
+  } catch { /* token invalide */ }
+
+  await c.env.DB.prepare(
+    `DELETE FROM member_overrides WHERE member_id = ?`
+  ).bind(memberId).run()
+
+  // Log immuable (action reset)
+  const logId = crypto.randomUUID()
+  await c.env.DB.prepare(
+    `INSERT INTO member_overrides_log (id, member_id, admin_id, action, reason)
+     VALUES (?, ?, ?, 'reset', 'Réinitialisation complète par admin')`
+  ).bind(logId, memberId, adminId).run()
+
+  // Recalculer le vrai rang et le remettre
+  const realRank = await calculateMemberRank(c.env.DB, memberId)
+  await c.env.DB.prepare(
+    `UPDATE members SET current_rank = ?, updated_at = datetime('now') WHERE id = ?`
+  ).bind(realRank, memberId).run()
+
+  return c.json({ success: true, realRank })
+})
+
 // ── HOLDING TANK ───────────────────────────────────────────
 admin.get('/holding-tank', requirePermission('tree.view'), async (c) => {
   // Lire le délai sponsor depuis la config (défaut 15j)

@@ -84,6 +84,18 @@ export async function calculateMemberRank(
   // Vérifier le statut membre (Client/Membre = pas de rang)
   if (member.member_status === 'Membre' || member.member_status === 'Client') return 'none'
 
+  // ── OVERRIDE RANG : si un rang override est défini, on le retourne directement ──
+  // L'override est permanent jusqu'à suppression manuelle par l'admin.
+  // Le vrai rang calculé continue d'exister en background mais n'est pas utilisé.
+  const overrideRow = await db.prepare(
+    `SELECT rank_override, bv_left_monthly_bonus, bv_right_monthly_bonus,
+            bv_left_total_bonus, bv_right_total_bonus
+     FROM member_overrides WHERE member_id = ?`
+  ).bind(memberId).first() as any
+  if (overrideRow?.rank_override) {
+    return overrideRow.rank_override as RankName
+  }
+
   // Lire le mode BV global (total à vie vs mensuel) depuis la config
   // CDC : par défaut les rangs sont basés sur le BV TOTAL à vie (irréversible)
   const globalCfg = await db.prepare(
@@ -133,8 +145,21 @@ export async function calculateMemberRank(
       ? rank.bv_rank_use_total === 1
       : globalUseTotal
 
-    const leftBV  = useTotal ? (member.left_bv_total  || 0) : (member.left_bv_monthly  || 0)
-    const rightBV = useTotal ? (member.right_bv_total || 0) : (member.right_bv_monthly || 0)
+    // ── BV OVERRIDE : additionner les bonus admin aux vrais BV ──
+    // overrideRow déjà chargé plus haut (rank_override = null ici, sinon on serait déjà sorti)
+    const bvBonus = overrideRow ? {
+      leftMonthly:  overrideRow.bv_left_monthly_bonus  || 0,
+      rightMonthly: overrideRow.bv_right_monthly_bonus || 0,
+      leftTotal:    overrideRow.bv_left_total_bonus    || 0,
+      rightTotal:   overrideRow.bv_right_total_bonus   || 0,
+    } : { leftMonthly: 0, rightMonthly: 0, leftTotal: 0, rightTotal: 0 }
+
+    const leftBV  = useTotal
+      ? ((member.left_bv_total   || 0) + bvBonus.leftTotal)
+      : ((member.left_bv_monthly || 0) + bvBonus.leftMonthly)
+    const rightBV = useTotal
+      ? ((member.right_bv_total  || 0) + bvBonus.rightTotal)
+      : ((member.right_bv_monthly || 0) + bvBonus.rightMonthly)
     const minLeg  = Math.min(leftBV, rightBV)
 
     if (minLeg < rank.min_bv_leg) continue
