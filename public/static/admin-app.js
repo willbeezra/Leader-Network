@@ -1017,7 +1017,7 @@ async function activateMemberLicense(memberId, memberName) {
       <div class="space-y-3">
         <div>
           <label class="form-label text-xs">Date d'activation</label>
-          <input type="date" id="activate-license-date" class="form-input" value="${today}" style="color-scheme: dark; color: #fff;">
+          <input type="text" id="activate-license-date" class="form-input" value="${today}" placeholder="AAAA-MM-JJ" pattern="\d{4}-\d{2}-\d{2}" style="color:#fff; letter-spacing:0.05em;" oninput="this.value=this.value.replace(/[^0-9-]/g,'')">
           <p class="text-xs text-gray-500 mt-1">Date pouvant être antérieure à aujourd'hui.</p>
         </div>
         <div>
@@ -1048,11 +1048,12 @@ window.activateMemberLicense = activateMemberLicense;
 async function execActivateLicense(memberId) {
   const dateInput = document.getElementById('activate-license-date');
   const reasonInput = document.getElementById('activate-license-reason');
-  // Fallback getAttribute pour Safari (innerHTML ne set pas .value correctement)
-  const activation_date = dateInput?.value || dateInput?.getAttribute('value');
+  // Lecture directe de la valeur (type=text, pas de bug Safari)
+  const activation_date = (dateInput?.value || '').trim();
   const reason = reasonInput?.value || 'Activation manuelle par l\'administration';
 
-  if (!activation_date) return showToast('Veuillez choisir une date d\'activation', 'error');
+  if (!activation_date) return showToast('Veuillez saisir une date d\'activation', 'error');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(activation_date)) return showToast('Format de date invalide. Utilisez AAAA-MM-JJ (ex: 2026-05-01)', 'error');
 
   const btn = document.querySelector('#modal-container button[onclick*="execActivateLicense"]');
   const orig = btn?.innerHTML;
