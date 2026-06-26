@@ -1036,13 +1036,20 @@ async function activateMemberLicense(memberId, memberName) {
       </div>
     </div>
   `);
+  // Fix Safari : innerHTML ne definit pas la propriete .value des inputs
+  // On force la valeur apres que le DOM est rendu
+  setTimeout(() => {
+    const el = document.getElementById('activate-license-date');
+    if (el) el.value = today;
+  }, 0);
 }
 window.activateMemberLicense = activateMemberLicense;
 
 async function execActivateLicense(memberId) {
   const dateInput = document.getElementById('activate-license-date');
   const reasonInput = document.getElementById('activate-license-reason');
-  const activation_date = dateInput?.value;
+  // Fallback getAttribute pour Safari (innerHTML ne set pas .value correctement)
+  const activation_date = dateInput?.value || dateInput?.getAttribute('value');
   const reason = reasonInput?.value || 'Activation manuelle par l\'administration';
 
   if (!activation_date) return showToast('Veuillez choisir une date d\'activation', 'error');
