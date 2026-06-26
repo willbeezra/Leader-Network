@@ -470,19 +470,24 @@ admin.delete('/members/:id', requirePermission('members.delete'), async (c) => {
 // GET /members/:id/overrides — lire l'override actuel + historique
 admin.get('/members/:id/overrides', requirePermission('members.edit'), async (c) => {
   const memberId = c.req.param('id')
-  const [current, logs] = await Promise.all([
-    c.env.DB.prepare(
-      `SELECT * FROM member_overrides WHERE member_id = ?`
-    ).bind(memberId).first(),
-    c.env.DB.prepare(
-      `SELECT mol.*, au.username as admin_username
-       FROM member_overrides_log mol
-       LEFT JOIN admin_users au ON au.id = mol.admin_id
-       WHERE mol.member_id = ?
-       ORDER BY mol.created_at DESC LIMIT 50`
-    ).bind(memberId).all(),
-  ])
-  return c.json({ override: current || null, logs: logs.results })
+  try {
+    const [current, logs] = await Promise.all([
+      c.env.DB.prepare(
+        `SELECT * FROM member_overrides WHERE member_id = ?`
+      ).bind(memberId).first(),
+      c.env.DB.prepare(
+        `SELECT mol.*, au.name as admin_username
+         FROM member_overrides_log mol
+         LEFT JOIN admin_users au ON au.id = mol.admin_id
+         WHERE mol.member_id = ?
+         ORDER BY mol.created_at DESC LIMIT 50`
+      ).bind(memberId).all(),
+    ])
+    return c.json({ override: current || null, logs: logs.results })
+  } catch (e: any) {
+    console.error('GET overrides error:', e)
+    return c.json({ error: e.message || 'Erreur serveur overrides' }, 500)
+  }
 })
 
 // POST /members/:id/overrides — créer ou remplacer l'override
