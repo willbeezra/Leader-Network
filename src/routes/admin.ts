@@ -3576,6 +3576,84 @@ admin.post('/members/:id/renew-license-free', requirePermission('licenses.edit')
   return c.json({ success: true, expires_at: newExpiry.toISOString(), newRank })
 })
 
+// POST /admin/members/:id/activate-license — activer manuellement la licence d'un membre
+// Paramètres body : { activation_date?: string (YYYY-MM-DD), reason?: string }
+// Si activation_date absent → aujourd'hui. Durée toujours 365 jours depuis activation_date.
+admin.post('/members/:id/activate-license', requirePermission('licenses.edit'), async (c) => {
+  const adminId: string = (c.get('adminId' as any) as string) || 'admin-000000000000000000000000'
+  const memberId = c.req.param('id')
+
+  const body = await c.req.json().catch(() => ({})) as any
+  const reason: string = body.reason || 'Activation manuelle par l\'administration'
+
+  // Date d'activation : celle fournie (YYYY-MM-DD) ou aujourd'hui
+  let startsAt: Date
+  if (body.activation_date && /^\d{4}-\d{2}-\d{2}$/.test(body.activation_date)) {
+    startsAt = new Date(body.activation_date + 'T00:00:00Z')
+    if (isNaN(startsAt.getTime())) startsAt = new Date()
+  } else {
+    startsAt = new Date()
+  }
+
+  // Expiration = date d'activation + 365 jours (exactement)
+  const expiresAt = new Date(startsAt)
+  expiresAt.setFullYear(expiresAt.getFullYear() + 1)
+
+  const member = await c.env.DB.prepare(`SELECT * FROM members WHERE id = ?`).bind(memberId).first() as any
+  if (!member) return c.json({ error: 'Membre introuvable' }, 404)
+
+  // Passer les licences actives précédentes en 'superseded' (remplacées)
+  await c.env.DB.prepare(
+    `UPDATE finstrategia_licenses SET status = 'expired', updated_at = datetime('now')
+     WHERE member_id = ? AND status = 'active'`
+  ).bind(memberId).run()
+
+  // Créer la nouvelle entrée de licence
+  const licId = generateId()
+  await c.env.DB.prepare(
+    `INSERT INTO finstrategia_licenses
+      (id, member_id, price_usd, status, starts_at, expires_at, validated_by, validated_at)
+     VALUES (?, ?, 0, 'active', ?, ?, ?, datetime('now'))`
+  ).bind(licId, memberId, startsAt.toISOString(), expiresAt.toISOString(), adminId).run()
+
+  // Mettre à jour le membre
+  await c.env.DB.prepare(
+    `UPDATE members SET license_active = 1, license_expires_at = ?, updated_at = datetime('now') WHERE id = ?`
+  ).bind(expiresAt.toISOString(), memberId).run()
+
+  // Recalcul statut (AMI / Partenaire selon s'il a un package)
+  await recalculateMemberStatus(c.env.DB, memberId)
+
+  // Recalcul rang
+  const newRank = await calculateMemberRank(c.env.DB, memberId)
+  await c.env.DB.prepare(
+    `UPDATE members SET current_rank = ?, updated_at = datetime('now') WHERE id = ?`
+  ).bind(newRank, memberId).run()
+
+  // Notification au membre
+  await createNotification(c.env.DB, memberId, 'success', 'Licence activée',
+    `Votre licence Finstrategia a été activée du ${startsAt.toLocaleDateString('fr-FR')} au ${expiresAt.toLocaleDateString('fr-FR')}.`)
+
+  // Log admin
+  await c.env.DB.prepare(
+    `INSERT INTO admin_audit_log (id, admin_id, admin_email, action, description, metadata, created_at)
+     VALUES (lower(hex(randomblob(16))), ?, ?, 'activate_license', ?, ?, datetime('now'))`
+  ).bind(
+    adminId,
+    (c.get('adminEmail' as any) as string) || 'admin@system',
+    `Activation manuelle licence — ${member.first_name} ${member.last_name} — du ${startsAt.toISOString().substring(0,10)} au ${expiresAt.toISOString().substring(0,10)}`,
+    JSON.stringify({ memberId, activation_date: startsAt.toISOString().substring(0,10), expires_at: expiresAt.toISOString().substring(0,10), reason, license_id: licId })
+  ).run()
+
+  return c.json({
+    success: true,
+    activation_date: startsAt.toISOString().substring(0, 10),
+    expires_at: expiresAt.toISOString().substring(0, 10),
+    newRank,
+    message: `Licence activée du ${startsAt.toLocaleDateString('fr-FR')} au ${expiresAt.toLocaleDateString('fr-FR')}`
+  })
+})
+
 // POST /admin/members/:id/suspend-license — suspendre la licence d'un membre
 admin.post('/members/:id/suspend-license', requirePermission('licenses.edit'), async (c) => {
   const memberId = c.req.param('id')
