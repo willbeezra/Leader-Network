@@ -762,7 +762,7 @@ export async function upgradePrimeLeadership(
           for (const row of oldRayFor8d.results as any[]) {
             await db.prepare(`UPDATE wallets SET pending_balance = MAX(0, pending_balance - ?) WHERE member_id = ?`).bind(row.amount, row.member_id).run()
           }
-          await db.prepare(`DELETE FROM commissions WHERE member_id = ? AND type = 'bonus_rayonnement' AND period = ?`).bind(memberRowFor8d.sponsor_id, period).run()
+          await deleteCommissionsAndPendingEntries(db, (oldRayFor8d.results as any[]).map(r => r.id))
           if (await isBonusEnabled(db, 'rayonnement_enabled')) {
             await calculateRayonnementBonus(db, memberRowFor8d.sponsor_id, period, sponsorRemCapFor8d, retroEnabled)
           }
@@ -774,7 +774,7 @@ export async function upgradePrimeLeadership(
             for (const row of oldInflFor8d.results as any[]) {
               await db.prepare(`UPDATE wallets SET pending_balance = MAX(0, pending_balance - ?) WHERE member_id = ?`).bind(row.amount, row.member_id).run()
             }
-            await db.prepare(`DELETE FROM commissions WHERE source_member_id = ? AND type = 'bonus_influence' AND period = ?`).bind(memberId, period).run()
+            await deleteCommissionsAndPendingEntries(db, (oldInflFor8d.results as any[]).map(r => r.id))
             await calculateInfluenceBonus(db, memberId, memberPrimeFor8d, period, Math.max(0, memberCapFor8d - memberPrimeFor8d), retroEnabled)
           }
         }
@@ -915,10 +915,7 @@ export async function upgradePrimeLeadership(
       `UPDATE wallets SET pending_balance = MAX(0, pending_balance - ?) WHERE member_id = ?`
     ).bind(row.amount, row.member_id).run()
   }
-  await db.prepare(
-    `DELETE FROM commissions
-     WHERE source_member_id = ? AND type = 'bonus_influence' AND period = ?`
-  ).bind(memberId, period).run()
+  await deleteCommissionsAndPendingEntries(db, (oldInfluenceRows.results as any[]).map(r => r.id))
 
   let influenceSpent = 0
   const remainingCapForBonuses = cap - targetPrime
@@ -944,10 +941,7 @@ export async function upgradePrimeLeadership(
       `UPDATE wallets SET pending_balance = MAX(0, pending_balance - ?) WHERE member_id = ?`
     ).bind(row.amount, row.member_id).run()
   }
-  await db.prepare(
-    `DELETE FROM commissions
-     WHERE member_id = ? AND type = 'bonus_rayonnement' AND period = ?`
-  ).bind(memberId, period).run()
+  await deleteCommissionsAndPendingEntries(db, (oldRayRows.results as any[]).map(r => r.id))
 
   if (await isBonusEnabled(db, 'rayonnement_enabled')) {
     const capAfterInfluence = Math.max(0, remainingCapForBonuses - influenceSpent)
@@ -1017,11 +1011,7 @@ export async function upgradePrimeLeadership(
           `UPDATE wallets SET pending_balance = MAX(0, pending_balance - ?) WHERE member_id = ?`
         ).bind(row.amount, row.member_id).run()
       }
-      await db.prepare(
-        `DELETE FROM commissions
-         WHERE member_id = ? AND source_member_id = ?
-           AND type = 'bonus_rayonnement' AND period = ?`
-      ).bind(sponsorId, memberId, period).run()
+      await deleteCommissionsAndPendingEntries(db, (oldSponsorRayRows.results as any[]).map(r => r.id))
 
       // Recalculer TOUT le rayonnement du sponsor (tous ses directs, pas seulement ce membre)
       // pour éviter les doublons — on purge tout le rayonnement du sponsor puis on recalcule
@@ -1034,10 +1024,7 @@ export async function upgradePrimeLeadership(
           `UPDATE wallets SET pending_balance = MAX(0, pending_balance - ?) WHERE member_id = ?`
         ).bind(row.amount, row.member_id).run()
       }
-      await db.prepare(
-        `DELETE FROM commissions
-         WHERE member_id = ? AND type = 'bonus_rayonnement' AND period = ?`
-      ).bind(sponsorId, period).run()
+      await deleteCommissionsAndPendingEntries(db, (allSponsorRayRows.results as any[]).map(r => r.id))
 
       if (await isBonusEnabled(db, 'rayonnement_enabled')) {
         await calculateRayonnementBonus(db, sponsorId, period, sponsorRemainingCap, retroEnabled)
@@ -1072,10 +1059,7 @@ export async function upgradePrimeLeadership(
         `UPDATE wallets SET pending_balance = MAX(0, pending_balance - ?) WHERE member_id = ?`
       ).bind(row.amount, row.member_id).run()
     }
-    await db.prepare(
-      `DELETE FROM commissions
-       WHERE source_member_id = ? AND type = 'bonus_influence' AND period = ?`
-    ).bind(memberId, period).run()
+    await deleteCommissionsAndPendingEntries(db, (oldInfluenceFromFilleul.results as any[]).map(r => r.id))
 
     // Recalculer l'influence depuis ce filleul sur la base de sa prime TOTALE
     const influenceSpent = await calculateInfluenceBonus(
@@ -2261,6 +2245,33 @@ export async function processMonthlyCommissions(
   }
 
   return { processed, skipped, alreadyDone: alreadyDoneCount?.cnt || 0 }
+}
+
+/**
+/**
+ * deleteCommissionsAndPendingEntries — Supprime des commissions + leurs pending_wallet_entries
+ * associées (FK : pending_wallet_entries.commission_id REFERENCES commissions(id)).
+ *
+ * TOUJOURS utiliser cette fonction à la place d'un DELETE direct sur `commissions`
+ * lorsque des pending_wallet_entries peuvent exister pour ces commissions.
+ *
+ * @param db       D1Database
+ * @param commIds  IDs des commissions à supprimer (déjà récupérés via SELECT)
+ */
+async function deleteCommissionsAndPendingEntries(
+  db: D1Database,
+  commIds: string[]
+): Promise<void> {
+  if (commIds.length === 0) return
+  for (const commId of commIds) {
+    await db.prepare(
+      `DELETE FROM pending_wallet_entries WHERE commission_id = ?`
+    ).bind(commId).run()
+  }
+  // Supprimer les commissions APRÈS les pending_wallet_entries (respecte la FK)
+  for (const commId of commIds) {
+    await db.prepare(`DELETE FROM commissions WHERE id = ?`).bind(commId).run()
+  }
 }
 
 /**
@@ -3760,9 +3771,7 @@ export async function recalculBonusRetroactif(
         `UPDATE wallets SET pending_balance = MAX(0, pending_balance - ?) WHERE member_id = ?`
       ).bind(row.amount, row.member_id).run()
     }
-    await db.prepare(
-      `DELETE FROM commissions WHERE member_id = ? AND type = 'bonus_rayonnement' AND period = ?`
-    ).bind(memberId, period).run()
+    await deleteCommissionsAndPendingEntries(db, (oldRayRows.results as any[]).map(r => r.id))
 
     const capRay = Math.max(0, memberCap - memberPrime - memberInfluence)
     await calculateRayonnementBonus(db, memberId, period, capRay, retroEnabled)
@@ -3809,9 +3818,7 @@ export async function recalculBonusRetroactif(
           `UPDATE wallets SET pending_balance = MAX(0, pending_balance - ?) WHERE member_id = ?`
         ).bind(row.amount, row.member_id).run()
       }
-      await db.prepare(
-        `DELETE FROM commissions WHERE source_member_id = ? AND type = 'bonus_influence' AND period = ?`
-      ).bind(direct.filleul_id, period).run()
+      await deleteCommissionsAndPendingEntries(db, (oldInflRows.results as any[]).map(r => r.id))
 
       // Recalculer l'influence depuis ce filleul
       const filleulRankCfg = await db.prepare(

@@ -730,6 +730,11 @@ admin.post('/members/:id/trigger-bonuses', requirePermission('members.edit'), as
       message: `Bonus déclenchés pour ${member.first_name} ${member.last_name} — rang ${effectiveRank} — période ${period}${upgradeError ? ' (avec erreurs partielles)' : ''}`,
     })
 
+  } catch (e: any) {
+    return c.json({ error: e.message || 'Erreur interne', detail: String(e) }, 500)
+  }
+})
+
 // ── HOLDING TANK ───────────────────────────────────────────
 admin.get('/holding-tank', requirePermission('tree.view'), async (c) => {
   // Lire le délai sponsor depuis la config (défaut 15j)
