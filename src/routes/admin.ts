@@ -650,6 +650,16 @@ admin.post('/members/:id/trigger-bonuses', requirePermission('members.edit'), as
       ).bind(pc.amount, memberId).run()
     }
 
+    // 3c-bis. Purger les wallet_transactions prime_leadership de ce mois
+    //         (sinon upgradePrimeLeadership voit alreadyPaid > 0 → delta = 0 → ne recrée pas)
+    const wtMonth = period + '-'
+    await c.env.DB.prepare(
+      `DELETE FROM wallet_transactions
+       WHERE member_id = ? AND transaction_type = 'prime_leadership'
+         AND wallet_type = 'pending'
+         AND created_at >= ? || '01'`
+    ).bind(memberId, wtMonth).run()
+
     // 3d. Annuler credit_croissance et reserve_strategique de ce mois
     const ccRows = await c.env.DB.prepare(
       `SELECT id, amount FROM credit_croissance WHERE member_id = ? AND period = ? AND status IN ('held','available')`
