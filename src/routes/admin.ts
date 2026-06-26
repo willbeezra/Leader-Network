@@ -645,7 +645,12 @@ admin.post('/members/:id/trigger-bonuses', requirePermission('members.edit'), as
     })
   } catch (e: any) {
     console.error('POST trigger-bonuses error:', e)
-    return c.json({ error: e.message || 'Erreur déclenchement bonus' }, 500)
+    // Retourner le message d'erreur complet pour diagnostic (admin only)
+    return c.json({
+      error: e.message || 'Erreur déclenchement bonus',
+      detail: String(e),
+      cause: e.cause ? String(e.cause) : undefined,
+    }, 500)
   }
 })
 
