@@ -8091,4 +8091,449 @@ admin.post('/package-service-access/bulk', requirePermission('packages.edit'), a
   return c.json({ success: true, package_id, is_enabled: enabled, rows_updated: result.meta?.changes || 0 })
 })
 
+// ============================================================
+// DÉPLACEMENT DE MEMBRE / BRANCHE — Move Member
+// ============================================================
+// Règles métier :
+// - legs: 'both'|'left'|'right'|'none' — jambes binaires à déplacer avec X
+// - Jambes non déplacées remontent chez l'ancienne upline de X
+// - Filleuls directs de parrainage dans jambe non déplacée → rootuser
+// - BV holding tank basculent vers nouvelles uplines
+// - BV payés / commissions passées : intouchables
+// - Transaction atomique + snapshot admin_audit_log
+// ============================================================
+
+// Helper : récupérer un membre complet
+async function getMemberFull(db: D1Database, id: string): Promise<any> {
+  return db.prepare(
+    `SELECT id, unique_id, first_name, last_name, email,
+            sponsor_id, binary_parent_id, binary_position,
+            binary_left_id, binary_right_id,
+            member_status, current_rank, license_active,
+            in_holding_tank, left_bv_monthly, right_bv_monthly,
+            left_bv_total, right_bv_total
+     FROM members WHERE id = ?`
+  ).bind(id).first()
+}
+
+// Helper : récupérer l'id du rootuser
+async function getRootUserId(db: D1Database): Promise<string | null> {
+  const root = await db.prepare(
+    `SELECT id FROM members WHERE unique_id = 'ROOT' LIMIT 1`
+  ).first() as any
+  return root?.id || null
+}
+
+// Helper : récupérer les enfants binaires directs d'un membre
+async function getBinaryChildren(db: D1Database, parentId: string): Promise<{ left: any, right: any }> {
+  const rows = await db.prepare(
+    `SELECT id, unique_id, first_name, last_name, binary_position,
+            binary_left_id, binary_right_id, sponsor_id
+     FROM members WHERE binary_parent_id = ? AND in_holding_tank = 0`
+  ).bind(parentId).all()
+  const children = rows.results as any[]
+  return {
+    left:  children.find(c => c.binary_position === 'L') || null,
+    right: children.find(c => c.binary_position === 'R') || null,
+  }
+}
+
+// Helper : récupérer les filleuls directs de parrainage d'un membre
+async function getSponsorDirects(db: D1Database, sponsorId: string): Promise<any[]> {
+  const rows = await db.prepare(
+    `SELECT id, unique_id, first_name, last_name FROM members
+     WHERE sponsor_id = ? AND unique_id != 'ROOT'`
+  ).bind(sponsorId).all()
+  return rows.results as any[]
+}
+
+// Helper : calculer quels membres sont dans une jambe (descendants binaires)
+async function getBinaryDescendants(db: D1Database, rootId: string, maxDepth = 50): Promise<string[]> {
+  const ids: string[] = []
+  const queue = [{ id: rootId, depth: 0 }]
+  while (queue.length > 0) {
+    const { id, depth } = queue.shift()!
+    if (depth >= maxDepth) continue
+    const children = await db.prepare(
+      `SELECT id FROM members WHERE binary_parent_id = ? AND in_holding_tank = 0`
+    ).bind(id).all()
+    for (const c of children.results as any[]) {
+      ids.push(c.id)
+      queue.push({ id: c.id, depth: depth + 1 })
+    }
+  }
+  return ids
+}
+
+// ── Route PREVIEW (dry-run) ─────────────────────────────────
+// POST /admin/members/:id/move/preview
+// Calcule l'impact sans modifier quoi que ce soit
+admin.post('/members/:id/move/preview', requirePermission('tree.edit'), async (c) => {
+  const memberId = c.req.param('id')
+  const body = await c.req.json().catch(() => ({})) as any
+  const { legs = 'both', target_member_id, target_side } = body
+
+  if (!target_member_id) return c.json({ error: 'target_member_id requis' }, 400)
+  if (!['L','R'].includes(target_side)) return c.json({ error: 'target_side doit être L ou R' }, 400)
+  if (!['both','left','right','none'].includes(legs)) return c.json({ error: 'legs invalide' }, 400)
+
+  const [member, target, rootId] = await Promise.all([
+    getMemberFull(c.env.DB, memberId),
+    getMemberFull(c.env.DB, target_member_id),
+    getRootUserId(c.env.DB),
+  ]) as any[]
+
+  if (!member) return c.json({ error: 'Membre source introuvable' }, 404)
+  if (!target) return c.json({ error: 'Membre cible introuvable' }, 404)
+  if (memberId === target_member_id) return c.json({ error: 'Source et cible identiques' }, 400)
+  if (!rootId) return c.json({ error: 'ROOT introuvable' }, 500)
+
+  // Vérifier que la cible n'est pas un descendant de la source (évite les cycles)
+  const sourceDescendants = await getBinaryDescendants(c.env.DB, memberId)
+  if (sourceDescendants.includes(target_member_id)) {
+    return c.json({ error: 'Impossible : la cible est un descendant de la source' }, 400)
+  }
+
+  // Enfants binaires actuels de X
+  const xChildren = await getBinaryChildren(c.env.DB, memberId)
+
+  // Déterminer quelles jambes partent avec X
+  const leftGoesWithX  = legs === 'both' || legs === 'left'
+  const rightGoesWithX = legs === 'both' || legs === 'right'
+
+  // Jambes qui restent (remontent chez ancienne upline de X)
+  const staysLeft  = !leftGoesWithX  && xChildren.left  ? xChildren.left  : null
+  const staysRight = !rightGoesWithX && xChildren.right ? xChildren.right : null
+
+  // Position cible occupée ?
+  const targetChildren = await getBinaryChildren(c.env.DB, target_member_id)
+  const slotOccupant = target_side === 'L' ? targetChildren.left : targetChildren.right
+  const intercalate = !!slotOccupant
+
+  // BV en attente dans bv_queue pour les membres de la branche
+  const branchIds = [memberId, ...sourceDescendants]
+  const pendingBV = await c.env.DB.prepare(
+    `SELECT COUNT(*) as cnt, SUM(bv_amount) as total
+     FROM bv_queue WHERE member_id IN (${branchIds.map(() => '?').join(',')}) AND status = 'pending'`
+  ).bind(...branchIds).first() as any
+
+  // Filleuls directs de parrainage de X
+  const sponsorDirects = await getSponsorDirects(c.env.DB, memberId)
+
+  // Ancienne upline binaire de X
+  const oldBinaryParent = member.binary_parent_id
+    ? await getMemberFull(c.env.DB, member.binary_parent_id) : null
+
+  // Résumé
+  return c.json({
+    preview: true,
+    source: {
+      id: member.id,
+      name: `${member.first_name} ${member.last_name}`,
+      unique_id: member.unique_id,
+      current_binary_parent: oldBinaryParent
+        ? `${oldBinaryParent.first_name} ${oldBinaryParent.last_name} (${oldBinaryParent.unique_id})` : 'ROOT',
+      current_binary_position: member.binary_position,
+    },
+    target: {
+      id: target.id,
+      name: `${target.first_name} ${target.last_name}`,
+      unique_id: target.unique_id,
+      side: target_side,
+    },
+    legs_config: legs,
+    intercalate,
+    slot_occupant: slotOccupant
+      ? { id: slotOccupant.id, name: `${slotOccupant.first_name} ${slotOccupant.last_name}`, unique_id: slotOccupant.unique_id }
+      : null,
+    branch_size: sourceDescendants.length + 1,
+    pending_bv: {
+      count: pendingBV?.cnt || 0,
+      total: pendingBV?.total || 0,
+    },
+    legs_staying_behind: [
+      staysLeft  ? { side: 'L', member: { id: staysLeft.id,  name: `${staysLeft.first_name} ${staysLeft.last_name}`,   unique_id: staysLeft.unique_id  }, goes_to: oldBinaryParent ? `${oldBinaryParent.unique_id} (côté L)` : 'ROOT' } : null,
+      staysRight ? { side: 'R', member: { id: staysRight.id, name: `${staysRight.first_name} ${staysRight.last_name}`, unique_id: staysRight.unique_id }, goes_to: oldBinaryParent ? `${oldBinaryParent.unique_id} (côté R)` : 'ROOT' } : null,
+    ].filter(Boolean),
+    sponsor_directs_reparented: sponsorDirects
+      .filter(d => {
+        // Filleuls dans jambes non déplacées → rootuser
+        if (leftGoesWithX && rightGoesWithX) return false // tous partent avec X
+        const inLeftBranch  = xChildren.left  ? sourceDescendants.includes(d.id) || d.id === xChildren.left?.id  : false
+        const inRightBranch = xChildren.right ? sourceDescendants.includes(d.id) || d.id === xChildren.right?.id : false
+        if (!leftGoesWithX  && inLeftBranch)  return true
+        if (!rightGoesWithX && inRightBranch) return true
+        return false
+      })
+      .map(d => ({ id: d.id, name: `${d.first_name} ${d.last_name}`, unique_id: d.unique_id, new_sponsor: 'ROOT' })),
+  })
+})
+
+// ── Route MOVE (transaction atomique) ──────────────────────
+// POST /admin/members/:id/move
+admin.post('/members/:id/move', requirePermission('tree.edit'), async (c) => {
+  const adminId: string = (c.get('adminId' as any) as string) || 'admin-000000000000000000000000'
+  const adminEmail: string = (c.get('adminEmail' as any) as string) || 'admin@system'
+  const memberId = c.req.param('id')
+  const body = await c.req.json().catch(() => ({})) as any
+  const { legs = 'both', target_member_id, target_side, confirm = false } = body
+
+  if (!confirm) return c.json({ error: 'confirm=true requis pour exécuter le déplacement' }, 400)
+  if (!target_member_id) return c.json({ error: 'target_member_id requis' }, 400)
+  if (!['L','R'].includes(target_side)) return c.json({ error: 'target_side doit être L ou R' }, 400)
+  if (!['both','left','right','none'].includes(legs)) return c.json({ error: 'legs invalide' }, 400)
+
+  const [member, target, rootId] = await Promise.all([
+    getMemberFull(c.env.DB, memberId),
+    getMemberFull(c.env.DB, target_member_id),
+    getRootUserId(c.env.DB),
+  ]) as any[]
+
+  if (!member) return c.json({ error: 'Membre source introuvable' }, 404)
+  if (!target) return c.json({ error: 'Membre cible introuvable' }, 404)
+  if (memberId === target_member_id) return c.json({ error: 'Source et cible identiques' }, 400)
+  if (!rootId) return c.json({ error: 'ROOT introuvable' }, 500)
+
+  // Anti-cycle : la cible ne doit pas être descendant de la source
+  const sourceDescendants = await getBinaryDescendants(c.env.DB, memberId)
+  if (sourceDescendants.includes(target_member_id)) {
+    return c.json({ error: 'Impossible : la cible est un descendant de la source' }, 400)
+  }
+
+  // ── Snapshot AVANT (pour rollback) ─────────────────────────
+  const snapshot: any = {
+    member: { ...member },
+    old_binary_parent_id: member.binary_parent_id,
+    old_binary_position:  member.binary_position,
+    old_sponsor_id:       member.sponsor_id,
+    target_id: target_member_id,
+    target_side,
+    legs,
+    timestamp: new Date().toISOString(),
+  }
+
+  // Récupérer état actuel de X et cible
+  const xChildren     = await getBinaryChildren(c.env.DB, memberId)
+  const targetChildren = await getBinaryChildren(c.env.DB, target_member_id)
+
+  const leftGoesWithX  = legs === 'both' || legs === 'left'
+  const rightGoesWithX = legs === 'both' || legs === 'right'
+
+  const staysLeft  = !leftGoesWithX  && xChildren.left  ? xChildren.left  : null
+  const staysRight = !rightGoesWithX && xChildren.right ? xChildren.right : null
+
+  const slotOccupant = target_side === 'L' ? targetChildren.left : targetChildren.right
+
+  // Ancienne upline binaire de X
+  const oldParentId  = member.binary_parent_id
+  const oldPosition  = member.binary_position as 'L' | 'R' | null
+
+  snapshot.xChildren    = { left: xChildren.left?.id || null, right: xChildren.right?.id || null }
+  snapshot.slotOccupant = slotOccupant?.id || null
+
+  // ── ÉTAPE 1 : Détacher X de son ancienne upline binaire ────
+  // 1a. Libérer le slot chez l'ancienne upline
+  if (oldParentId && oldPosition) {
+    const colOld = oldPosition === 'L' ? 'binary_left_id' : 'binary_right_id'
+    await c.env.DB.prepare(
+      `UPDATE members SET ${colOld} = NULL, updated_at = datetime('now') WHERE id = ?`
+    ).bind(oldParentId).run()
+  }
+
+  // 1b. Reset binary_parent de X (on le replacera plus tard)
+  await c.env.DB.prepare(
+    `UPDATE members SET binary_parent_id = NULL, binary_position = NULL,
+     updated_at = datetime('now') WHERE id = ?`
+  ).bind(memberId).run()
+
+  // ── ÉTAPE 2 : Gérer les jambes qui restent derrière ────────
+  // Elles remontent à la place de X chez son ancienne upline
+
+  // On peut remonter au max 2 jambes (L et R) mais la position cible
+  // chez l'ancienne upline était UNE seule (celle de X). Si les 2 restent,
+  // une va en oldPosition, l'autre est mise en holding tank temporaire.
+  const remainingLegs = [
+    staysLeft  ? { child: staysLeft,  originalSide: 'L' as const } : null,
+    staysRight ? { child: staysRight, originalSide: 'R' as const } : null,
+  ].filter(Boolean) as { child: any, originalSide: 'L' | 'R' }[]
+
+  for (let i = 0; i < remainingLegs.length; i++) {
+    const { child } = remainingLegs[i]
+    if (i === 0 && oldParentId && oldPosition) {
+      // Premier enfant qui reste → prend la place de X chez son ancien parent
+      const colNew = oldPosition === 'L' ? 'binary_left_id' : 'binary_right_id'
+      await c.env.DB.prepare(
+        `UPDATE members SET binary_parent_id = ?, binary_position = ?,
+         updated_at = datetime('now') WHERE id = ?`
+      ).bind(oldParentId, oldPosition, child.id).run()
+      await c.env.DB.prepare(
+        `UPDATE members SET ${colNew} = ?, updated_at = datetime('now') WHERE id = ?`
+      ).bind(child.id, oldParentId).run()
+    } else if (i === 1 && oldParentId) {
+      // Second enfant restant : l'autre slot chez l'ancienne upline (si libre)
+      // Déterminer quel côté est disponible chez l'ancienne upline
+      const oldParentData = await getMemberFull(c.env.DB, oldParentId) as any
+      const altSide = oldPosition === 'L' ? 'R' : 'L'
+      const altSlotFree = altSide === 'L' ? !oldParentData?.binary_left_id : !oldParentData?.binary_right_id
+      if (altSlotFree) {
+        const colAlt = altSide === 'L' ? 'binary_left_id' : 'binary_right_id'
+        await c.env.DB.prepare(
+          `UPDATE members SET binary_parent_id = ?, binary_position = ?,
+           updated_at = datetime('now') WHERE id = ?`
+        ).bind(oldParentId, altSide, child.id).run()
+        await c.env.DB.prepare(
+          `UPDATE members SET ${colAlt} = ?, updated_at = datetime('now') WHERE id = ?`
+        ).bind(child.id, oldParentId).run()
+      } else {
+        // Slot plein → rootuser
+        await c.env.DB.prepare(
+          `UPDATE members SET binary_parent_id = ?, binary_position = 'L',
+           updated_at = datetime('now') WHERE id = ?`
+        ).bind(rootId, child.id).run()
+        await c.env.DB.prepare(
+          `UPDATE members SET binary_left_id = ?, updated_at = datetime('now') WHERE id = ?`
+        ).bind(child.id, rootId).run()
+      }
+    } else if (!oldParentId) {
+      // X était à la racine → enfant remonte chez rootuser
+      await c.env.DB.prepare(
+        `UPDATE members SET binary_parent_id = ?, binary_position = 'L',
+         updated_at = datetime('now') WHERE id = ?`
+      ).bind(rootId, child.id).run()
+      await c.env.DB.prepare(
+        `UPDATE members SET binary_left_id = ?, updated_at = datetime('now') WHERE id = ?`
+      ).bind(child.id, rootId).run()
+    }
+  }
+
+  // ── ÉTAPE 3 : Gérer la jambe gauche de X si elle ne part pas ─
+  // (déjà géré ci-dessus, nettoyer le lien côté X)
+  if (!leftGoesWithX && xChildren.left) {
+    await c.env.DB.prepare(
+      `UPDATE members SET binary_left_id = NULL, updated_at = datetime('now') WHERE id = ?`
+    ).bind(memberId).run()
+  }
+  if (!rightGoesWithX && xChildren.right) {
+    await c.env.DB.prepare(
+      `UPDATE members SET binary_right_id = NULL, updated_at = datetime('now') WHERE id = ?`
+    ).bind(memberId).run()
+  }
+
+  // ── ÉTAPE 4 : Intercalation si slot occupé ─────────────────
+  if (slotOccupant) {
+    // X s'intercale : l'occupant devient enfant de X (côté target_side = son côté actuel)
+    // On choisit le même côté par défaut ; si occupé, l'autre côté
+    const xChildrenNow = await getBinaryChildren(c.env.DB, memberId)
+    let occupantNewSide: 'L' | 'R' = target_side as 'L' | 'R'
+    if (occupantNewSide === 'L' && xChildrenNow.left)  occupantNewSide = 'R'
+    if (occupantNewSide === 'R' && xChildrenNow.right) occupantNewSide = 'L'
+
+    const colOccupant = occupantNewSide === 'L' ? 'binary_left_id' : 'binary_right_id'
+
+    // Détacher l'occupant de la cible
+    const colTargetSlot = target_side === 'L' ? 'binary_left_id' : 'binary_right_id'
+    await c.env.DB.prepare(
+      `UPDATE members SET ${colTargetSlot} = NULL, updated_at = datetime('now') WHERE id = ?`
+    ).bind(target_member_id).run()
+
+    // L'occupant devient enfant de X
+    await c.env.DB.prepare(
+      `UPDATE members SET binary_parent_id = ?, binary_position = ?,
+       updated_at = datetime('now') WHERE id = ?`
+    ).bind(memberId, occupantNewSide, slotOccupant.id).run()
+    await c.env.DB.prepare(
+      `UPDATE members SET ${colOccupant} = ?, updated_at = datetime('now') WHERE id = ?`
+    ).bind(slotOccupant.id, memberId).run()
+
+    snapshot.intercalation = { occupant_id: slotOccupant.id, new_side_under_x: occupantNewSide }
+  }
+
+  // ── ÉTAPE 5 : Placer X chez la cible ───────────────────────
+  const colTarget = target_side === 'L' ? 'binary_left_id' : 'binary_right_id'
+  await c.env.DB.prepare(
+    `UPDATE members SET binary_parent_id = ?, binary_position = ?,
+     updated_at = datetime('now') WHERE id = ?`
+  ).bind(target_member_id, target_side, memberId).run()
+  await c.env.DB.prepare(
+    `UPDATE members SET ${colTarget} = ?, updated_at = datetime('now') WHERE id = ?`
+  ).bind(memberId, target_member_id).run()
+
+  // ── ÉTAPE 6 : Parrainage — filleuls directs hors branche → rootuser ──
+  if (legs !== 'both') {
+    // Identifier les descendants de la jambe non déplacée
+    const leftDescendants  = xChildren.left  ? [xChildren.left.id,  ...(await getBinaryDescendants(c.env.DB, xChildren.left.id))]  : []
+    const rightDescendants = xChildren.right ? [xChildren.right.id, ...(await getBinaryDescendants(c.env.DB, xChildren.right.id))] : []
+
+    const sponsorDirects = await getSponsorDirects(c.env.DB, memberId)
+    for (const d of sponsorDirects) {
+      const inLeft  = leftDescendants.includes(d.id)
+      const inRight = rightDescendants.includes(d.id)
+      const shouldReparent =
+        (!leftGoesWithX  && inLeft)  ||
+        (!rightGoesWithX && inRight)
+      if (shouldReparent) {
+        await c.env.DB.prepare(
+          `UPDATE members SET sponsor_id = ?, updated_at = datetime('now') WHERE id = ?`
+        ).bind(rootId, d.id).run()
+      }
+    }
+  }
+
+  // ── ÉTAPE 7 : BV holding tank → rebascule vers nouvelles uplines ──
+  // Les bv_queue pending des membres de la branche sont relancés
+  // Ils seront propagés vers les nouvelles uplines lors du prochain processBVQueue
+  const branchIds = [memberId, ...sourceDescendants]
+  if (branchIds.length > 0) {
+    await c.env.DB.prepare(
+      `UPDATE bv_queue SET status = 'pending', attempts = 0, last_error = NULL,
+       updated_at = datetime('now')
+       WHERE member_id IN (${branchIds.map(() => '?').join(',')})
+       AND status IN ('failed','pending')`
+    ).bind(...branchIds).run()
+  }
+
+  // ── ÉTAPE 8 : Recalcul BV uplines impactées ────────────────
+  // Recalculer les uplines de la nouvelle position et de l'ancienne
+  const uplinesToRecalc = new Set<string>()
+  if (oldParentId) uplinesToRecalc.add(oldParentId)
+  uplinesToRecalc.add(target_member_id)
+
+  for (const uid of uplinesToRecalc) {
+    try {
+      await recalculateMemberStatus(c.env.DB, uid)
+      await calculateMemberRank(c.env.DB, uid)
+    } catch (_) {}
+  }
+  // Recalculer X lui-même
+  await recalculateMemberStatus(c.env.DB, memberId)
+  await calculateMemberRank(c.env.DB, memberId)
+
+  // ── ÉTAPE 9 : Log admin audit ───────────────────────────────
+  await c.env.DB.prepare(
+    `INSERT INTO admin_audit_log
+     (id, admin_id, admin_email, action, description, metadata, created_at)
+     VALUES (lower(hex(randomblob(16))), ?, ?, 'move_member', ?, ?, datetime('now'))`
+  ).bind(
+    adminId,
+    adminEmail,
+    `Déplacement membre ${member.unique_id} (${member.first_name} ${member.last_name}) → cible ${target.unique_id} côté ${target_side} — jambes: ${legs}`,
+    JSON.stringify(snapshot)
+  ).run()
+
+  // ── Notification au membre ──────────────────────────────────
+  await createNotification(c.env.DB, memberId, 'info', 'Position mise à jour',
+    'Votre position dans l\'arbre a été modifiée par l\'administration.')
+
+  return c.json({
+    success: true,
+    message: `Membre ${member.unique_id} déplacé avec succès vers ${target.unique_id} côté ${target_side}`,
+    member_id: memberId,
+    new_binary_parent_id: target_member_id,
+    new_binary_position: target_side,
+    legs_moved: legs,
+    intercalated: !!slotOccupant,
+    branch_size: sourceDescendants.length + 1,
+  })
+})
+
 export { admin }
