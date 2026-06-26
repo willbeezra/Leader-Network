@@ -3087,9 +3087,12 @@ async function checkMonthlyQualification(
   const realRankConfig = ranks.find(r => r.rank_name === realRank)
   if (!realRankConfig) return null
 
-  // ── BV mensuel petite jambe ──────────────────────────────────
-  const leftBVMonthly  = member.left_bv_monthly  || 0
-  const rightBVMonthly = member.right_bv_monthly || 0
+  // ── BV mensuel petite jambe (+ bonus override admin si présent) ─────────
+  const ovRow = await db.prepare(
+    `SELECT bv_left_monthly_bonus, bv_right_monthly_bonus FROM member_overrides WHERE member_id = ?`
+  ).bind(memberId).first() as any
+  const leftBVMonthly  = (member.left_bv_monthly  || 0) + (ovRow?.bv_left_monthly_bonus  || 0)
+  const rightBVMonthly = (member.right_bv_monthly || 0) + (ovRow?.bv_right_monthly_bonus || 0)
   const smallLegMonthly = Math.min(leftBVMonthly, rightBVMonthly)
 
   // ── Nouvelles recrues directes ce mois ──────────────────────

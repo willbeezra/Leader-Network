@@ -591,6 +591,64 @@ admin.delete('/members/:id/overrides', requirePermission('members.edit'), async 
   }
 })
 
+// ── TRIGGER BONUSES MANUELLEMENT ───────────────────────────
+// POST /members/:id/trigger-bonuses
+// Déclenche immédiatement les bonus pour un membre (prime leadership + rayonnement + influence)
+// sans attendre le cron mensuel. Efface d'abord le verrou monthly_validations si présent.
+admin.post('/members/:id/trigger-bonuses', requirePermission('members.edit'), async (c) => {
+  const memberId = c.req.param('id')
+  try {
+    // Période courante (YYYY-MM)
+    const period = getMauritiusDateStr().substring(0, 7)
+
+    // 1. Récupérer le membre frais
+    const member = await c.env.DB.prepare(`SELECT * FROM members WHERE id = ?`).bind(memberId).first() as any
+    if (!member) return c.json({ error: 'Membre introuvable' }, 404)
+    if (!member.license_active) return c.json({ error: 'Licence inactive — aucun bonus possible' }, 400)
+    if (member.member_status === 'Membre' || member.member_status === 'Client') {
+      return c.json({ error: 'Statut insuffisant (Membre/Client) — aucun bonus possible' }, 400)
+    }
+
+    // 2. Calculer le rang effectif (avec overrides BV inclus)
+    const effectiveRank = await calculateMemberRank(c.env.DB, memberId)
+    if (!effectiveRank || effectiveRank === 'none') {
+      return c.json({ error: `Rang calculé = none — conditions de rang non remplies (BV insuffisant ou directs insuffisants)` }, 400)
+    }
+
+    // 3. Supprimer le verrou monthly_validations pour ce membre+période
+    //    (permet de recalculer même si le cron est déjà passé ce mois)
+    await c.env.DB.prepare(
+      `DELETE FROM monthly_validations WHERE member_id = ? AND period = ?`
+    ).bind(memberId, period).run()
+
+    // 4. Mettre à jour current_rank avec le rang calculé (override inclus)
+    await c.env.DB.prepare(
+      `UPDATE members SET current_rank = ?, updated_at = datetime('now') WHERE id = ?`
+    ).bind(effectiveRank, memberId).run()
+
+    // 5. Déclencher la prime leadership + CC + RS + rayonnement + influence
+    await upgradePrimeLeadership(c.env.DB, memberId, effectiveRank, period)
+
+    // 6. Recalcul rétroactif rayonnement/influence vers les sponsors
+    const retro = await recalculBonusRetroactif(c.env.DB, memberId, period, true)
+
+    return c.json({
+      success: true,
+      memberId,
+      period,
+      rang: effectiveRank,
+      retroactif: {
+        rayonnement: retro.rayonnement,
+        influence:   retro.influence,
+      },
+      message: `Bonus déclenchés pour ${member.first_name} ${member.last_name} — rang ${effectiveRank} — période ${period}`,
+    })
+  } catch (e: any) {
+    console.error('POST trigger-bonuses error:', e)
+    return c.json({ error: e.message || 'Erreur déclenchement bonus' }, 500)
+  }
+})
+
 // ── HOLDING TANK ───────────────────────────────────────────
 admin.get('/holding-tank', requirePermission('tree.view'), async (c) => {
   // Lire le délai sponsor depuis la config (défaut 15j)
