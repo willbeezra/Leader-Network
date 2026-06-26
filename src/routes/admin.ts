@@ -594,7 +594,7 @@ admin.delete('/members/:id/overrides', requirePermission('members.edit'), async 
 // ── TRIGGER BONUSES MANUELLEMENT ───────────────────────────
 // POST /members/:id/trigger-bonuses
 // Déclenche immédiatement les bonus pour un membre (prime leadership + rayonnement + influence)
-// sans attendre le cron mensuel. Efface d'abord le verrou monthly_validations si présent.
+// Purge d'abord toutes les données du mois courant pour repartir proprement.
 admin.post('/members/:id/trigger-bonuses', requirePermission('members.edit'), async (c) => {
   const memberId = c.req.param('id')
   try {
@@ -615,8 +615,69 @@ admin.post('/members/:id/trigger-bonuses', requirePermission('members.edit'), as
       return c.json({ error: `Rang calculé = none — conditions de rang non remplies (BV insuffisant ou directs insuffisants)` }, 400)
     }
 
-    // 3. Supprimer le verrou monthly_validations pour ce membre+période
-    //    (permet de recalculer même si le cron est déjà passé ce mois)
+    // 3. Purge complète des données du mois courant pour ce membre
+    //    (évite les doublons et erreurs FK si le bouton est cliqué plusieurs fois)
+
+    // 3a. Récupérer les IDs des commissions de ce mois (pour purger pending_wallet_entries)
+    const existingComms = await c.env.DB.prepare(
+      `SELECT id FROM commissions WHERE member_id = ? AND period = ?`
+    ).bind(memberId, period).all()
+    const commIds = (existingComms.results as any[]).map(r => r.id)
+
+    // 3b. Supprimer les pending_wallet_entries liées à ces commissions
+    for (const commId of commIds) {
+      await c.env.DB.prepare(
+        `DELETE FROM pending_wallet_entries WHERE commission_id = ?`
+      ).bind(commId).run()
+    }
+    // Supprimer aussi les pending_wallet_entries directes du membre pour cette période
+    await c.env.DB.prepare(
+      `DELETE FROM pending_wallet_entries WHERE member_id = ? AND period = ?`
+    ).bind(memberId, period).run()
+
+    // 3c. Annuler les commissions prime_leadership de ce mois (pending → cancelled)
+    //     et rembourser le pending_balance wallet
+    const primeComms = await c.env.DB.prepare(
+      `SELECT id, amount FROM commissions WHERE member_id = ? AND period = ? AND type = 'prime_leadership' AND status IN ('pending','approved')`
+    ).bind(memberId, period).all()
+    for (const pc of primeComms.results as any[]) {
+      await c.env.DB.prepare(
+        `UPDATE commissions SET status = 'cancelled' WHERE id = ?`
+      ).bind(pc.id).run()
+      // Rembourser le pending_balance
+      await c.env.DB.prepare(
+        `UPDATE wallets SET pending_balance = MAX(0, pending_balance - ?) WHERE member_id = ?`
+      ).bind(pc.amount, memberId).run()
+    }
+
+    // 3d. Annuler credit_croissance et reserve_strategique de ce mois
+    const ccRows = await c.env.DB.prepare(
+      `SELECT id, amount FROM credit_croissance WHERE member_id = ? AND period = ? AND status IN ('held','available')`
+    ).bind(memberId, period).all()
+    for (const cc of ccRows.results as any[]) {
+      await c.env.DB.prepare(
+        `UPDATE credit_croissance SET status = 'expired' WHERE id = ?`
+      ).bind(cc.id).run()
+      await c.env.DB.prepare(
+        `UPDATE members SET credit_croissance = MAX(0, credit_croissance - ?) WHERE id = ?`
+      ).bind(cc.amount, memberId).run()
+    }
+    await c.env.DB.prepare(
+      `UPDATE commissions SET status = 'cancelled' WHERE member_id = ? AND period = ? AND type IN ('credit_croissance','reserve_strategique') AND status NOT IN ('cancelled')`
+    ).bind(memberId, period).run()
+    const rsRows = await c.env.DB.prepare(
+      `SELECT id, amount FROM reserve_strategique WHERE member_id = ? AND period = ? AND status = 'locked'`
+    ).bind(memberId, period).all()
+    for (const rs of rsRows.results as any[]) {
+      await c.env.DB.prepare(
+        `UPDATE reserve_strategique SET status = 'cancelled' WHERE id = ?`
+      ).bind(rs.id).run()
+      await c.env.DB.prepare(
+        `UPDATE members SET reserve_strategique = MAX(0, reserve_strategique - ?) WHERE id = ?`
+      ).bind(rs.amount, memberId).run()
+    }
+
+    // 3e. Supprimer le verrou monthly_validations
     await c.env.DB.prepare(
       `DELETE FROM monthly_validations WHERE member_id = ? AND period = ?`
     ).bind(memberId, period).run()
@@ -645,11 +706,9 @@ admin.post('/members/:id/trigger-bonuses', requirePermission('members.edit'), as
     })
   } catch (e: any) {
     console.error('POST trigger-bonuses error:', e)
-    // Retourner le message d'erreur complet pour diagnostic (admin only)
     return c.json({
       error: e.message || 'Erreur déclenchement bonus',
       detail: String(e),
-      cause: e.cause ? String(e.cause) : undefined,
     }, 500)
   }
 })
