@@ -8148,21 +8148,20 @@ async function getSponsorDirects(db: D1Database, sponsorId: string): Promise<any
 }
 
 // Helper : calculer quels membres sont dans une jambe (descendants binaires)
-async function getBinaryDescendants(db: D1Database, rootId: string, maxDepth = 50): Promise<string[]> {
-  const ids: string[] = []
-  const queue = [{ id: rootId, depth: 0 }]
-  while (queue.length > 0) {
-    const { id, depth } = queue.shift()!
-    if (depth >= maxDepth) continue
-    const children = await db.prepare(
-      `SELECT id FROM members WHERE binary_parent_id = ? AND in_holding_tank = 0`
-    ).bind(id).all()
-    for (const c of children.results as any[]) {
-      ids.push(c.id)
-      queue.push({ id: c.id, depth: depth + 1 })
-    }
-  }
-  return ids
+async function getBinaryDescendants(db: D1Database, rootId: string, _maxDepth = 50): Promise<string[]> {
+  // CTE récursive SQLite — une seule requête au lieu de N requêtes séquentielles
+  const rows = await db.prepare(`
+    WITH RECURSIVE descendants(id, depth) AS (
+      SELECT id, 1 FROM members
+        WHERE binary_parent_id = ? AND in_holding_tank = 0
+      UNION ALL
+      SELECT m.id, d.depth + 1 FROM members m
+        INNER JOIN descendants d ON m.binary_parent_id = d.id
+        WHERE m.in_holding_tank = 0 AND d.depth < 50
+    )
+    SELECT id FROM descendants
+  `).bind(rootId).all()
+  return (rows.results as any[]).map((r: any) => r.id)
 }
 
 // ── Route PREVIEW (dry-run) ─────────────────────────────────
@@ -8192,6 +8191,14 @@ admin.post('/members/:id/move/preview', requirePermission('tree.edit'), async (c
   const sourceDescendants = await getBinaryDescendants(c.env.DB, memberId)
   if (sourceDescendants.includes(target_member_id)) {
     return c.json({ error: 'Impossible : la cible est un descendant de la source' }, 400)
+  }
+
+  // Anti-redondance : la source ne doit pas être déjà positionné au même slot cible
+  const alreadyAtTargetPreview =
+    member.binary_parent_id === target_member_id &&
+    member.binary_position  === target_side
+  if (alreadyAtTargetPreview) {
+    return c.json({ error: 'Le membre est déjà positionné à cet emplacement (même parent, même côté)' }, 400)
   }
 
   // Enfants binaires actuels de X
@@ -8281,6 +8288,9 @@ admin.post('/members/:id/move', requirePermission('tree.edit'), async (c) => {
   if (!confirm) return c.json({ error: 'confirm=true requis pour exécuter le déplacement' }, 400)
   if (!target_member_id) return c.json({ error: 'target_member_id requis' }, 400)
   if (!['L','R'].includes(target_side)) return c.json({ error: 'target_side doit être L ou R' }, 400)
+
+  // ── Try/catch global pour retourner une erreur JSON propre ──────────────
+  try {
   if (!['both','left','right','none'].includes(legs)) return c.json({ error: 'legs invalide' }, 400)
 
   const [member, target, rootId] = await Promise.all([
@@ -8298,6 +8308,14 @@ admin.post('/members/:id/move', requirePermission('tree.edit'), async (c) => {
   const sourceDescendants = await getBinaryDescendants(c.env.DB, memberId)
   if (sourceDescendants.includes(target_member_id)) {
     return c.json({ error: 'Impossible : la cible est un descendant de la source' }, 400)
+  }
+
+  // Anti-redondance : la source ne doit pas être déjà positionnée au même slot cible
+  const alreadyAtTarget =
+    member.binary_parent_id === target_member_id &&
+    member.binary_position  === target_side
+  if (alreadyAtTarget) {
+    return c.json({ error: 'Le membre est déjà positionné à cet emplacement (même parent, même côté)' }, 400)
   }
 
   // ── Snapshot AVANT (pour rollback) ─────────────────────────
@@ -8482,47 +8500,65 @@ admin.post('/members/:id/move', requirePermission('tree.edit'), async (c) => {
   // ── ÉTAPE 7 : BV holding tank → rebascule vers nouvelles uplines ──
   // Les bv_queue pending des membres de la branche sont relancés
   // Ils seront propagés vers les nouvelles uplines lors du prochain processBVQueue
-  const branchIds = [memberId, ...sourceDescendants]
-  if (branchIds.length > 0) {
-    await c.env.DB.prepare(
-      `UPDATE bv_queue SET status = 'pending', attempts = 0, last_error = NULL,
-       updated_at = datetime('now')
-       WHERE member_id IN (${branchIds.map(() => '?').join(',')})
-       AND status IN ('failed','pending')`
-    ).bind(...branchIds).run()
+  try {
+    const branchIds = [memberId, ...sourceDescendants]
+    if (branchIds.length > 0) {
+      // Traitement par lots de 90 pour respecter la limite D1 (100 params max)
+      const CHUNK = 90
+      for (let i = 0; i < branchIds.length; i += CHUNK) {
+        const chunk = branchIds.slice(i, i + CHUNK)
+        await c.env.DB.prepare(
+          `UPDATE bv_queue SET status = 'pending', attempts = 0, last_error = NULL,
+           updated_at = datetime('now')
+           WHERE member_id IN (${chunk.map(() => '?').join(',')})
+           AND status IN ('failed','pending')`
+        ).bind(...chunk).run()
+      }
+    }
+  } catch (e7: any) {
+    console.warn('[move_member] étape 7 BV queue ignorée:', e7?.message)
   }
 
   // ── ÉTAPE 8 : Recalcul BV uplines impactées ────────────────
   // Recalculer les uplines de la nouvelle position et de l'ancienne
-  const uplinesToRecalc = new Set<string>()
-  if (oldParentId) uplinesToRecalc.add(oldParentId)
-  uplinesToRecalc.add(target_member_id)
-
-  for (const uid of uplinesToRecalc) {
-    try {
-      await recalculateMemberStatus(c.env.DB, uid)
-      await calculateMemberRank(c.env.DB, uid)
-    } catch (_) {}
+  try {
+    const uplinesToRecalc = new Set<string>()
+    if (oldParentId) uplinesToRecalc.add(oldParentId)
+    uplinesToRecalc.add(target_member_id)
+    for (const uid of uplinesToRecalc) {
+      try {
+        await recalculateMemberStatus(c.env.DB, uid)
+        await calculateMemberRank(c.env.DB, uid)
+      } catch (_) {}
+    }
+    // Recalculer X lui-même
+    try { await recalculateMemberStatus(c.env.DB, memberId) } catch (_) {}
+    try { await calculateMemberRank(c.env.DB, memberId) }     catch (_) {}
+  } catch (e8: any) {
+    console.warn('[move_member] étape 8 recalcul ignorée:', e8?.message)
   }
-  // Recalculer X lui-même
-  await recalculateMemberStatus(c.env.DB, memberId)
-  await calculateMemberRank(c.env.DB, memberId)
 
   // ── ÉTAPE 9 : Log admin audit ───────────────────────────────
-  await c.env.DB.prepare(
-    `INSERT INTO admin_audit_log
-     (id, admin_id, admin_email, action, description, metadata, created_at)
-     VALUES (lower(hex(randomblob(16))), ?, ?, 'move_member', ?, ?, datetime('now'))`
-  ).bind(
-    adminId,
-    adminEmail,
-    `Déplacement membre ${member.unique_id} (${member.first_name} ${member.last_name}) → cible ${target.unique_id} côté ${target_side} — jambes: ${legs}`,
-    JSON.stringify(snapshot)
-  ).run()
+  try {
+    await c.env.DB.prepare(
+      `INSERT INTO admin_audit_log
+       (id, admin_id, admin_email, action, description, metadata, created_at)
+       VALUES (lower(hex(randomblob(16))), ?, ?, 'move_member', ?, ?, datetime('now'))`
+    ).bind(
+      adminId,
+      adminEmail,
+      `Déplacement membre ${member.unique_id} (${member.first_name} ${member.last_name}) → cible ${target.unique_id} côté ${target_side} — jambes: ${legs}`,
+      JSON.stringify(snapshot)
+    ).run()
+  } catch (e9: any) {
+    console.warn('[move_member] étape 9 audit log ignorée:', e9?.message)
+  }
 
   // ── Notification au membre ──────────────────────────────────
-  await createNotification(c.env.DB, memberId, 'info', 'Position mise à jour',
-    'Votre position dans l\'arbre a été modifiée par l\'administration.')
+  try {
+    await createNotification(c.env.DB, memberId, 'info', 'Position mise à jour',
+      'Votre position dans l\'arbre a été modifiée par l\'administration.')
+  } catch (_) {}
 
   return c.json({
     success: true,
@@ -8534,6 +8570,14 @@ admin.post('/members/:id/move', requirePermission('tree.edit'), async (c) => {
     intercalated: !!slotOccupant,
     branch_size: sourceDescendants.length + 1,
   })
+
+  } catch (err: any) {
+    console.error('[move_member] ERREUR:', err)
+    return c.json({
+      error: err?.message || 'Erreur interne lors du déplacement',
+      detail: String(err),
+    }, 500)
+  }
 })
 
 export { admin }

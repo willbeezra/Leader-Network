@@ -13835,7 +13835,7 @@ function renderMovePreview(data) {
       '<div class="flex items-center gap-2 mb-1"><i class="fas fa-exclamation-triangle text-orange-400"></i>' +
         '<span class="font-semibold text-orange-300">Slot occupé — intercalation automatique</span></div>' +
       '<div class="text-orange-200 leading-relaxed">Le slot ' + (_moveState.targetSide === 'L' ? 'gauche' : 'droit') +
-        ' est occupé par <strong>' + occupant.first_name + ' ' + occupant.last_name + '</strong> (' + occupant.unique_id + '). ' +
+        ' est occupé par <strong>' + (occupant.name || occupant.first_name + ' ' + occupant.last_name) + '</strong> (' + occupant.unique_id + '). ' +
         'Ce membre descendra sous ' + (src.name || '?') + '.</div>' +
       '</div>';
   }
