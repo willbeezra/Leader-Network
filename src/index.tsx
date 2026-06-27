@@ -28,7 +28,9 @@ const app = new Hono<{ Bindings: Bindings }>()
 // CORS
 app.use('/api/*', cors({ origin: '*', allowMethods: ['GET','POST','PUT','DELETE','OPTIONS'] }))
 
-// ── Rate limiting global — 120 req/minute par IP ─────────────────
+// ── Rate limiting global — 300 req/minute par IP ─────────────────
+// Augmenté à 300 : le dashboard + ses widgets font ~15 appels au chargement,
+// et un membre actif naviguant entre pages peut facilement atteindre 120 en moins d'une minute.
 // Optimisation perf : le kv.put (incrément) est non-bloquant via waitUntil
 // → La requête n'attend plus l'écriture KV avant de continuer
 // → Seul le kv.get (lecture) bloque, pour vérifier la limite
@@ -40,7 +42,7 @@ app.use('/api/*', async (c, next) => {
       const rlKey = `rl:${ip}`
       const raw = await kv.get(rlKey)
       const count = raw ? parseInt(raw) : 0
-      if (count >= 120) {
+      if (count >= 300) {
         return c.json({ error: 'Trop de requêtes. Réessayez dans une minute.' }, 429)
       }
       // Incrément non-bloquant : ne pas attendre la réponse KV
