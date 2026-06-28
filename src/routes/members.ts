@@ -57,37 +57,41 @@ members.use('/*', async (c, next) => {
 })
 
 // GET /api/members/me — Profil complet (sans password_hash ni pin_hash)
+// PERF: 3 requêtes séquentielles → 1 round-trip parallèle (Promise.all)
 members.get('/me', async (c) => {
   const memberId = c.get('memberId' as any)
-  const member = await c.env.DB.prepare(
-    `SELECT id, unique_id, email, first_name, last_name, phone, country,
-            address, city, postal_code, nationality, birth_date,
-            sponsor_id, binary_parent_id, binary_position,
-            binary_left_id, binary_right_id,
-            member_status, current_rank,
-            left_bv_total, right_bv_total, left_bv_monthly, right_bv_monthly,
-            personal_bv_monthly, license_active, license_expires_at, kyc_status,
-            kyc_document_url, fast_start_start_date, fast_start_completed,
-            in_holding_tank, wallet_balance, credit_croissance, reserve_strategique,
-            avatar_url, paypal_email, registration_method,
-            preferred_lang, profile_photo, vdi_consent, vdi_consent_at,
-            whatsapp_number, messenger_id,
-            created_at, updated_at
-     FROM members WHERE id = ?`
-  ).bind(memberId).first()
-  if (!member) return c.json({ error: 'Membre introuvable' }, 404)
-  const wallet = await c.env.DB.prepare(`SELECT * FROM wallets WHERE member_id = ?`).bind(memberId).first()
 
-  // Récupérer la date d'expiration du package actif (non mensuel)
-  const activePackage = await c.env.DB.prepare(
-    `SELECT po.package_expires_at, po.validated_at, p.name AS package_name,
-            p.pricing_type, p.payment_mode, p.duration_years
-     FROM package_orders po
-     JOIN packages p ON p.id = po.package_id
-     WHERE po.member_id = ? AND po.status = 'active'
-       AND (p.pricing_type != 'monthly' OR p.pricing_type IS NULL)
-     ORDER BY po.validated_at DESC LIMIT 1`
-  ).bind(memberId).first() as any
+  const [member, wallet, activePackage] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT id, unique_id, email, first_name, last_name, phone, country,
+              address, city, postal_code, nationality, birth_date,
+              sponsor_id, binary_parent_id, binary_position,
+              binary_left_id, binary_right_id,
+              member_status, current_rank,
+              left_bv_total, right_bv_total, left_bv_monthly, right_bv_monthly,
+              personal_bv_monthly, license_active, license_expires_at, kyc_status,
+              kyc_document_url, fast_start_start_date, fast_start_completed,
+              in_holding_tank, wallet_balance, credit_croissance, reserve_strategique,
+              avatar_url, paypal_email, registration_method,
+              preferred_lang, profile_photo, vdi_consent, vdi_consent_at,
+              whatsapp_number, messenger_id,
+              created_at, updated_at
+       FROM members WHERE id = ?`
+    ).bind(memberId).first(),
+    c.env.DB.prepare(`SELECT * FROM wallets WHERE member_id = ?`).bind(memberId).first(),
+    // Package actif (non mensuel) — couvert par idx_po_member_active
+    c.env.DB.prepare(
+      `SELECT po.package_expires_at, po.validated_at, p.name AS package_name,
+              p.pricing_type, p.payment_mode, p.duration_years
+       FROM package_orders po
+       JOIN packages p ON p.id = po.package_id
+       WHERE po.member_id = ? AND po.status = 'active'
+         AND (p.pricing_type != 'monthly' OR p.pricing_type IS NULL)
+       ORDER BY po.validated_at DESC LIMIT 1`
+    ).bind(memberId).first(),
+  ])
+
+  if (!member) return c.json({ error: 'Membre introuvable' }, 404)
 
   return c.json({ member, wallet, activePackage: activePackage || null })
 })
@@ -205,23 +209,110 @@ members.get('/dashboard', async (c) => {
   ).bind(memberId).first() as any
   if (!member) return c.json({ error: 'Membre introuvable' }, 404)
 
-  const wallet = await c.env.DB.prepare(`SELECT * FROM wallets WHERE member_id = ?`).bind(memberId).first() as any
-  const period = new Date().toISOString().substring(0, 7)
+  // ── BATCH 1 : toutes les requêtes indépendantes en parallèle ──────────────
+  // Avant : 16 requêtes séquentielles (~16× aller-retour DB)
+  // Après : un seul round-trip groupé (~3-4× aller-retour total)
+  const now = new Date()
+  const monthStr = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`
+  const currentIdx = getRankIndex(member.current_rank)
+  const nextRank = currentIdx < RANK_ORDER.length - 1 ? RANK_ORDER[currentIdx + 1] : null
 
-  // Pending wallet — total bloqué en attente de libération
-  const pendingWalletRows = await c.env.DB.prepare(
-    `SELECT total_amount, amount_per_day, days_paid, eligible_date, status, commission_type
-     FROM pending_wallet_entries
-     WHERE member_id = ? AND status IN ('pending_release','active')`
-  ).bind(memberId).all()
-  const pendingWalletTotal = ((pendingWalletRows.results || []) as any[]).reduce((sum, e) => {
-    return sum + Math.max(0, (e.total_amount || 0) - (e.amount_per_day || 0) * (e.days_paid || 0))
-  }, 0)
-  const nextEligible = ((pendingWalletRows.results || []) as any[])
-    .map((e: any) => e.eligible_date).filter(Boolean).sort()[0] || null
+  const [
+    wallet,
+    pendingWalletRows,
+    recentCommissions,
+    unreadCount,
+    directCount,
+    rankConfig,
+    nextRankConfig,
+    fastStartPaliers,
+    fsDaysRow,
+    activePackageRow,
+    licenseConfig,
+  ] = await Promise.all([
+    // wallet
+    c.env.DB.prepare(`SELECT * FROM wallets WHERE member_id = ?`).bind(memberId).first(),
+    // pending wallet entries (couvertes par idx_pwe_member_status)
+    c.env.DB.prepare(
+      `SELECT total_amount, amount_per_day, days_paid, eligible_date, status, commission_type
+       FROM pending_wallet_entries
+       WHERE member_id = ? AND status IN ('pending_release','active')`
+    ).bind(memberId).all(),
+    // flux récent unifié
+    c.env.DB.prepare(
+      `SELECT * FROM (
+         SELECT id, type AS tx_type, 'bonus' AS category, amount,
+                description, status, created_at, NULL AS package_name, NULL AS product_type
+         FROM commissions WHERE member_id = ?
+         UNION ALL
+         SELECT po.id,
+                CASE WHEN po.product_type='upgrade' THEN 'package_upgrade' ELSE 'package_purchase' END,
+                'purchase', -po.amount_usd,
+                CASE WHEN po.product_type='upgrade' THEN 'Upgrade → '||COALESCE(p.name,'Package')
+                     ELSE 'Achat package : '||COALESCE(p.name,'Package') END,
+                po.status, po.created_at, p.name, po.product_type
+         FROM package_orders po LEFT JOIN packages p ON p.id=po.package_id
+         WHERE po.member_id = ?
+         UNION ALL
+         SELECT id, 'license_purchase', 'purchase', -price_usd,
+                'Achat licence annuelle', status, created_at, 'Licence', 'license'
+         FROM finstrategia_licenses WHERE member_id = ?
+         UNION ALL
+         SELECT id, 'withdrawal', 'withdrawal', -net_amount,
+                'Retrait — '||COALESCE(paypal_email,'PayPal'),
+                status, created_at, NULL, NULL
+         FROM withdrawals WHERE member_id = ?
+       ) ORDER BY created_at DESC LIMIT 8`
+    ).bind(memberId, memberId, memberId, memberId).all(),
+    // notifications non lues (couvert par idx_notifications_member_read)
+    c.env.DB.prepare(
+      `SELECT COUNT(*) as cnt FROM notifications WHERE member_id = ? AND is_read = 0`
+    ).bind(memberId).first(),
+    // équipe directe
+    c.env.DB.prepare(
+      `SELECT COUNT(*) as cnt FROM members WHERE sponsor_id = ?`
+    ).bind(memberId).first(),
+    // rank config actuel
+    member.current_rank !== 'none'
+      ? c.env.DB.prepare(`SELECT * FROM rank_config WHERE rank_name = ?`).bind(member.current_rank).first()
+      : Promise.resolve(null),
+    // prochain rang config
+    nextRank && nextRank !== 'none'
+      ? c.env.DB.prepare(`SELECT * FROM rank_config WHERE rank_name = ?`).bind(nextRank).first()
+      : Promise.resolve(null),
+    // paliers fast start
+    c.env.DB.prepare(
+      `SELECT fsc.bv_threshold, fsc.bonus_amount,
+              CASE WHEN c.id IS NOT NULL THEN 1 ELSE 0 END AS paid
+       FROM fast_start_config fsc
+       LEFT JOIN commissions c
+         ON c.member_id = ?
+        AND c.type = 'fast_start'
+        AND c.description LIKE '%palier ' || CAST(CAST(fsc.bv_threshold AS INTEGER) AS TEXT) || ' BV%'
+       ORDER BY fsc.bv_threshold ASC`
+    ).bind(memberId).all(),
+    // durée fast start
+    c.env.DB.prepare(`SELECT value FROM compensation_config WHERE key = 'fast_start_days'`).first(),
+    // package actif
+    c.env.DB.prepare(
+      `SELECT po.package_expires_at, po.validated_at, p.name AS package_name,
+              p.pricing_type, p.payment_mode, p.duration_years
+       FROM package_orders po
+       JOIN packages p ON p.id = po.package_id
+       WHERE po.member_id = ? AND po.status = 'active'
+         AND (p.pricing_type IS NULL OR p.pricing_type != 'monthly')
+       ORDER BY po.validated_at DESC LIMIT 1`
+    ).bind(memberId).first(),
+    // prix licence
+    getLicenseConfig(c.env.DB),
+  ]) as any[]
 
-  // Q70/Q108 — Prime du jour : total journalier actuel + ventilation par type
-  // Somme des amount_per_day des entrées en cours de libération (status='active')
+  // ── Calculs dérivés (CPU seulement, 0 requête DB) ─────────────────────────
+  const pendingRows = (pendingWalletRows.results || []) as any[]
+  const pendingWalletTotal = pendingRows.reduce((sum: number, e: any) =>
+    sum + Math.max(0, (e.total_amount || 0) - (e.amount_per_day || 0) * (e.days_paid || 0)), 0)
+  const nextEligible = pendingRows.map((e: any) => e.eligible_date).filter(Boolean).sort()[0] || null
+
   const COMM_TYPE_LABELS_DASH: Record<string, string> = {
     prime_leadership:            'Prime de Leadership',
     bonus_influence:             "Bonus d'Influence",
@@ -231,240 +322,118 @@ members.get('/dashboard', async (c) => {
     credit_croissance:           'Crédit de Croissance',
     reserve_strategique:         'Réserve Stratégique',
   }
-  const activeEntries = ((pendingWalletRows.results || []) as any[]).filter(e => e.status === 'active')
+  const activeEntries = pendingRows.filter((e: any) => e.status === 'active')
   const dailyReleaseTotal = activeEntries.reduce((sum: number, e: any) => sum + (e.amount_per_day || 0), 0)
   const dailyReleaseByType: Array<{ type: string; label: string; amount_per_day: number }> = []
   for (const e of activeEntries) {
     const existing = dailyReleaseByType.find(x => x.type === e.commission_type)
-    if (existing) {
-      existing.amount_per_day += e.amount_per_day || 0
-    } else {
-      dailyReleaseByType.push({
-        type:           e.commission_type,
-        label:          COMM_TYPE_LABELS_DASH[e.commission_type] || e.commission_type,
-        amount_per_day: e.amount_per_day || 0,
-      })
-    }
+    if (existing) existing.amount_per_day += e.amount_per_day || 0
+    else dailyReleaseByType.push({ type: e.commission_type, label: COMM_TYPE_LABELS_DASH[e.commission_type] || e.commission_type, amount_per_day: e.amount_per_day || 0 })
   }
 
-  // Dernières opérations : flux unifié (bonus, achats packages, licences, retraits)
-  const recentCommissions = await c.env.DB.prepare(
-    `SELECT * FROM (
-       SELECT id, type AS tx_type, 'bonus' AS category, amount,
-              description, status, created_at, NULL AS package_name, NULL AS product_type
-       FROM commissions WHERE member_id = ?
-       UNION ALL
-       SELECT po.id,
-              CASE WHEN po.product_type='upgrade' THEN 'package_upgrade' ELSE 'package_purchase' END,
-              'purchase', -po.amount_usd,
-              CASE WHEN po.product_type='upgrade' THEN 'Upgrade → '||COALESCE(p.name,'Package')
-                   ELSE 'Achat package : '||COALESCE(p.name,'Package') END,
-              po.status, po.created_at, p.name, po.product_type
-       FROM package_orders po LEFT JOIN packages p ON p.id=po.package_id
-       WHERE po.member_id = ?
-       UNION ALL
-       SELECT id, 'license_purchase', 'purchase', -price_usd,
-              'Achat licence annuelle', status, created_at,
-              'Licence', 'license'
-       FROM finstrategia_licenses WHERE member_id = ?
-       UNION ALL
-       SELECT id, 'withdrawal', 'withdrawal', -net_amount,
-              'Retrait — '||COALESCE(paypal_email,'PayPal'),
-              status, created_at, NULL, NULL
-       FROM withdrawals WHERE member_id = ?
-     ) ORDER BY created_at DESC LIMIT 8`
-  ).bind(memberId, memberId, memberId, memberId).all()
-
-  // Notifications non lues
-  const unreadCount = await c.env.DB.prepare(
-    `SELECT COUNT(*) as cnt FROM notifications WHERE member_id = ? AND is_read = 0`
-  ).bind(memberId).first() as any
-
-  // Équipe directe
-  const directCount = await c.env.DB.prepare(
-    `SELECT COUNT(*) as cnt FROM members WHERE sponsor_id = ?`
-  ).bind(memberId).first() as any
-
-  // Rank config
-  const rankConfig = member.current_rank !== 'none'
-    ? await c.env.DB.prepare(`SELECT * FROM rank_config WHERE rank_name = ?`).bind(member.current_rank).first()
-    : null
-
-  // Prochain rang
-  const currentIdx = getRankIndex(member.current_rank)
-  const nextRank = currentIdx < RANK_ORDER.length - 1 ? RANK_ORDER[currentIdx + 1] : null
-  const nextRankConfig = nextRank && nextRank !== 'none'
-    ? await c.env.DB.prepare(`SELECT * FROM rank_config WHERE rank_name = ?`).bind(nextRank).first() as any
-    : null
-
-  // Mode BV pour la progression : utilise le mode configuré sur le prochain rang
-  // bv_rank_use_total=1 (défaut CDC) → BV total à vie | =0 → BV mensuel
-  const useTotal = nextRankConfig ? (nextRankConfig.bv_rank_use_total !== 0) : true
+  const useTotal = nextRankConfig ? ((nextRankConfig as any).bv_rank_use_total !== 0) : true
   const leftBV  = useTotal ? (member.left_bv_total  || 0) : (member.left_bv_monthly  || 0)
   const rightBV = useTotal ? (member.right_bv_total || 0) : (member.right_bv_monthly || 0)
   const minLeg  = Math.min(leftBV, rightBV)
-  const progressToNext = nextRankConfig && nextRankConfig.min_bv_leg > 0
-    ? Math.min(100, Math.round((minLeg / nextRankConfig.min_bv_leg) * 100))
+  const progressToNext = nextRankConfig && (nextRankConfig as any).min_bv_leg > 0
+    ? Math.min(100, Math.round((minLeg / (nextRankConfig as any).min_bv_leg) * 100))
     : (nextRankConfig ? 0 : 100)
-  // Exposer le mode BV utilisé au frontend pour l'affichage correct
   const progressBVMode = useTotal ? 'total' : 'monthly'
-  const progressMinLeg = minLeg
 
-  // Paliers Fast Start — pour affichage progression côté membre
-  // Enrichi avec paid=1 si la commission du palier a déjà été versée (idempotence visible)
-  const fastStartPaliers = await c.env.DB.prepare(
-    `SELECT
-       fsc.bv_threshold,
-       fsc.bonus_amount,
-       CASE WHEN c.id IS NOT NULL THEN 1 ELSE 0 END AS paid
-     FROM fast_start_config fsc
-     LEFT JOIN commissions c
-       ON c.member_id = ?
-      AND c.type = 'fast_start'
-      AND c.description LIKE '%palier ' || CAST(CAST(fsc.bv_threshold AS INTEGER) AS TEXT) || ' BV%'
-     ORDER BY fsc.bv_threshold ASC`
-  ).bind(memberId).all()
-
-  // Config Fast Start (durée)
-  const fsDaysRow = await c.env.DB.prepare(
-    `SELECT value FROM compensation_config WHERE key = 'fast_start_days'`
-  ).first() as any
-  const fastStartDays = parseInt(fsDaysRow?.value || '30')
-
-  // Solde CC v2
-  const ccBalance = await getCCBalance(c.env.DB, memberId)
-
-  // --- Blocs progression dashboard : directs qualifiés rang à vie + prime mensuelle ---
-  // Tout dans un try/catch isolé : une erreur SQL ici ne doit jamais casser le dashboard
+  // ── BATCH 2 : blocs progression (dépendent de rankConfig/nextRankConfig) ──
   let directActiveCount = 0
-  // Prime de Leadership mensuelle — données pour Bloc B
-  let monthlyBvLegCurrent = 0       // petite jambe mensuelle actuelle
-  let monthlyBvLegRequired = 0      // seuil BV jambe requis pour le rang actuel
-  let monthlyRecruitsCurrent = 0    // nouvelles recrues directes ce mois
-  let monthlyRecruitsRequired = 0   // seuil recrues requis pour le rang actuel
-  let monthlyPkgMinValue = 0        // valeur $ minimum package recrues ce mois
-  let monthlyFloorRanks = 0         // plancher de rangs (info)
-  let monthlyEffectiveRank = ''     // rang mensuel effectif calculé
+  let monthlyBvLegCurrent = 0, monthlyBvLegRequired = 0
+  let monthlyRecruitsCurrent = 0, monthlyRecruitsRequired = 0
+  let monthlyPkgMinValue = 0, monthlyFloorRanks = 0, monthlyEffectiveRank = ''
 
   try {
-    // ── Bloc A : directs qualifiés pour le prochain rang (à vie) ──
-    // Seuil de prix lu depuis rank_config.min_monthly_package_value (paramétrable admin).
-    // Aucune valeur de prix n'est hardcodée — tout vient de la table rank_config.
-    if (nextRankConfig) {
-      const activeThreshold = nextRankConfig.min_monthly_package_value || 0
-      if (activeThreshold > 0) {
-        // Directs avec package validated >= seuil prix du prochain rang
-        const directActiveRow = await c.env.DB.prepare(
+    const batch2Promises: Promise<any>[] = []
+    const rcNext = nextRankConfig as any
+    const rcCurr = rankConfig as any
+
+    // Directs qualifiés (Bloc A)
+    if (rcNext) {
+      const threshold = rcNext.min_monthly_package_value || 0
+      if (threshold > 0) {
+        batch2Promises.push(c.env.DB.prepare(
           `SELECT COUNT(DISTINCT m.id) as cnt FROM members m
            JOIN package_orders po ON po.member_id = m.id
            JOIN packages p ON p.id = po.package_id
            WHERE m.sponsor_id = ? AND po.status = 'validated' AND p.price_usd >= ?`
-        ).bind(memberId, activeThreshold).first() as any
-        directActiveCount = directActiveRow?.cnt || 0
+        ).bind(memberId, threshold).first())
       } else {
-        // Pas de seuil prix configuré → tout package validated avec bv_value > 0 suffit
-        const directActiveRow = await c.env.DB.prepare(
+        batch2Promises.push(c.env.DB.prepare(
           `SELECT COUNT(DISTINCT m.id) as cnt FROM members m
            JOIN package_orders po ON po.member_id = m.id
            JOIN packages p ON p.id = po.package_id
            WHERE m.sponsor_id = ? AND po.status = 'validated' AND p.bv_value > 0`
-        ).bind(memberId).first() as any
-        directActiveCount = directActiveRow?.cnt || 0
+        ).bind(memberId).first())
       }
+    } else {
+      batch2Promises.push(Promise.resolve(null))
     }
 
-    // ── Bloc B : progression Prime de Leadership mensuelle ──────
-    if (rankConfig) {
-      // BV mensuel petite jambe actuelle
-      monthlyBvLegCurrent  = Math.min(member.left_bv_monthly || 0, member.right_bv_monthly || 0)
-      monthlyBvLegRequired = rankConfig.min_monthly_bv_leg     || 0
-      monthlyRecruitsRequired = rankConfig.min_monthly_directs  || 0
-      monthlyPkgMinValue   = rankConfig.min_monthly_package_value || 0
-      monthlyFloorRanks    = rankConfig.monthly_floor_ranks     || 0
-
-      // Nouvelles recrues directes ce mois
-      const now = new Date()
-      const monthStr = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`
+    // Recrues ce mois (Bloc B)
+    if (rcCurr) {
+      monthlyBvLegCurrent    = Math.min(member.left_bv_monthly || 0, member.right_bv_monthly || 0)
+      monthlyBvLegRequired   = rcCurr.min_monthly_bv_leg    || 0
+      monthlyRecruitsRequired = rcCurr.min_monthly_directs  || 0
+      monthlyPkgMinValue     = rcCurr.min_monthly_package_value || 0
+      monthlyFloorRanks      = rcCurr.monthly_floor_ranks   || 0
       if (monthlyPkgMinValue > 0) {
-        const recruitRow = await c.env.DB.prepare(
-          `SELECT COUNT(DISTINCT m.id) as cnt
-           FROM members m
+        batch2Promises.push(c.env.DB.prepare(
+          `SELECT COUNT(DISTINCT m.id) as cnt FROM members m
            JOIN package_orders po ON po.member_id = m.id
            JOIN packages p ON p.id = po.package_id
-           WHERE m.sponsor_id = ?
-             AND strftime('%Y-%m', m.created_at) = ?
-             AND po.status = 'validated'
-             AND p.price_usd >= ?`
-        ).bind(memberId, monthStr, monthlyPkgMinValue).first() as any
-        monthlyRecruitsCurrent = recruitRow?.cnt || 0
+           WHERE m.sponsor_id = ? AND strftime('%Y-%m', m.created_at) = ?
+             AND po.status = 'validated' AND p.price_usd >= ?`
+        ).bind(memberId, monthStr, monthlyPkgMinValue).first())
       } else {
-        const recruitRow = await c.env.DB.prepare(
-          `SELECT COUNT(*) as cnt FROM members
-           WHERE sponsor_id = ? AND strftime('%Y-%m', created_at) = ?`
-        ).bind(memberId, monthStr).first() as any
-        monthlyRecruitsCurrent = recruitRow?.cnt || 0
+        batch2Promises.push(c.env.DB.prepare(
+          `SELECT COUNT(*) as cnt FROM members WHERE sponsor_id = ? AND strftime('%Y-%m', created_at) = ?`
+        ).bind(memberId, monthStr).first())
       }
+      // Rangs pour rang mensuel effectif
+      batch2Promises.push(c.env.DB.prepare(`SELECT * FROM rank_config ORDER BY rank_order DESC`).all())
+    } else {
+      batch2Promises.push(Promise.resolve(null))
+      batch2Promises.push(Promise.resolve(null))
+    }
 
-      // Rang mensuel effectif simplifié (pour affichage — pas le vrai calcul mlm.ts)
-      // On détermine quel rang correspond aux critères actuels
-      const ranksForEffective = await c.env.DB.prepare(
-        `SELECT * FROM rank_config ORDER BY rank_order DESC`
-      ).all()
-      const realRankOrder = rankConfig.rank_order || 0
-      for (const r of ranksForEffective.results as any[]) {
+    const [directActiveRow, recruitRow, ranksForEffective] = await Promise.all(batch2Promises)
+    directActiveCount = (directActiveRow as any)?.cnt || 0
+    monthlyRecruitsCurrent = (recruitRow as any)?.cnt || 0
+
+    if (rcCurr && ranksForEffective) {
+      const realRankOrder = rcCurr.rank_order || 0
+      for (const r of ((ranksForEffective as any).results || []) as any[]) {
         if (r.rank_order > realRankOrder) continue
         const bvOk = (r.min_monthly_bv_leg || 0) === 0 || monthlyBvLegCurrent >= (r.min_monthly_bv_leg || 0)
         const recOk = (r.min_monthly_directs || 0) === 0 || monthlyRecruitsCurrent >= (r.min_monthly_directs || 0)
         if (bvOk && recOk) { monthlyEffectiveRank = r.rank_name; break }
       }
     }
-  } catch (_e: any) {
-    // Non-bloquant : le dashboard s'affiche avec des valeurs par défaut
-    // En dev, on peut activer le log : console.error('[dashboard bloc A/B]', _e?.message || _e)
-  }
+  } catch (_e: any) { /* non-bloquant */ }
+
+  // Solde CC (1 requête légère)
+  const ccBalance = await getCCBalance(c.env.DB, memberId)
 
   return c.json({
-    member,
-    wallet,
-    ccBalance,
-    recentCommissions: recentCommissions.results,
-    unreadNotifications: unreadCount?.cnt || 0,
-    directTeamCount: directCount?.cnt || 0,
-    rankConfig,
-    nextRank,
-    nextRankConfig,
-    progressToNext,
-    progressBVMode,
-    progressMinLeg,
-    pendingWalletTotal,
-    nextEligible,
-    dailyReleaseTotal,
-    dailyReleaseByType,
-    fastStartPaliers: fastStartPaliers.results,
-    fastStartDays,
-    license_price: (await getLicenseConfig(c.env.DB)).price,
+    member, wallet, ccBalance,
+    recentCommissions: (recentCommissions as any).results,
+    unreadNotifications: (unreadCount as any)?.cnt || 0,
+    directTeamCount: (directCount as any)?.cnt || 0,
+    rankConfig, nextRank, nextRankConfig,
+    progressToNext, progressBVMode, progressMinLeg: minLeg,
+    pendingWalletTotal, nextEligible, dailyReleaseTotal, dailyReleaseByType,
+    fastStartPaliers: (fastStartPaliers as any).results,
+    fastStartDays: parseInt((fsDaysRow as any)?.value || '30'),
+    license_price: (licenseConfig as any).price,
     directActiveCount,
-    // Bloc B — Prime de Leadership mensuelle
-    monthlyBvLegCurrent,
-    monthlyBvLegRequired,
-    monthlyRecruitsCurrent,
-    monthlyRecruitsRequired,
-    monthlyPkgMinValue,
-    monthlyFloorRanks,
-    monthlyEffectiveRank,
-    // Package actif + date d'expiration (Fix #4)
-    activePackage: await (async () => {
-      const row = await c.env.DB.prepare(
-        `SELECT po.package_expires_at, po.validated_at, p.name AS package_name,
-                p.pricing_type, p.payment_mode, p.duration_years
-         FROM package_orders po
-         JOIN packages p ON p.id = po.package_id
-         WHERE po.member_id = ? AND po.status = 'active'
-           AND (p.pricing_type IS NULL OR p.pricing_type != 'monthly')
-         ORDER BY po.validated_at DESC LIMIT 1`
-      ).bind(memberId).first()
-      return row || null
-    })()
+    monthlyBvLegCurrent, monthlyBvLegRequired,
+    monthlyRecruitsCurrent, monthlyRecruitsRequired,
+    monthlyPkgMinValue, monthlyFloorRanks, monthlyEffectiveRank,
+    activePackage: activePackageRow || null,
   })
 })
 
@@ -827,42 +796,45 @@ members.get('/wallet', async (c) => {
 
 // GET /api/members/services — Services accessibles au membre selon son package actif
 // Retourne aussi tous les services avec un flag is_accessible pour afficher les cadenas
+// PERF: 3 requêtes séquentielles → 1 round-trip parallèle (Promise.all)
 members.get('/services', async (c) => {
   const memberId = c.get('memberId' as any)
 
-  // Tous les services non-inactifs — on lit landing_services qui contient
-  // les logos détourés haute qualité (logo_data_uri travaillés)
-  const allServices = await c.env.DB.prepare(`
-    SELECT id, name, slug, description, url, logo_url, logo_data_uri,
-           status, display_order, category, bg_color, text_color
-    FROM landing_services
-    WHERE status != 'inactive'
-    ORDER BY display_order ASC, name ASC
-  `).all()
+  // Toutes les requêtes indépendantes en parallèle
+  const [allServices, accessibleRows, activePackage] = await Promise.all([
+    // Tous les services non-inactifs — logo_data_uri travaillés
+    c.env.DB.prepare(`
+      SELECT id, name, slug, description, url, logo_url, logo_data_uri,
+             status, display_order, category, bg_color, text_color
+      FROM landing_services
+      WHERE status != 'inactive'
+      ORDER BY display_order ASC, name ASC
+    `).all(),
 
-  // Services accessibles au membre : jointure package_orders validés → package_service_access
-  const accessibleRows = await c.env.DB.prepare(`
-    SELECT DISTINCT psa.service_id
-    FROM package_service_access psa
-    JOIN package_orders po ON po.package_id = psa.package_id
-    WHERE po.member_id = ?
-      AND po.status = 'validated'
-      AND psa.is_enabled = 1
-  `).bind(memberId).all()
+    // Services accessibles via package validé
+    c.env.DB.prepare(`
+      SELECT DISTINCT psa.service_id
+      FROM package_service_access psa
+      JOIN package_orders po ON po.package_id = psa.package_id
+      WHERE po.member_id = ?
+        AND po.status = 'validated'
+        AND psa.is_enabled = 1
+    `).bind(memberId).all(),
+
+    // Package actif (couvert par idx_po_member_status)
+    c.env.DB.prepare(`
+      SELECT p.name as package_name, p.id as package_id
+      FROM package_orders po
+      JOIN packages p ON p.id = po.package_id
+      WHERE po.member_id = ? AND po.status = 'validated'
+      ORDER BY po.validated_at DESC
+      LIMIT 1
+    `).bind(memberId).first() as Promise<any>,
+  ])
 
   const accessibleIds = new Set(
     ((accessibleRows.results || []) as any[]).map((r: any) => r.service_id)
   )
-
-  // Récupérer le nom du package actif (pour le message cadenas)
-  const activePackage = await c.env.DB.prepare(`
-    SELECT p.name as package_name, p.id as package_id
-    FROM package_orders po
-    JOIN packages p ON p.id = po.package_id
-    WHERE po.member_id = ? AND po.status = 'validated'
-    ORDER BY po.validated_at DESC
-    LIMIT 1
-  `).bind(memberId).first() as any
 
   // Enrichir chaque service avec le flag is_accessible
   const services = ((allServices.results || []) as any[]).map((s: any) => ({
@@ -873,7 +845,7 @@ members.get('/services', async (c) => {
   return c.json({
     success: true,
     services,
-    active_package: activePackage?.package_name || null,
+    active_package: (activePackage as any)?.package_name || null,
     accessible_count: accessibleIds.size,
     total_count: services.length,
   })
@@ -2516,20 +2488,50 @@ members.post('/kyc/submit', async (c) => {
 })
 
 // GET /api/members/notifications
+// PERF + SCALABILITÉ : purge automatique après réponse — garde max 50 notifs par membre.
+// La table notifications peut grossir sans limite (1 000+ lignes/membre à terme).
+// La purge est non-bloquante : elle s'exécute APRÈS l'envoi de la réponse (ctx.waitUntil
+// n'est pas disponible dans Hono/CF Pages → on lance la Promise sans await).
 members.get('/notifications', async (c) => {
   const memberId = c.get('memberId' as any)
   const { page = '1', per_page = '25' } = c.req.query()
   const limit = parseInt(per_page)
   const offset = (parseInt(page) - 1) * limit
+
   const [rows, total] = await Promise.all([
     c.env.DB.prepare(
       `SELECT * FROM notifications WHERE member_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?`
     ).bind(memberId, limit, offset).all(),
     c.env.DB.prepare(
       `SELECT COUNT(*) as cnt FROM notifications WHERE member_id = ?`
-    ).bind(memberId).first() as any
+    ).bind(memberId).first() as any,
   ])
-  return c.json({ notifications: rows.results, total: total?.cnt || 0 })
+
+  const totalCount: number = total?.cnt || 0
+
+  // ── Purge non-bloquante : garde les 50 plus récentes, supprime le reste ──
+  // Ne s'exécute que si le membre a > 60 notifs (marge pour éviter une requête
+  // DELETE inutile à chaque appel). La Promise est lancée sans await.
+  const MAX_NOTIFS = 50
+  const PURGE_THRESHOLD = 60  // déclenche la purge seulement au-delà de 60
+  if (totalCount > PURGE_THRESHOLD) {
+    c.env.DB.prepare(
+      `DELETE FROM notifications
+       WHERE member_id = ?
+         AND id NOT IN (
+           SELECT id FROM notifications
+           WHERE member_id = ?
+           ORDER BY created_at DESC
+           LIMIT ?
+         )`
+    ).bind(memberId, memberId, MAX_NOTIFS).run().catch((e: any) => {
+      console.warn('[notifications] purge silencieuse échouée:', e?.message)
+    })
+    // Ajuster le total retourné pour refléter la purge à venir
+    return c.json({ notifications: rows.results, total: Math.min(totalCount, MAX_NOTIFS) })
+  }
+
+  return c.json({ notifications: rows.results, total: totalCount })
 })
 
 // PUT /api/members/notifications/read-all
@@ -3010,7 +3012,8 @@ members.get('/cc-wallet', async (c) => {
       `SELECT id, amount, description, justificatif_name, justificatif_type, status, admin_note, reviewed_at, created_at
        FROM cc_withdrawals
        WHERE member_id = ?
-       ORDER BY created_at DESC`
+       ORDER BY created_at DESC
+       LIMIT 50`
     ).bind(memberId).all(),
     // Config paramétrable (toutes les clés CC en 1 requête)
     db.prepare(

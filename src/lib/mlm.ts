@@ -3675,9 +3675,26 @@ export async function createNotification(
   title: string,
   message: string
 ): Promise<void> {
+  // 1. Insérer la nouvelle notification
   await db.prepare(
     `INSERT INTO notifications (id, member_id, type, title, message) VALUES (?, ?, ?, ?, ?)`
   ).bind(generateId(), memberId, type, title, message).run()
+
+  // 2. Purge automatique : garder max 100 notifications par membre
+  // (supprime les plus anciennes lues en premier, au-delà de 100)
+  // Non-bloquant : une erreur ici ne doit pas faire échouer la notification principale
+  try {
+    await db.prepare(
+      `DELETE FROM notifications
+       WHERE member_id = ?
+         AND id NOT IN (
+           SELECT id FROM notifications
+           WHERE member_id = ?
+           ORDER BY created_at DESC
+           LIMIT 100
+         )`
+    ).bind(memberId, memberId).run()
+  } catch (_e) { /* non-bloquant */ }
 }
 
 // ── UTILITAIRES ───────────────────────────────────────────────

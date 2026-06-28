@@ -268,22 +268,29 @@ admin.get('/members', requirePermission('members.view'), async (c) => {
 admin.get('/members/:id/sponsorship', requirePermission('members.view'), async (c) => {
   const id = c.req.param('id')
 
-  // 1. Lignée ascendante : qui a parrainé ce membre, et qui a parrainé le parrain, etc.
-  const ancestry: any[] = []
-  let currentId: string | null = id
-  let safetyLimit = 20
-  while (currentId && safetyLimit-- > 0) {
-    const row = await c.env.DB.prepare(
-      `SELECT id, unique_id, first_name, last_name, email, current_rank, member_status,
-              license_active, sponsor_id, created_at
-       FROM members WHERE id = ?`
-    ).bind(currentId).first() as any
-    if (!row || row.unique_id === 'ROOT') break
-    ancestry.push(row)
-    currentId = row.sponsor_id || null
-  }
-  // ancestry[0] = membre lui-même, [1] = son sponsor, [2] = grand-sponsor…
-  ancestry.shift() // enlever le membre lui-même (on veut juste la lignée au-dessus)
+  // 1. Lignée ascendante via CTE récursive (remplace la boucle while avec 20 requêtes)
+  //    Un seul round-trip D1 pour toute la chaîne de parrainage ascendante
+  const ancestryRows = await c.env.DB.prepare(`
+    WITH RECURSIVE ancestry(id, unique_id, first_name, last_name, email, current_rank,
+                             member_status, license_active, sponsor_id, created_at, depth) AS (
+      -- Point de départ : sponsor direct du membre cible
+      SELECT m.id, m.unique_id, m.first_name, m.last_name, m.email, m.current_rank,
+             m.member_status, m.license_active, m.sponsor_id, m.created_at, 1
+      FROM members m
+      WHERE m.id = (SELECT sponsor_id FROM members WHERE id = ?)
+        AND m.unique_id != 'ROOT'
+      UNION ALL
+      -- Remonte la chaîne jusqu'à 20 niveaux max
+      SELECT m.id, m.unique_id, m.first_name, m.last_name, m.email, m.current_rank,
+             m.member_status, m.license_active, m.sponsor_id, m.created_at, a.depth + 1
+      FROM members m
+      JOIN ancestry a ON m.id = a.sponsor_id
+      WHERE m.unique_id != 'ROOT' AND a.depth < 20
+    )
+    SELECT * FROM ancestry ORDER BY depth ASC
+  `).bind(id).all()
+
+  const ancestry = (ancestryRows.results || []) as any[]
 
   // 2. Downline complète de parrainage (CTE récursif, depth 8 max)
   const allRows = await c.env.DB.prepare(`
@@ -344,13 +351,13 @@ admin.get('/members/:id', requirePermission('members.view'), async (c) => {
     c.env.DB.prepare(
       `SELECT po.*, p.name as pkg_name, p.type as pkg_type, p.bv_value
        FROM package_orders po JOIN packages p ON p.id=po.package_id
-       WHERE po.member_id=? ORDER BY po.created_at DESC`
+       WHERE po.member_id=? ORDER BY po.created_at DESC LIMIT 50`
     ).bind(id).all(),
     c.env.DB.prepare(
       `SELECT * FROM commissions WHERE member_id=? ORDER BY created_at DESC LIMIT 10`
     ).bind(id).all(),
     c.env.DB.prepare(
-      `SELECT * FROM finstrategia_licenses WHERE member_id=? ORDER BY created_at DESC`
+      `SELECT * FROM finstrategia_licenses WHERE member_id=? ORDER BY created_at DESC LIMIT 20`
     ).bind(id).all(),
     c.env.DB.prepare(
       `SELECT SUM(bv_amount) as total, COUNT(*) as cnt FROM bv_logs WHERE member_id=?`
@@ -2397,26 +2404,26 @@ admin.get('/commissions/dashboard', requirePermission('commissions.view'), async
   const currentPeriod = new Date().toISOString().substring(0, 7)
 
   const [queueActive, queueTotal, monthlyValidations, commSummary, eligibleMembers] = await Promise.all([
-    // Paiements journaliers en cours
+    // Paiements journaliers en cours (limité — peut être large à grande échelle)
     c.env.DB.prepare(
       `SELECT cq.*, m.first_name, m.last_name, m.unique_id, m.current_rank
        FROM commission_queue cq JOIN members m ON m.id = cq.member_id
-       WHERE cq.status = 'active' ORDER BY cq.start_date ASC`
+       WHERE cq.status = 'active' ORDER BY cq.start_date ASC LIMIT 500`
     ).all(),
     // Total paiements terminés
     c.env.DB.prepare(`SELECT COUNT(*) as cnt FROM commission_queue WHERE status = 'completed'`).first(),
-    // Validations mensuelles faites ce mois
+    // Validations mensuelles faites ce mois (limité)
     c.env.DB.prepare(
       `SELECT mv.*, m.first_name, m.last_name, m.unique_id, m.current_rank
        FROM monthly_validations mv JOIN members m ON m.id = mv.member_id
-       WHERE mv.period = ? ORDER BY mv.processed_at DESC`
+       WHERE mv.period = ? ORDER BY mv.processed_at DESC LIMIT 200`
     ).bind(currentPeriod).all(),
     // Résumé commissions par type ce mois
     c.env.DB.prepare(
       `SELECT type, status, SUM(amount) as total, COUNT(*) as cnt
        FROM commissions WHERE period = ? GROUP BY type, status ORDER BY total DESC`
     ).bind(currentPeriod).all(),
-    // Membres éligibles aux commissions (rang actif)
+    // Membres éligibles aux commissions (rang actif) — limité à 500 pour scalabilité
     c.env.DB.prepare(
       `SELECT m.unique_id, m.first_name, m.last_name, m.current_rank,
               m.left_bv_total, m.right_bv_total, m.personal_bv_monthly,
@@ -2427,7 +2434,7 @@ admin.get('/commissions/dashboard', requirePermission('commissions.view'), async
        LEFT JOIN rank_config rc ON rc.rank_name = m.current_rank
        WHERE m.license_active = 1 AND m.member_status IN ('AMI','Partenaire')
          AND m.unique_id != 'ROOT'
-       ORDER BY rc.rank_order DESC NULLS LAST, m.left_bv_total DESC`
+       ORDER BY rc.rank_order DESC, m.left_bv_total DESC LIMIT 500`
     ).all(),
   ])
 
