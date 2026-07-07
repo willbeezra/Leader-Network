@@ -1408,33 +1408,13 @@ admin.post('/kyc/:id/reject', requirePermission('members.edit'), async (c) => {
 })
 
 // ── ARBRE BINAIRE ──────────────────────────────────────────
+// Utilise une CTE récursive pour charger tous les nœuds en 1 seule requête SQL
+// puis reconstruit l'arbre en mémoire → évite le timeout Cloudflare Workers
 admin.get('/binary-tree', requirePermission('tree.view'), async (c) => {
-  const { root_id, depth: maxD = '8' } = c.req.query()
-  const maxDepth = Math.min(parseInt(maxD), 10)
+  const { root_id, depth: maxD = '10' } = c.req.query()
+  const maxDepth = Math.min(parseInt(maxD) || 10, 20)
 
-  async function buildTree(id: string, depth = 0): Promise<any> {
-    if (depth > maxDepth) return null
-    const m = await c.env.DB.prepare(
-      `SELECT id, unique_id, first_name, last_name, member_status, current_rank,
-              left_bv_monthly, right_bv_monthly, left_bv_total, right_bv_total,
-              in_holding_tank, license_active
-       FROM members WHERE id=?`
-    ).bind(id).first() as any
-    if (!m) return null
-
-    const children = await c.env.DB.prepare(
-      `SELECT id, binary_position FROM members WHERE binary_parent_id=?`
-    ).bind(id).all()
-    const leftC  = (children.results as any[]).find(x => x.binary_position==='L')
-    const rightC = (children.results as any[]).find(x => x.binary_position==='R')
-
-    return {
-      ...m,
-      left:  leftC  ? await buildTree(leftC.id,  depth+1) : null,
-      right: rightC ? await buildTree(rightC.id, depth+1) : null,
-    }
-  }
-
+  // ── Résoudre le rootId ────────────────────────────────────────────────
   let rootId = root_id
   if (!rootId) {
     const root = await c.env.DB.prepare(
@@ -1449,9 +1429,74 @@ admin.get('/binary-tree', requirePermission('tree.view'), async (c) => {
       rootId = root.id
     }
   }
-
   if (!rootId) return c.json({ tree: null })
-  return c.json({ tree: await buildTree(rootId) })
+
+  // ── 1 SEULE REQUÊTE : CTE récursive ──────────────────────────────────
+  // Charge tous les nœuds de l'arbre jusqu'à maxDepth en un seul aller-retour DB
+  const rows = await c.env.DB.prepare(`
+    WITH RECURSIVE tree_cte(
+      id, unique_id, first_name, last_name, member_status, current_rank,
+      left_bv_monthly, right_bv_monthly, left_bv_total, right_bv_total,
+      in_holding_tank, license_active,
+      binary_parent_id, binary_position,
+      binary_left_id, binary_right_id,
+      node_depth
+    ) AS (
+      -- Nœud racine
+      SELECT
+        m.id, m.unique_id, m.first_name, m.last_name, m.member_status, m.current_rank,
+        m.left_bv_monthly, m.right_bv_monthly, m.left_bv_total, m.right_bv_total,
+        m.in_holding_tank, m.license_active,
+        m.binary_parent_id, m.binary_position,
+        m.binary_left_id, m.binary_right_id,
+        0 AS node_depth
+      FROM members m
+      WHERE m.id = ?
+
+      UNION ALL
+
+      -- Enfants récursifs
+      SELECT
+        m.id, m.unique_id, m.first_name, m.last_name, m.member_status, m.current_rank,
+        m.left_bv_monthly, m.right_bv_monthly, m.left_bv_total, m.right_bv_total,
+        m.in_holding_tank, m.license_active,
+        m.binary_parent_id, m.binary_position,
+        m.binary_left_id, m.binary_right_id,
+        t.node_depth + 1
+      FROM members m
+      JOIN tree_cte t ON m.binary_parent_id = t.id
+      WHERE t.node_depth < ?
+    )
+    SELECT * FROM tree_cte ORDER BY node_depth ASC
+  `).bind(rootId, maxDepth).all()
+
+  if (!rows.results || rows.results.length === 0) return c.json({ tree: null })
+
+  // ── Reconstruction de l'arbre en mémoire ─────────────────────────────
+  const nodeMap = new Map<string, any>()
+  for (const n of rows.results as any[]) {
+    nodeMap.set(n.id, { ...n, left: null, right: null })
+  }
+
+  let root: any = null
+  for (const n of rows.results as any[]) {
+    const node = nodeMap.get(n.id)
+    if (n.node_depth === 0) {
+      root = node
+    } else if (n.binary_parent_id) {
+      const parent = nodeMap.get(n.binary_parent_id)
+      if (parent) {
+        if (n.binary_position === 'L') parent.left = node
+        else parent.right = node
+      }
+    }
+  }
+
+  return c.json({
+    tree: root,
+    total: rows.results.length,
+    depth_loaded: maxDepth
+  })
 })
 
 // ── BV QUEUE ───────────────────────────────────────────────
