@@ -1415,26 +1415,28 @@ admin.get('/binary-tree', requirePermission('tree.view'), async (c) => {
   const maxDepth = Math.min(parseInt(maxD) || 10, 20)
 
   // ── Résoudre le rootId ────────────────────────────────────────────────
-  // On ne part JAMAIS de ROOT (nœud système) sauf si root_id est explicitement fourni.
-  // Par défaut on part du premier enfant réel de ROOT (le vrai sommet du réseau).
+  // Par défaut on part de LEADER (vrai sommet visible du réseau).
+  // ROOT est le nœud système invisible — on ne l'affiche jamais.
   let rootId = root_id
   if (!rootId) {
-    // Chercher le premier enfant direct de ROOT (vrai sommet du réseau)
-    const rootNode = await c.env.DB.prepare(
-      `SELECT id FROM members WHERE unique_id='ROOT' LIMIT 1`
+    // Priorité 1 : chercher le membre LEADER (unique_id = 'LEADER')
+    const leaderNode = await c.env.DB.prepare(
+      `SELECT id FROM members WHERE unique_id='LEADER' LIMIT 1`
     ).first() as any
-    if (rootNode) {
-      const firstChild = await c.env.DB.prepare(
-        `SELECT id FROM members WHERE binary_parent_id=? AND unique_id != 'ROOT' ORDER BY created_at ASC LIMIT 1`
-      ).bind(rootNode.id).first() as any
-      rootId = firstChild?.id || rootNode.id
+    if (leaderNode) {
+      rootId = leaderNode.id
     }
-    // Fallback : premier membre sans parent (hors ROOT)
+    // Priorité 2 : premier enfant direct de ROOT (hors ROOT lui-même)
     if (!rootId) {
-      const firstMember = await c.env.DB.prepare(
-        `SELECT id FROM members WHERE binary_parent_id IS NULL AND unique_id != 'ROOT' ORDER BY created_at ASC LIMIT 1`
+      const rootNode = await c.env.DB.prepare(
+        `SELECT id FROM members WHERE unique_id='ROOT' LIMIT 1`
       ).first() as any
-      rootId = firstMember?.id
+      if (rootNode) {
+        const firstChild = await c.env.DB.prepare(
+          `SELECT id FROM members WHERE binary_parent_id=? AND unique_id != 'ROOT' ORDER BY created_at ASC LIMIT 1`
+        ).bind(rootNode.id).first() as any
+        rootId = firstChild?.id || rootNode.id
+      }
     }
     // Dernier recours : ROOT lui-même
     if (!rootId) {
