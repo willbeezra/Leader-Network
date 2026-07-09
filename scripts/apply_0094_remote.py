@@ -63,19 +63,25 @@ def classify_stmt(stmt):
     return 'other'
 
 def run_chunk(stmts, label):
-    """Exécute un chunk de statements via wrangler d1 execute --remote."""
+    """Exécute un chunk de statements via wrangler d1 execute --file (évite Argument list too long)."""
     sql_block = '\n'.join(stmts)
 
     if DRY_RUN:
         return True, f'DRY-RUN OK ({len(stmts)} stmts)'
 
-    cmd = [
-        'npx', 'wrangler', 'd1', 'execute', DB_NAME,
-        '--remote',
-        '--command', sql_block
-    ]
+    # Écrire dans un fichier temporaire pour éviter "Argument list too long"
+    import tempfile
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.sql', delete=False, encoding='utf-8') as tmp:
+        tmp.write(sql_block)
+        tmp_path = tmp.name
 
     try:
+        cmd = [
+            'npx', 'wrangler', 'd1', 'execute', DB_NAME,
+            '--remote',
+            '--file', tmp_path
+        ]
+
         result = subprocess.run(
             cmd,
             capture_output=True,
@@ -93,6 +99,12 @@ def run_chunk(stmts, label):
         return False, 'TIMEOUT après 120s'
     except Exception as e:
         return False, str(e)
+    finally:
+        import os
+        try:
+            os.unlink(tmp_path)
+        except Exception:
+            pass
 
 # Ordre d'insertion pour respecter les FK
 SECTION_ORDER = [

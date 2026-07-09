@@ -1,19 +1,15 @@
 {
   "done_sections": [
     "member_fk",
-    "licenses",
-    "wallets",
-    "bv_updates",
-    "bv_logs",
     "members"
   ],
-  "last_section": "wallet_tx",
-  "last_chunk_in_section": 38,
+  "last_section": "wallets",
+  "last_chunk_in_section": 4,
   "errors": [
     {
       "section": "member_fk",
-      "chunk": 11,
-      "error": "\u2718 [ERROR] A request to the Cloudflare API (/accounts/e3c22eb11c116deb6d2d21349b153b91/d1/database/9f446266-de38-4dd1-8201-9cec9ec682c8/query) failed.\n\n  FOREIGN KEY constraint failed: SQLITE_CONSTRAINT (extended: SQLITE_CONSTRAINT_FOREIGNKEY) [code: 7500]\n  \n  If you think this is a bug, please open"
+      "chunk": 5,
+      "error": "\u25b2 [WARNING] \u26a0\ufe0f This process may take some time, during which your D1 database will be unavailable to serve queries.\n\n\n\u2718 [ERROR] FOREIGN KEY constraint failed: SQLITE_CONSTRAINT (extended: SQLITE_CONSTRAINT_FOREIGNKEY)\n\n\n\ud83e\udeb5  Logs were written to \"/home/user/.wrangler/logs/wrangler-2026-07-09_19-53-57_"
     }
   ]
 }

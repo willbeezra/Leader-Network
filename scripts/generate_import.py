@@ -53,7 +53,7 @@ def resolve_id(username):
     if username == 'rootuser':
         return ROOT_ID
     if username == 'LEADER':
-        return LEADER_ID
+        return ROOT_ID
     return make_id(username)
 
 # ── Lire u(1).csv ─────────────────────────────────────────────
@@ -358,10 +358,10 @@ for uid in sorted_members:
     # Sponsor
     sponsor_raw = m['sponsor']
     if not sponsor_raw or sponsor_raw.upper() == 'NULL' or sponsor_raw == '':
-        sponsor_id = LEADER_ID
+        sponsor_id = ROOT_ID
         stats['no_sponsor'] += 1
     elif sponsor_raw == 'rootuser':
-        sponsor_id = LEADER_ID
+        sponsor_id = ROOT_ID
     else:
         sponsor_id = make_id(sponsor_raw)
 
@@ -388,8 +388,27 @@ for uid in sorted_members:
         if pkg['active'] == '1':
             stats['with_active_pkg'] += 1
 
+    # ── Déterminer member_status ─────────────────────────────
+    # Règle : status=1 + (plan_id≠0 OU active_license=1 OU current_rank_id≠NULL) → Partenaire
+    # Sinon : Membre
+    if mx:
+        _plan_id  = clean(mx.get('plan_id', '0'))
+        _act_lic  = clean(mx.get('active_license', '0'))
+        _rank_id  = clean(mx.get('current_rank_id', '0'))
+        _status_v = clean(mx.get('status', '1'))
+        if _status_v == '1' and (
+            (_plan_id  and _plan_id  not in ('0', 'NULL', '')) or
+            _act_lic == '1' or
+            (_rank_id  and _rank_id  not in ('0', 'NULL', ''))
+        ):
+            member_status_val = 'Partenaire'
+        else:
+            member_status_val = 'Membre'
+    else:
+        member_status_val = 'Membre'
+
     # ── INSERT members ────────────────────────────────────────
-    # STRATÉGIE FK : on insère avec sponsor_id=LEADER (toujours valide)
+    # STRATÉGIE FK : on insère avec sponsor_id=ROOT (toujours valide)
     # et binary_parent_id=NULL (pas de FK cross-membre à l'INSERT),
     # puis un UPDATE séparé (section member_fk) remettra les vraies valeurs.
     exp_sql = sql_str(license_expires)
@@ -413,8 +432,8 @@ for uid in sorted_members:
         f") VALUES ("
         f"'{member_id}', {sql_str(uid)}, {sql_str(email)}, '{HASH}', "
         f"{sql_str(firstname)}, {sql_str(lastname)}, {sql_str(mobile)}, {sql_str(country)}, "
-        f"'{LEADER_ID}', NULL, NULL, "   # FK sûres pour l'INSERT
-        f"'Membre', '{rank}', "
+        f"'{ROOT_ID}', NULL, NULL, "   # FK sûres pour l'INSERT
+        f"'{member_status_val}', '{rank}', "
         f"{active_lic}, {exp_sql}, '{kyc}', "
         f"0, {balance}, {credit_cr}, {reserve_s}, "
         f"{bv_left}, {bv_right}, "
@@ -438,7 +457,7 @@ for uid in sorted_members:
         real_bp_id  = None
         real_bp_pos = None
     elif bp_raw == 'rootuser':
-        real_bp_id  = LEADER_ID
+        real_bp_id  = ROOT_ID
         real_bp_pos = m['binary_position'] if m['binary_position'] in ('L','R') else None
     else:
         real_bp_id  = make_id(bp_raw)
