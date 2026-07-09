@@ -129,7 +129,7 @@ function regNextStep(target) {
     const em = (document.getElementById('reg-email')?.value || '').trim();
     const bd = (document.getElementById('reg-birthdate')?.value || '').trim();
     if (!fn || !ln) {if (err1) {err1.textContent = 'Prénom et nom sont obligatoires.';err1.classList.remove('hidden');}return;}
-    if (!em || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) {if (err1) {err1.textContent = 'Adresse email invalide.';err1.classList.remove('hidden');}return;}
+    if (!em || !em.includes('@')) {if (err1) {err1.textContent = 'Adresse email invalide.';err1.classList.remove('hidden');}return;}
     if (!bd) {if (err1) {err1.textContent = 'La date de naissance est obligatoire.';err1.classList.remove('hidden');}return;}
     if (err1) err1.classList.add('hidden');
   }

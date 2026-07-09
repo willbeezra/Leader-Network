@@ -1641,7 +1641,7 @@ function msValidateStep(step) {
   const v = (id) => (document.getElementById(id)?.value||'').trim()
   if (step === 1) {
     if (!v('r-firstname') || !v('r-lastname')) return 'Veuillez renseigner votre prénom et votre nom.'
-    if (!v('r-email') || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v('r-email'))) return 'Adresse email invalide.'
+    if (!v('r-email') || !v('r-email').includes('@')) return 'Adresse email invalide.'
     // Champs optionnels requis selon config
     const flds = window._msFields
     if (flds.includes('birth_date') && !v('r-birthdate')) return 'Le champ « Date de naissance » est obligatoire.'
@@ -1701,7 +1701,7 @@ async function doRegister() {
 
   // Validations de base (toujours obligatoires)
   if (!first_name || !last_name) { showError('Veuillez renseigner votre prénom et votre nom.'); return }
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showError('Adresse email invalide.'); return }
+  if (!email || !email.includes('@')) { showError('Adresse email invalide.'); return }
   if (password.length < 8) { showError('Le mot de passe doit contenir au moins 8 caractères.'); return }
   if (password !== password2) { showError('Les mots de passe ne correspondent pas.'); return }
   if (!cgu) { showError('Vous devez accepter les conditions générales d\\'utilisation.'); return }
@@ -2386,7 +2386,7 @@ function regMsValidate(step) {
   if (err) err.classList.add('hidden')
   if (step === 1) {
     if (!v('reg-firstname')||!v('reg-lastname')) { show('Veuillez renseigner votre prénom et votre nom.'); return false }
-    if (!v('reg-email')||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v('reg-email'))) { show('Adresse email invalide.'); return false }
+    if (!v('reg-email')||!v('reg-email').includes('@')) { show('Adresse email invalide.'); return false }
     var flds1 = window._regMsFields
     if (flds1.indexOf('birth_date')>=0 && !v('reg-birthdate')) { show('Le champ \u00ab Date de naissance \u00bb est obligatoire.'); return false }
     if (flds1.indexOf('nationality')>=0 && !v('reg-nationality')) { show('Le champ \u00ab Nationalité \u00bb est obligatoire.'); return false }

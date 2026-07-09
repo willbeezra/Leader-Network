@@ -320,12 +320,6 @@ auth.post('/register', async (c) => {
       return c.json({ error: 'Champs obligatoires manquants', code: 'MISSING_FIELDS' }, 400)
     }
 
-    // Validation format email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
-      return c.json({ error: 'Adresse email invalide', code: 'INVALID_EMAIL' }, 400)
-    }
-
     if (password.length < 8) {
       return c.json({ error: 'Le mot de passe doit faire au moins 8 caractères' }, 400)
     }
