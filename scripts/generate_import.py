@@ -259,11 +259,10 @@ if 'sorjenking' in sorted_members:
     print(f"  → sorjenking position : {idx}")
 
 # ── Rangs ─────────────────────────────────────────────────────
-RANK_MAP = {
-    '0': 'none', '1': 'captain', '2': 'commander', '3': 'admiral',
-    '4': 'vice_admiral', '5': 'ambassador', '6': 'diamond',
-    '7': 'triple_diamond', '8': 'crown'
-}
+# Les rangs de l'ancien système (captain, commander, triple_diamond…) ne
+# correspondent pas aux rangs actuels de rank_config.
+# On importe tout à 'none' — le système recalculera les rangs depuis les BV.
+RANK_MAP = {}  # toujours 'none' via le fallback ci-dessous
 
 def map_kyc(kv):
     kv = clean(kv)
