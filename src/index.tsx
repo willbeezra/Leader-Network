@@ -2720,6 +2720,20 @@ function adminHTML(branding: BrandingPublic = { logoUri: '', networkName: 'LEADE
   <div id="modal-content" class="bg-dark-800 rounded-2xl shadow-2xl border border-dark-600 w-full max-w-lg max-h-[90vh] overflow-y-auto"></div>
 </div>
 
+<script>
+function togglePwd(inputId, iconId) {
+  const input = document.getElementById(inputId);
+  const icon  = document.getElementById(iconId);
+  if (!input) return;
+  if (input.type === 'password') {
+    input.type = 'text';
+    if (icon) icon.className = 'fas fa-eye-slash text-sm';
+  } else {
+    input.type = 'password';
+    if (icon) icon.className = 'fas fa-eye text-sm';
+  }
+}
+</script>
 <script src="/static/upload-zone.js"></script>
 <script src="/static/campus-app.js"></script>
 <script src="/static/admin-app.js"></script>
