@@ -1968,9 +1968,14 @@ function memberHTML(opts: MemberHTMLOpts = {}, branding: BrandingPublic = { logo
         </div>
         <div>
           <label class="block text-sm text-gray-400 mb-1">Mot de passe</label>
-          <input id="login-password" type="password" placeholder="••••••••"
-            onkeydown="if(event.key==='Enter')doLogin()"
-            class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none" style="border-color:#12185A" onfocus="this.style.borderColor='#C03020'" onblur="this.style.borderColor='#12185A'">
+          <div class="relative">
+            <input id="login-password" type="password" placeholder="••••••••"
+              onkeydown="if(event.key==='Enter')doLogin()"
+              class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none pr-12" style="border-color:#12185A" onfocus="this.style.borderColor='#C03020'" onblur="this.style.borderColor='#12185A'">
+            <button type="button" onclick="togglePwd('login-password','eye-login')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
+              <i id="eye-login" class="fas fa-eye text-sm"></i>
+            </button>
+          </div>
         </div>
         <div id="login-error" class="hidden text-red-400 text-sm bg-red-900/20 rounded-lg p-3"></div>
         <button type="button" onclick="doLogin()" class="w-full font-bold py-3 rounded-xl transition btn-rouge">
@@ -2090,13 +2095,23 @@ function memberHTML(opts: MemberHTMLOpts = {}, branding: BrandingPublic = { logo
       <div id="reg-s3" class="reg-ms-section" style="display:none">
         <div class="mt-0">
           <label class="block text-sm text-gray-400 mb-1">Mot de passe <span class="text-red-400">*</span></label>
-          <input id="reg-password" type="password" placeholder="Min. 8 caractères" autocomplete="new-password"
-            class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none" style="border-color:#12185A" onfocus="this.style.borderColor='#C03020'" onblur="this.style.borderColor='#12185A'">
+          <div class="relative">
+            <input id="reg-password" type="password" placeholder="Min. 8 caractères" autocomplete="new-password"
+              class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none pr-12" style="border-color:#12185A" onfocus="this.style.borderColor='#C03020'" onblur="this.style.borderColor='#12185A'">
+            <button type="button" onclick="togglePwd('reg-password','eye-reg1')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
+              <i id="eye-reg1" class="fas fa-eye text-sm"></i>
+            </button>
+          </div>
         </div>
         <div class="mt-4">
           <label class="block text-sm text-gray-400 mb-1">Confirmer le mot de passe <span class="text-red-400">*</span></label>
-          <input id="reg-password2" type="password" placeholder="Répétez le mot de passe" autocomplete="new-password"
-            class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none" style="border-color:#12185A" onfocus="this.style.borderColor='#C03020'" onblur="this.style.borderColor='#12185A'">
+          <div class="relative">
+            <input id="reg-password2" type="password" placeholder="Répétez le mot de passe" autocomplete="new-password"
+              class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none pr-12" style="border-color:#12185A" onfocus="this.style.borderColor='#C03020'" onblur="this.style.borderColor='#12185A'">
+            <button type="button" onclick="togglePwd('reg-password2','eye-reg2')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
+              <i id="eye-reg2" class="fas fa-eye text-sm"></i>
+            </button>
+          </div>
         </div>
         <!-- Code parrain — affiché seulement en M1 -->
         <div class="mt-4" id="reg-sponsor-field">
@@ -2540,8 +2555,13 @@ function adminHTML(branding: BrandingPublic = { logoUri: '', networkName: 'LEADE
         </div>
         <div>
           <label class="block text-sm text-gray-400 mb-1">Mot de passe</label>
-          <input id="admin-password" type="password" placeholder="••••••••"
-            class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:border-red-500 focus:outline-none">
+          <div class="relative">
+            <input id="admin-password" type="password" placeholder="••••••••"
+              class="w-full bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:border-red-500 focus:outline-none pr-12">
+            <button type="button" onclick="togglePwd('admin-password','eye-admin')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
+              <i id="eye-admin" class="fas fa-eye text-sm"></i>
+            </button>
+          </div>
         </div>
         <div id="admin-login-error" class="hidden text-red-400 text-sm bg-red-900/20 rounded-lg p-3"></div>
         <button onclick="doAdminLogin()" class="w-full bg-gradient-to-r from-red-600 to-red-700 text-white font-bold py-3 rounded-xl hover:from-red-500 hover:to-red-600 transition">
