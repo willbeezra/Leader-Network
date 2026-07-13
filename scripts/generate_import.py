@@ -389,19 +389,21 @@ for uid in sorted_members:
             stats['with_active_pkg'] += 1
 
     # ── Déterminer member_status ─────────────────────────────
-    # Règle : status=1 + (plan_id≠0 OU active_license=1 OU current_rank_id≠NULL) → Partenaire
-    # Sinon : Membre
+    # Règle métier :
+    #   AMI       = package acheté (plan_id≠0 dans le CSV) → rangs illimités
+    #   Partenaire = licence active mais pas de package → plafonné Manager
+    #   Membre    = ni licence ni package
     if mx:
         _plan_id  = clean(mx.get('plan_id', '0'))
         _act_lic  = clean(mx.get('active_license', '0'))
         _rank_id  = clean(mx.get('current_rank_id', '0'))
         _status_v = clean(mx.get('status', '1'))
-        if _status_v == '1' and (
-            (_plan_id  and _plan_id  not in ('0', 'NULL', '')) or
-            _act_lic == '1' or
-            (_rank_id  and _rank_id  not in ('0', 'NULL', ''))
-        ):
-            member_status_val = 'Partenaire'
+        has_package = bool(_plan_id and _plan_id not in ('0', 'NULL', ''))
+        has_rank    = bool(_rank_id  and _rank_id  not in ('0', 'NULL', ''))
+        if _status_v == '1' and (has_package or has_rank):
+            member_status_val = 'AMI'          # package acheté → rangs illimités
+        elif _status_v == '1' and _act_lic == '1':
+            member_status_val = 'Partenaire'   # licence seule → plafonné Manager
         else:
             member_status_val = 'Membre'
     else:
