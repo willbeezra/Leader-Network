@@ -1,0 +1,35 @@
+{
+  "production_base_commit": "a15d62595f1906b4739aa4cc684598366aaf73e6",
+  "recovered_source_head": "cd909ad",
+  "local_fix_commit": "4f33ee8359287810d0cd8ed3504f2d4fed07cb0e",
+  "previous_deployment_id": "b8c0bda3-db5b-476d-aeec-264e73d58cfa",
+  "registration_tests": 21,
+  "registration_tests_passed": 21,
+  "regression_checks": [
+    "member-tree",
+    "finstrategia-sso",
+    "legacy-permission",
+    "campus-service-link",
+    "check-js"
+  ],
+  "build": "passed",
+  "baseline_rebuild_identical": true,
+  "existing_static_assets": 85,
+  "unchanged_static_assets": 84,
+  "changed_static_assets": [
+    "/static/member-app.js"
+  ],
+  "database_migrations": 0,
+  "local_d1_test": {
+    "schema": "current production definitions, synthetic data only",
+    "concurrent_registration_statuses": [
+      201,
+      409
+    ],
+    "members_in_slot": 1,
+    "wallets": 1,
+    "foreign_key_violations": 0
+  },
+  "worker_sha256": "87c5262310ab8ac875f113db2a32a8044b3c6b8146297674c09005185d3912fd",
+  "member_app_sha256": "af3174dad56a719c69cc3cd35b489a517bd3d73b748fc0a8659900e96c6a1c5b"
+}
