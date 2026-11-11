@@ -1200,7 +1200,7 @@ function registerHTML(opts: RegisterHTMLOpts): string {
       <div id="slot-error-banner" class="hidden mb-5 bg-red-900/30 border border-red-500/40 rounded-xl px-4 py-4 flex items-start gap-3">
         <i class="fas fa-triangle-exclamation text-red-400 mt-0.5 flex-shrink-0"></i>
         <div>
-          <div class="text-sm font-semibold text-red-300">Lien invalide ou expiré</div>
+          <div class="text-sm font-semibold text-red-300">Inscription indisponible</div>
           <div class="text-xs text-red-400/80 mt-1" id="slot-error-text"></div>
           <a href="/" class="text-xs text-red-300 underline mt-2 inline-block">← Retour à l'accueil</a>
         </div>
@@ -1426,6 +1426,7 @@ const REG = window.__REG__ || { mode: 'M1' }
 let _sponsorId = null       // UUID du sponsor (M2/M3)
 let _binaryParentId = null  // UUID du parent binaire (M2)
 let _memberToken = null     // JWT après inscription
+let _registrationReady = false
 
 // ── Utilitaires ──────────────────────────────────
 function showStep(id) {
@@ -1461,6 +1462,10 @@ function acceptCGU() {
 // ── INIT — appelé au chargement ──────────────────
 async function initPage() {
   const mode = REG.mode
+  _sponsorId = null
+  _binaryParentId = null
+  _registrationReady = false
+  document.getElementById('r-submit-btn').disabled = mode !== 'M1'
 
   if (mode === 'M1') {
     // Inscription libre — afficher le formulaire directement
@@ -1478,7 +1483,7 @@ async function initPage() {
     //                absent sur anciens liens → rétrocompat : parent = sponsor
     const sponsor  = REG.sponsor  || ''
     const parent   = REG.parent   || sponsor  // rétrocompat anciens liens
-    const position = REG.position || ''
+    const position = (REG.position || '').trim().toUpperCase()
     try {
       const res = await axios.get(
         '/api/auth/validate-slot?sponsor=' + encodeURIComponent(sponsor) +
@@ -1489,6 +1494,9 @@ async function initPage() {
       if (d.valid) {
         _sponsorId      = d.sponsor_id   // UUID du RECRUTEUR → sponsor_id en DB
         _binaryParentId = d.parent_id    // UUID du NŒUD DE PLACEMENT → binary_parent_id en DB
+        REG.position = d.position
+        _registrationReady = true
+        document.getElementById('r-submit-btn').disabled = false
         document.getElementById('form-title').textContent = 'Inscription — Placement direct'
         document.getElementById('form-subtitle').textContent =
           'Vous serez placé(e) directement dans l\\'arbre binaire sur ce slot.'
@@ -1528,7 +1536,7 @@ async function initPage() {
 
   if (mode === 'M3') {
     // Résoudre le sponsor via son unique_id
-    const sponsorUid = (REG.sponsorUid || '').toUpperCase()
+    const sponsorUid = (REG.sponsorUid || '').trim()
     document.getElementById('sponsor-field').classList.add('hidden')
     document.getElementById('form-title').textContent = 'Inscription — Via lien parrain'
     document.getElementById('form-subtitle').textContent =
@@ -1541,6 +1549,8 @@ async function initPage() {
         const d = res.data
         if (d.found) {
           _sponsorId = d.id
+          _registrationReady = true
+          document.getElementById('r-submit-btn').disabled = false
           const banner = document.getElementById('sponsor-banner')
           banner.classList.remove('hidden')
           document.getElementById('sponsor-banner-name').textContent =
@@ -1548,19 +1558,18 @@ async function initPage() {
           document.getElementById('sponsor-banner-detail').textContent =
             'Vous rejoignez le réseau de ' + d.name + '. Votre compte sera en attente de placement.'
         } else {
-          // Sponsor introuvable → inscription sans parrain
-          const banner = document.getElementById('sponsor-banner')
-          banner.classList.remove('hidden')
-          banner.style.background = 'rgba(107,114,128,0.1)'
-          banner.style.borderColor = 'rgba(107,114,128,0.3)'
-          document.getElementById('sponsor-banner-name').style.color = '#9CA3AF'
-          document.getElementById('sponsor-banner-name').textContent = 'Parrain introuvable'
-          document.getElementById('sponsor-banner-detail').textContent =
-            'Inscription sans parrain — vous serez rattaché à la racine du réseau.'
+          document.getElementById('slot-error-text').textContent =
+            d.message || d.error || 'Parrain introuvable. Vérifiez le lien de parrainage.'
+          document.getElementById('slot-error-banner').classList.remove('hidden')
         }
-      } catch {
-        // Erreur silencieuse — inscription sans parrain
+      } catch (err) {
+        document.getElementById('slot-error-text').textContent =
+          err.response?.data?.error || 'Impossible de vérifier le parrain. Rechargez la page pour réessayer.'
+        document.getElementById('slot-error-banner').classList.remove('hidden')
       }
+    } else {
+      document.getElementById('slot-error-text').textContent = 'Le lien ne contient pas de parrain.'
+      document.getElementById('slot-error-banner').classList.remove('hidden')
     }
     showStep('step-form')
     return
@@ -1680,6 +1689,9 @@ function msApplyRequiredMarkers(fields) {
 // ── SOUMISSION DU FORMULAIRE ─────────────────────
 async function doRegister() {
   hideError()
+  if (REG.mode !== 'M1' && !_registrationReady) {
+    showError('Le parrain et le placement doivent être validés avant de continuer.'); return
+  }
 
   const first_name    = (document.getElementById('r-firstname')?.value||'').trim()
   const last_name     = (document.getElementById('r-lastname')?.value||'').trim()
@@ -1741,24 +1753,30 @@ async function doRegister() {
 
   if (REG.mode === 'M1') {
     // Résoudre le code parrain optionnel
-    const code = (document.getElementById('r-sponsor-code')?.value || '').trim().toUpperCase()
+    const code = (document.getElementById('r-sponsor-code')?.value || '').trim()
     if (code) {
       try {
         const res = await axios.get('/api/auth/sponsor/' + encodeURIComponent(code))
-        if (res.data.found) payload.sponsor_id = res.data.id
-      } catch { /* sans parrain si erreur */ }
+        if (!res.data.found) {
+          showError(res.data.message || res.data.error || 'Parrain introuvable. Vérifiez le code.'); return
+        }
+        payload.sponsor_id = res.data.id
+      } catch (err) {
+        showError(err.response?.data?.error || 'Impossible de vérifier le parrain. Réessayez.'); return
+      }
     }
   }
 
   if (REG.mode === 'M2') {
-    if (!_binaryParentId) { showError('Lien invalide — rechargez la page.'); return }
+    if (!_binaryParentId || !_sponsorId) { showError('Lien invalide — rechargez la page.'); return }
     payload.sponsor_id       = _sponsorId
     payload.binary_parent_id = _binaryParentId
     payload.binary_position  = REG.position
   }
 
   if (REG.mode === 'M3') {
-    if (_sponsorId) payload.sponsor_id = _sponsorId
+    if (!_sponsorId) { showError('Un parrain valide est obligatoire.'); return }
+    payload.sponsor_id = _sponsorId
   }
 
   // Envoi

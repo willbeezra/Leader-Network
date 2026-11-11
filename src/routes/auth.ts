@@ -7,6 +7,10 @@ import { createJWT, verifyPassword, hashPassword } from '../lib/auth.js'
 import { initFastStart } from '../lib/mlm.js'
 import type { Bindings } from '../types/index.js'
 import { sendEmail } from '../lib/mailer.js'
+import {
+  RegistrationError, findReferralMember, requireSponsorLicense, requireAvailableSlot,
+  validateRegistration, validateRegistrationRelations,
+} from '../lib/registration.js'
 
 // ── Protection brute force via KV ────────────────────────────
 // OPTIMISATION KV : on ne lit le KV qu'APRÈS un échec d'auth (DB),
@@ -61,14 +65,15 @@ function generatePin(): string {
 }
 
 async function getRootId(db: D1Database): Promise<string> {
-  const root = await db.prepare(`SELECT id FROM members WHERE unique_id = 'ROOT'`).first() as any
-  return root?.id || 'root-system-000000000000000000000000'
+  const root = await db.prepare(`SELECT id FROM members WHERE unique_id = 'ROOT' COLLATE NOCASE`).first() as any
+  if (!root) throw new RegistrationError('REGISTRATION_CONFIG_ERROR', 'Inscription temporairement indisponible. Contactez le support.', 503)
+  return root.id
 }
 
 async function generateUniqueIdSafe(db: D1Database): Promise<string | null> {
   for (let i = 0; i < 5; i++) {
     const candidate = generateUniqueId()
-    const existing = await db.prepare(`SELECT id FROM members WHERE unique_id = ?`).bind(candidate).first()
+    const existing = await db.prepare(`SELECT id FROM members WHERE unique_id = ? COLLATE NOCASE`).bind(candidate).first()
     if (!existing) return candidate
   }
   return null
@@ -208,17 +213,13 @@ auth.post('/admin/login', async (c) => {
 // Vérifie qu'un unique_id existe, est actif ET a une licence active
 auth.get('/sponsor/:uniqueId', async (c) => {
   try {
-    const uid = c.req.param('uniqueId').toUpperCase()
-    const sponsor = await c.env.DB.prepare(
-      `SELECT id, unique_id, first_name, last_name, license_active
-       FROM members WHERE unique_id = ? AND unique_id != 'ROOT'`
-    ).bind(uid).first() as any
-    if (!sponsor) return c.json({ found: false }, 200)
+    const sponsor = await findReferralMember(c.env.DB, c.req.param('uniqueId'))
     // Point 4 : le parrainage n'est accessible que si la licence est active
     if (!sponsor.license_active) {
       return c.json({
         found: false,
         reason: 'no_license',
+        code: 'SPONSOR_NO_LICENSE',
         message: 'Ce lien de parrainage est inactif. Le parrain doit activer sa licence Finstrategia.'
       }, 200)
     }
@@ -229,6 +230,10 @@ auth.get('/sponsor/:uniqueId', async (c) => {
       name: `${sponsor.first_name} ${sponsor.last_name}`
     })
   } catch (e: any) {
+    if (e instanceof RegistrationError) {
+      if (e.code === 'INVALID_SPONSOR') return c.json({ found: false, reason: 'not_found', code: e.code, message: e.message })
+      return c.json({ found: false, error: e.message, code: e.code }, e.status)
+    }
     return c.json({ error: e.message }, 500)
   }
 })
@@ -250,41 +255,15 @@ auth.get('/validate-slot', async (c) => {
     const pos = position.toUpperCase() as 'L' | 'R'
 
     // 1. Résoudre le RECRUTEUR (sponsor = celui qui parraine réellement)
-    const sponsorMember = await c.env.DB.prepare(
-      `SELECT id, unique_id, first_name, last_name, license_active
-       FROM members WHERE unique_id = ? AND unique_id != 'ROOT'`
-    ).bind(sponsor.toUpperCase()).first() as any
-
-    if (!sponsorMember) {
-      return c.json({ error: 'Lien de parrainage invalide', code: 'INVALID_SPONSOR' }, 400)
-    }
-    if (!sponsorMember.license_active) {
-      return c.json({
-        error: 'Ce lien de parrainage est inactif. Le parrain doit activer sa licence Finstrategia.',
-        code: 'SPONSOR_NO_LICENSE'
-      }, 403)
-    }
+    const sponsorMember = await findReferralMember(c.env.DB, sponsor)
+    requireSponsorLicense(sponsorMember)
 
     // 2. Résoudre le NŒUD DE PLACEMENT (parent = où sera placé dans l'arbre binaire)
     //    Rétrocompat : si pas de param 'parent', le nœud de placement = le sponsor lui-même
-    const parentUid = (parent || sponsor).toUpperCase()
-    const parentNode = await c.env.DB.prepare(
-      `SELECT id, unique_id, first_name, last_name, binary_left_id, binary_right_id
-       FROM members WHERE unique_id = ? AND unique_id != 'ROOT'`
-    ).bind(parentUid).first() as any
-
-    if (!parentNode) {
-      return c.json({ error: 'Nœud de placement introuvable', code: 'INVALID_PARENT' }, 400)
-    }
+    const parentNode = await findReferralMember(c.env.DB, parent || sponsor, true)
 
     // 3. Vérifier que le slot est libre sur le nœud de placement
-    const slotTaken = pos === 'L' ? parentNode.binary_left_id : parentNode.binary_right_id
-    if (slotTaken) {
-      return c.json({
-        error: 'Ce lien n\'est plus disponible. Contactez votre parrain pour en obtenir un nouveau.',
-        code: 'SLOT_TAKEN'
-      }, 409)
-    }
+    await requireAvailableSlot(c.env.DB, parentNode.id, pos)
 
     return c.json({
       valid: true,
@@ -299,6 +278,7 @@ auth.get('/validate-slot', async (c) => {
       position: pos
     })
   } catch (e: any) {
+    if (e instanceof RegistrationError) return c.json({ error: e.message, code: e.code }, e.status)
     return c.json({ error: e.message }, 500)
   }
 })
@@ -306,206 +286,131 @@ auth.get('/validate-slot', async (c) => {
 // ── POST /api/auth/register — Inscription unifiée M1/M2/M3 ────
 auth.post('/register', async (c) => {
   try {
-    const body = await c.req.json()
+    const input = await validateRegistration(c.env.DB, await c.req.json())
     const {
       email, password, first_name, last_name, phone, country,
-      registration_method = 'M1',
-      sponsor_id,           // UUID du sponsor (M2/M3)
-      binary_parent_id,     // UUID du parent binaire (M2 uniquement)
-      binary_position,      // 'L' ou 'R' (M2 uniquement)
-    } = body
-
-    // ── VALIDATIONS ──────────────────────────────────────────
-    if (!email || !password || !first_name || !last_name) {
-      return c.json({ error: 'Champs obligatoires manquants', code: 'MISSING_FIELDS' }, 400)
-    }
-
-    if (password.length < 8) {
-      return c.json({ error: 'Le mot de passe doit faire au moins 8 caractères' }, 400)
-    }
-
-    // Unicité email
-    const existing = await c.env.DB.prepare(
-      `SELECT id FROM members WHERE email = ?`
-    ).bind(email.toLowerCase().trim()).first()
-    if (existing) return c.json({ error: 'Cette adresse email est déjà utilisée', code: 'EMAIL_EXISTS' }, 409)
-
-    // ── MÉTHODE M2 : Vérification atomique du slot ───────────
-    if (registration_method === 'M2') {
-      if (!binary_parent_id || !binary_position || !['L', 'R'].includes(binary_position)) {
-        return c.json({ error: 'Position invalide', code: 'INVALID_POSITION' }, 400)
-      }
-      const parent = await c.env.DB.prepare(
-        `SELECT id, binary_left_id, binary_right_id FROM members WHERE id = ?`
-      ).bind(binary_parent_id).first() as any
-      if (!parent) return c.json({ error: 'Code parrain invalide', code: 'INVALID_SPONSOR' }, 400)
-
-      const slotTaken = binary_position === 'L' ? parent.binary_left_id : parent.binary_right_id
-      if (slotTaken) {
-        return c.json({
-          error: 'Ce lien n\'est plus disponible. Contactez votre parrain.',
-          code: 'SLOT_TAKEN'
-        }, 409)
-      }
-    }
-
-    // ── GÉNÉRATION IDENTIFIANTS ──────────────────────────────
+      birth_date, nationality, address, postal_code, city,
+      registration_method, sponsor_id, binary_parent_id, binary_position,
+    } = input
     const uniqueId = await generateUniqueIdSafe(c.env.DB)
-    if (!uniqueId) {
-      return c.json({ error: 'Erreur technique, réessayez', code: 'UNIQUE_ID_COLLISION' }, 500)
-    }
+    if (!uniqueId) return c.json({ error: 'Erreur technique, réessayez.', code: 'UNIQUE_ID_COLLISION' }, 503)
 
-    const pin = generatePin()
     const id = generateId()
+    const pin = generatePin()
     const passwordHash = await hashPassword(password)
     const pinHash = await hashPassword(pin)
+    const effectiveSponsorId = sponsor_id || await getRootId(c.env.DB)
+    const inHoldingTank = registration_method === 'M2' ? 0 : 1
+    const effectiveParentId = registration_method === 'M2' ? binary_parent_id : null
+    const effectivePosition = registration_method === 'M2' ? binary_position : null
+    const sponsorRow = await c.env.DB.prepare(`SELECT first_name, last_name FROM members WHERE id = ?`)
+      .bind(effectiveSponsorId).first() as any
 
-    // ── RÉSOLUTION SPONSOR ───────────────────────────────────
-    const rootId = await getRootId(c.env.DB)
-    const effectiveSponsorId = sponsor_id || rootId
+    // Prepare the response token before committing the account.
+    const token = await createJWT({ sub: id, email, role: 'member' }, c.env.JWT_SECRET)
 
-    // ── CRÉATION MEMBER ──────────────────────────────────────
-    const inHoldingTank = registration_method !== 'M2' ? 1 : 0
-    const effectiveBinaryParentId = registration_method === 'M2' ? binary_parent_id : null
-    const effectiveBinaryPosition = registration_method === 'M2' ? binary_position : null
-
-    await c.env.DB.prepare(
-      `INSERT INTO members (
-        id, unique_id, email, password_hash, pin_hash,
-        first_name, last_name, phone, country,
-        sponsor_id, binary_parent_id, binary_position,
-        member_status, current_rank,
-        license_active, in_holding_tank,
-        registration_method,
-        created_at, updated_at
-       ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,  'Membre','none',  0,?,?,  datetime('now'),datetime('now'))`
-    ).bind(
-      id, uniqueId, email.toLowerCase().trim(), passwordHash, pinHash,
-      first_name.trim(), last_name.trim(), phone || null, country || null,
-      effectiveSponsorId, effectiveBinaryParentId, effectiveBinaryPosition,
-      inHoldingTank,
-      registration_method
-    ).run()
-
-    // ── CRÉATION WALLET ──────────────────────────────────────
-    await c.env.DB.prepare(
-      `INSERT INTO wallets (id, member_id, balance, total_earned, total_withdrawn) VALUES (?,?,0,0,0)`
-    ).bind(generateId(), id).run()
-
-    // ── HOLDING TANK (M1 et M3) ──────────────────────────────
-    if (registration_method !== 'M2') {
+    // Recheck eligibility inside the same D1 transaction as every account write.
+    // If the conditional INSERT inserts nothing, the wallet's member_id foreign key
+    // fails and D1 rolls back the entire batch (including notifications/placement).
+    // No schema change or rewrite of existing members is needed.
+    const conditions = [
+      sponsor_id
+        ? `s.id = ? AND s.unique_id != 'ROOT' COLLATE NOCASE AND s.license_active = 1`
+        : `s.id = ? AND s.unique_id = 'ROOT' COLLATE NOCASE`,
+    ]
+    const guardValues: string[] = [effectiveSponsorId]
+    if (registration_method === 'M2') {
+      const slotColumn = binary_position === 'L' ? 'binary_left_id' : 'binary_right_id'
+      conditions.push(`EXISTS (
+        SELECT 1 FROM members p WHERE p.id = ? AND p.unique_id != 'ROOT' COLLATE NOCASE
+          AND p.${slotColumn} IS NULL
+          AND NOT EXISTS (SELECT 1 FROM members child WHERE child.binary_parent_id = p.id AND child.binary_position = ?)
+      )`)
+      guardValues.push(binary_parent_id, binary_position)
+    }
+    const statements: D1PreparedStatement[] = [
+      c.env.DB.prepare(
+        `INSERT INTO members (
+          id, unique_id, email, password_hash, pin_hash, first_name, last_name, phone, country,
+          birth_date, nationality, address, postal_code, city,
+          sponsor_id, binary_parent_id, binary_position,
+          member_status, current_rank, license_active, in_holding_tank, registration_method,
+          created_at, updated_at
+         ) SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'Membre','none',0,?,?,datetime('now'),datetime('now')
+           FROM members s WHERE ${conditions.join(' AND ')}`
+      ).bind(id, uniqueId, email, passwordHash, pinHash, first_name, last_name, phone || null, country || null,
+        birth_date || null, nationality || null, address || null, postal_code || null, city || null,
+        effectiveSponsorId, effectiveParentId, effectivePosition, inHoldingTank, registration_method, ...guardValues),
+      c.env.DB.prepare(
+        `INSERT INTO wallets (id, member_id, balance, total_earned, total_withdrawn) VALUES (?,?,0,0,0)`
+      ).bind(generateId(), id),
+    ]
+    if (registration_method === 'M2') {
+      const col = binary_position === 'L' ? 'binary_left_id' : 'binary_right_id'
+      statements.push(c.env.DB.prepare(
+        `UPDATE members SET ${col} = ?, updated_at = datetime('now') WHERE id = ? AND ${col} IS NULL`
+      ).bind(id, binary_parent_id))
+    } else {
       const notes = registration_method === 'M3'
         ? `Inscription M3 par lien de parrainage (sponsor: ${effectiveSponsorId})`
-        : 'Inscription M1 — sans parrain'
-      await c.env.DB.prepare(
-        `INSERT INTO holding_tank (id, member_id, sponsor_id, entry_reason, status) VALUES (?,?,?,?,  'waiting')`
-      ).bind(generateId(), id, effectiveSponsorId, notes).run()
+        : 'Inscription M1 — sans placement direct'
+      statements.push(c.env.DB.prepare(
+        `INSERT INTO holding_tank (id, member_id, sponsor_id, entry_reason, status) VALUES (?,?,?,?,'waiting')`
+      ).bind(generateId(), id, effectiveSponsorId, notes))
     }
-
-    // ── MISE À JOUR PARENT BINAIRE (M2) ──────────────────────
-    if (registration_method === 'M2' && binary_parent_id && binary_position) {
-      const col = binary_position === 'L' ? 'binary_left_id' : 'binary_right_id'
-      await c.env.DB.prepare(
-        `UPDATE members SET ${col} = ?, updated_at = datetime('now') WHERE id = ?`
-      ).bind(id, binary_parent_id).run()
-    }
-
-    // ── NOTIFICATION WELCOME ─────────────────────────────────
-    await c.env.DB.prepare(
-      `INSERT INTO notifications (id, member_id, type, title, message) VALUES (?,?,?,?,?)`
-    ).bind(
-      generateId(), id, 'welcome',
-      'Bienvenue sur LEADER !',
-      `Votre compte a été créé avec succès. Votre identifiant unique est ${uniqueId}.`
-    ).run()
-
-    // ── NOTIFICATIONS ADMINS (M1 et M3) ──────────────────────
-    // Les admins utilisent admin_id, pas member_id (tables différentes)
+    statements.push(c.env.DB.prepare(
+      `INSERT INTO notifications (id, member_id, type, title, message) VALUES (?,?,'welcome',?,?)`
+    ).bind(generateId(), id, 'Bienvenue sur LEADER !',
+      `Votre compte a été créé avec succès. Votre identifiant unique est ${uniqueId}.`))
     if (registration_method !== 'M2') {
-      const admins = await c.env.DB.prepare(`SELECT id FROM admin_users`).all()
-      for (const admin of (admins.results as any[])) {
-        await c.env.DB.prepare(
-          `INSERT INTO notifications (id, admin_id, type, title, message) VALUES (?,?,?,?,?)`
-        ).bind(
-          generateId(), admin.id, 'info',
-          'Nouveau membre en attente de placement',
-          `${first_name} ${last_name} (${uniqueId}) attend son placement dans l'arbre.`
-        ).run()
-      }
+      statements.push(c.env.DB.prepare(
+        `INSERT INTO notifications (id, admin_id, type, title, message)
+         SELECT lower(hex(randomblob(16))), id, 'info', ?, ? FROM admin_users`
+      ).bind('Nouveau membre en attente de placement',
+        `${first_name} ${last_name} (${uniqueId}) attend son placement dans l'arbre.`))
     }
-
-    // ── NOTIFICATION SPONSOR (M2 et M3) ──────────────────────
-    if (registration_method === 'M2' && binary_parent_id) {
-      const posLabel = binary_position === 'L' ? 'gauche' : 'droite'
-      await c.env.DB.prepare(
-        `INSERT INTO notifications (id, member_id, type, title, message) VALUES (?,?,?,?,?)`
-      ).bind(
-        generateId(), binary_parent_id, 'success',
-        'Nouveau filleul inscrit',
-        `${first_name} ${last_name} vient de s'inscrire (jambe ${posLabel}).`
-      ).run()
+    if (registration_method === 'M2') {
+      statements.push(c.env.DB.prepare(
+        `INSERT INTO notifications (id, member_id, type, title, message) VALUES (?,?,'success',?,?)`
+      ).bind(generateId(), binary_parent_id, 'Nouveau filleul inscrit',
+        `${first_name} ${last_name} vient de s'inscrire (jambe ${binary_position === 'L' ? 'gauche' : 'droite'}).`))
+    } else if (registration_method === 'M3') {
+      statements.push(c.env.DB.prepare(
+        `INSERT INTO notifications (id, member_id, type, title, message) VALUES (?,?,'info',?,?)`
+      ).bind(generateId(), sponsor_id, 'Nouveau filleul en attente',
+        `${first_name} ${last_name} vient de s'inscrire avec votre lien de parrainage. Il est en attente de placement dans l'arbre.`))
     }
-    if (registration_method === 'M3' && sponsor_id && sponsor_id !== rootId) {
-      await c.env.DB.prepare(
-        `INSERT INTO notifications (id, member_id, type, title, message) VALUES (?,?,?,?,?)`
-      ).bind(
-        generateId(), sponsor_id, 'info',
-        'Nouveau filleul en attente',
-        `${first_name} ${last_name} vient de s'inscrire avec votre lien de parrainage. Il est en attente de placement dans l'arbre.`
-      ).run()
-    }
-
-    // ── FAST START : initialiser la fenêtre dès l'inscription ──
-    // La fenêtre de 30j part de created_at (= maintenant) du nouveau membre.
-    // initFastStart est idempotent — pas de risque de double-init.
     try {
-      await initFastStart(c.env.DB, id)
-    } catch (_) {}
+      await c.env.DB.batch(statements)
+    } catch (error) {
+      // A slot/license/email may have changed since the initial validation.
+      await validateRegistrationRelations(c.env.DB, input)
+      throw error
+    }
 
-    // ── TOKEN JWT ────────────────────────────────────────────
-    const token = await createJWT(
-      { sub: id, email: email.toLowerCase().trim(), role: 'member' },
-      c.env.JWT_SECRET
-    )
-
-    // ── Email de bienvenue ──────────────────────────────────
-    // NOTE: await direct — plus fiable que waitUntil dans les sous-routers Hono
-    const sponsorRow = sponsor_id
-      ? await c.env.DB.prepare(`SELECT first_name, last_name FROM members WHERE id=?`).bind(sponsor_id).first() as any
-      : null
+    // Optional follow-up work must not turn a committed registration into an error.
+    try { await initFastStart(c.env.DB, id) } catch (_) {}
     await sendEmail(c.env.DB, {
-      to: email.toLowerCase().trim(),
-      toName: `${first_name} ${last_name}`,
-      templateId: 'welcome',
+      to: email, toName: `${first_name} ${last_name}`, templateId: 'welcome',
       variables: {
-        prenom:    first_name,
-        nom:       last_name,
-        email:     email.toLowerCase().trim(),
-        membre_id: uniqueId,
-        pin:       pin,
-        parrain:   sponsorRow ? `${sponsorRow.first_name} ${sponsorRow.last_name}` : 'Aucun',
+        prenom: first_name, nom: last_name, email, membre_id: uniqueId, pin,
+        parrain: sponsor_id && sponsorRow ? `${sponsorRow.first_name} ${sponsorRow.last_name}` : 'Aucun',
         login_url: 'https://willbeleader.pages.dev',
-      }
-    }).catch(() => {})
-
-    return c.json({
-      success: true,
-      token,
-      member: {
-        id,
-        unique_id: uniqueId,
-        email: email.toLowerCase().trim(),
-        first_name,
-        last_name,
-        member_status: 'Membre'
       },
-      pin_displayed: pin,           // PIN en clair — UNE SEULE FOIS
+    }).catch(() => {})
+    return c.json({
+      success: true, token,
+      member: { id, unique_id: uniqueId, email, first_name, last_name, member_status: 'Membre' },
+      pin_displayed: pin,
       in_holding_tank: inHoldingTank === 1,
       placed: registration_method === 'M2',
-      registration_method
+      registration_method,
     }, 201)
   } catch (e: any) {
-    return c.json({ error: e.message }, 500)
+    if (e instanceof RegistrationError) return c.json({ error: e.message, code: e.code }, e.status)
+    if (e instanceof SyntaxError) return c.json({ error: 'Formulaire invalide.', code: 'INVALID_REQUEST' }, 400)
+    console.error('[register] Account creation failed', e)
+    return c.json({ error: 'Inscription impossible pour le moment. Veuillez réessayer.', code: 'REGISTRATION_FAILED' }, 500)
   }
 })
 
