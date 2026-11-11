@@ -195,8 +195,58 @@ function regNextStep(target) {
   if (l2) l2.style.background = target >= 3 ? 'linear-gradient(90deg,#22c55e,#22c55e)' : '';
 }
 
-async function initRegistrationMode() {const e = window.__REGISTRATION__ || {},t = e.mode || "M1";if ("M1" === t) return document.getElementById("reg-title").textContent = "Créer un compte", void document.getElementById("reg-sponsor-field").classList.remove("hidden");if ("M2" === t) {document.getElementById("reg-title").textContent = "Inscription — Placement direct", document.getElementById("reg-sponsor-field").classList.add("hidden");const t = document.getElementById("slot-error-banner"),n = document.getElementById("sponsor-banner"),a = document.getElementById("reg-submit-btn");try {const s = e.parent || e.sponsor,r = (await axios.get("/api/auth/validate-slot?sponsor=".concat(encodeURIComponent(e.sponsor), "&parent=").concat(encodeURIComponent(s), "&position=").concat(encodeURIComponent(e.position)))).data;if (r.valid) {document.getElementById("reg-sponsor").value = r.sponsor_id, document.getElementById("reg-binary-parent").value = r.parent_id, n.classList.remove("hidden");const t = r.parent_unique_id !== r.sponsor_unique_id ? "Parrain\xE9(e) par ".concat(r.sponsor_name, " \u2014 plac\xE9(e) sous ").concat(r.parent_name, " (").concat(r.parent_unique_id, "), jambe ").concat("L" === e.position ? "GAUCHE" : "DROITE") : "Vous serez plac\xE9(e) c\xF4t\xE9 ".concat("L" === e.position ? "GAUCHE" : "DROITE", " de ").concat(r.sponsor_name, " (").concat(r.sponsor_unique_id, ")");document.getElementById("sponsor-banner-text").textContent = t;} else t.classList.remove("hidden"), document.getElementById("slot-error-text").textContent = r.error || "Slot invalide", a.disabled = !0;} catch (e) {const n = e.response?.data?.error || "Lien de parrainage invalide ou expiré.";t.classList.remove("hidden"), document.getElementById("slot-error-text").textContent = n, a.disabled = !0;}return;}if ("M3" === t) {document.getElementById("reg-title").textContent = "Inscription — Via lien parrain", document.getElementById("reg-sponsor-field").classList.add("hidden");const t = document.getElementById("sponsor-banner"),n = document.getElementById("slot-error-banner"),a = document.getElementById("reg-submit-btn"),s = e.sponsorUid || "";if (s) try {const e = (await axios.get("/api/auth/sponsor/".concat(encodeURIComponent(s)))).data;e.found ? (document.getElementById("reg-sponsor").value = e.id, t.classList.remove("hidden"), document.getElementById("sponsor-banner-text").textContent = "Parrain\xE9(e) par : ".concat(e.name, " (").concat(e.unique_id, ")")) : "no_license" === e.reason ? (n.classList.remove("hidden"), document.getElementById("slot-error-text").textContent = e.message || "Ce lien de parrainage est inactif (licence du parrain expirée ou non activée).", a.disabled = !0) : (t.classList.remove("hidden"), document.getElementById("sponsor-banner-text").textContent = "Inscription sans parrain (lien introuvable)");} catch (e) {const t = e.response?.data?.error || "Lien de parrainage invalide.";n.classList.remove("hidden"), document.getElementById("slot-error-text").textContent = t, a.disabled = !0;}}}async function doRegister() {
+async function initRegistrationMode() {
+  const reg = window.__REGISTRATION__ || {};
+  const mode = reg.mode || "M1";
+  const button = document.getElementById("reg-submit-btn");
+  window._registrationReady = false;
+  document.getElementById("reg-sponsor").value = "";
+  document.getElementById("reg-binary-parent").value = "";
+  document.getElementById("slot-error-banner").classList.add("hidden");
+  document.getElementById("sponsor-banner").classList.add("hidden");
+  button.disabled = mode !== "M1";
+  if (mode === "M1") {
+    document.getElementById("reg-title").textContent = "Créer un compte";
+    document.getElementById("reg-sponsor-field").classList.remove("hidden");
+    return;
+  }
+  document.getElementById("reg-sponsor-field").classList.add("hidden");
+  document.getElementById("reg-title").textContent = mode === "M2" ? "Inscription — Placement direct" : "Inscription — Via lien parrain";
+  try {
+    let data;
+    if (mode === "M2") {
+      const query = new URLSearchParams({ sponsor: reg.sponsor || "", parent: reg.parent || reg.sponsor || "", position: reg.position || "" });
+      data = (await axios.get("/api/auth/validate-slot?" + query)).data;
+      if (!data.valid) throw new Error(data.error || "Place invalide.");
+      document.getElementById("reg-sponsor").value = data.sponsor_id;
+      document.getElementById("reg-binary-parent").value = data.parent_id;
+      reg.position = data.position;
+      document.getElementById("sponsor-banner-text").textContent =
+        "Parrain : " + data.sponsor_name + " — placement sous " + data.parent_name + ", jambe " + (data.position === "L" ? "GAUCHE" : "DROITE");
+    } else if (mode === "M3") {
+      if (!reg.sponsorUid) throw new Error("Le lien ne contient pas de parrain.");
+      data = (await axios.get("/api/auth/sponsor/" + encodeURIComponent(reg.sponsorUid.trim()))).data;
+      if (!data.found) throw new Error(data.message || data.error || "Parrain introuvable. Vérifiez le lien de parrainage.");
+      document.getElementById("reg-sponsor").value = data.id;
+      document.getElementById("sponsor-banner-text").textContent = "Parrain : " + data.name + " (" + data.unique_id + ")";
+    } else {
+      throw new Error("Méthode d’inscription invalide.");
+    }
+    document.getElementById("sponsor-banner").classList.remove("hidden");
+    window._registrationReady = true;
+    button.disabled = false;
+  } catch (error) {
+    document.getElementById("slot-error-text").textContent = error.response?.data?.error || (error.response ? "Impossible de vérifier le lien. Réessayez." : error.message) || "Impossible de vérifier le lien. Réessayez.";
+    document.getElementById("slot-error-banner").classList.remove("hidden");
+  }
+}
+async function doRegister() {
   const e = window.__REGISTRATION__ || {},t = e.mode || "M1";
+  if (t !== "M1" && !window._registrationReady) {
+    document.getElementById("reg-error").textContent = "Le parrain et le placement doivent être validés avant de continuer.";
+    document.getElementById("reg-error").classList.remove("hidden");
+    return;
+  }
   const n = document.getElementById("reg-firstname").value.trim();
   const a = document.getElementById("reg-lastname").value.trim();
   const s = document.getElementById("reg-email").value.trim();
@@ -225,9 +275,27 @@ async function initRegistrationMode() {const e = window.__REGISTRATION__ || {},t
   const fieldMap = { country: { val: i, label: "Pays" }, birth_date: { val: regBirthdate, label: "Date de naissance" }, nationality: { val: regNationality, label: "Nationalité" }, address: { val: regAddress, label: "Adresse" }, postal_code: { val: regPostal, label: "Code postal" }, city: { val: regCity, label: "Ville" } };
   for (const fk of reqFields) {if (fieldMap[fk] && !fieldMap[fk].val) return c.textContent = "Le champ «" + fieldMap[fk].label + "» est obligatoire.", void c.classList.remove("hidden");}
   const m = { first_name: n, last_name: a, email: s, password: l, phone: r || null, country: i || null, birth_date: regBirthdate || null, nationality: regNationality || null, address: regAddress || null, postal_code: regPostal || null, city: regCity || null };
-  if ("M1" === t) {m.registration_method = "M1";const e = document.getElementById("reg-sponsor").value.trim();if (e) try {const t = await axios.get("/api/auth/sponsor/".concat(encodeURIComponent(e.toUpperCase())));t.data.found && (m.sponsor_id = t.data.id);} catch {}}
+  if ("M1" === t) {
+    m.registration_method = "M1";
+    const code = document.getElementById("reg-sponsor").value.trim();
+    if (code) {
+      try {
+        const data = (await axios.get("/api/auth/sponsor/" + encodeURIComponent(code))).data;
+        if (!data.found) throw new Error(data.message || data.error || "Parrain introuvable. Vérifiez le code.");
+        m.sponsor_id = data.id;
+      } catch (error) {
+        c.textContent = error.response?.data?.error || error.message || "Impossible de vérifier le parrain. Réessayez.";
+        c.classList.remove("hidden");
+        return;
+      }
+    }
+  }
   if ("M2" === t && (m.registration_method = "M2", m.sponsor_id = document.getElementById("reg-sponsor").value.trim(), m.binary_parent_id = document.getElementById("reg-binary-parent").value.trim(), m.binary_position = e.position, !m.binary_parent_id || !m.sponsor_id)) return c.textContent = "Slot invalide — rechargez la page", void c.classList.remove("hidden");
-  if ("M3" === t) {m.registration_method = "M3";const e = document.getElementById("reg-sponsor").value.trim();e && (m.sponsor_id = e);}
+  if ("M3" === t) {
+    m.registration_method = "M3";
+    m.sponsor_id = document.getElementById("reg-sponsor").value.trim();
+    if (!m.sponsor_id) { c.textContent = "Un parrain valide est obligatoire."; c.classList.remove("hidden"); return; }
+  }
   p.disabled = !0, x.textContent = "Création en cours...";
   try {const e = await api("POST", "/auth/register", m);memberToken = e.token, localStorage.setItem("leader_member_token", e.token), currentMember = e.member, showPinConfirmation(e);} catch (e) {c.textContent = e.error || "Erreur lors de l'inscription", c.classList.remove("hidden"), p.disabled = !1, x.textContent = "Créer mon compte";}
 }function showPinConfirmation(e) {document.getElementById("register-form").classList.add("hidden"), document.getElementById("login-form").classList.add("hidden"), document.getElementById("pin-confirmation").classList.remove("hidden");const t = { M1: "Inscription libre", M2: "Placement direct", M3: "Via lien de parrainage" }[e.registration_method] || e.registration_method;document.getElementById("pin-confirm-content").innerHTML = "\n\n    <div class=\"space-y-4\">\n\n      <!-- Identifiant unique -->\n\n      <div class=\"bg-dark-700 rounded-xl p-4 border border-rouge-500/25\">\n\n        <div class=\"text-xs text-gray-400 mb-1 uppercase tracking-wider\">Votre identifiant unique</div>\n\n        <div class=\"text-2xl font-bold text-rouge-400 font-mono tracking-widest\">".concat(

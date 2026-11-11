@@ -6,6 +6,7 @@
     "dev:sandbox": "wrangler pages dev dist --d1=leader-network-production --local --ip 0.0.0.0 --port 3000",
     "minify:static": "npx terser public/static/member-app.js --compress drop_console,passes=2 --mangle --output public/static/member-app.min.js && npx terser public/static/admin-app.js --compress drop_console,passes=2 --mangle --output public/static/admin-app.min.js",
     "check:js": "node scripts/check-js-syntax.cjs",
+    "test:registration": "node --test tests/registration.test.mjs",
     "build": "node scripts/check-js-syntax.cjs && vite build",
     "preview": "wrangler pages dev dist",
     "deploy": "npm run build && wrangler pages deploy dist --project-name leader-network",

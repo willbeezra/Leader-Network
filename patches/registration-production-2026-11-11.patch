@@ -1,0 +1,1111 @@
+diff --git a/package.json b/package.json
+index 9a5d9f3..4fa3411 100644
+--- a/package.json
++++ b/package.json
+@@ -20,6 +20,7 @@
+     "test:member-tree": "node scripts/test-member-tree-navigation.cjs",
+     "test:legacy-permission": "node scripts/test-legacy-permission-entitlements.cjs",
+     "test:finstrategia-sso": "node scripts/test-finstrategia-sso.cjs",
++    "test:registration": "node --test tests/registration.test.mjs",
+     "build": "node scripts/check-js-syntax.cjs && vite build",
+     "preview": "wrangler pages dev dist",
+     "deploy": "npm run build && wrangler pages deploy dist --project-name leader-network",
+diff --git a/public/static/member-app.js b/public/static/member-app.js
+index ff826d4..190073c 100644
+--- a/public/static/member-app.js
++++ b/public/static/member-app.js
+@@ -218,8 +218,58 @@ function regNextStep(target) {
+   if (l2) l2.style.background = target >= 3 ? 'linear-gradient(90deg,#22c55e,#22c55e)' : '';
+ }
+ 
+-async function initRegistrationMode() {const e = window.__REGISTRATION__ || {},t = e.mode || "M1";if ("M1" === t) return document.getElementById("reg-title").textContent = "Créer un compte", void document.getElementById("reg-sponsor-field").classList.remove("hidden");if ("M2" === t) {document.getElementById("reg-title").textContent = "Inscription — Placement direct", document.getElementById("reg-sponsor-field").classList.add("hidden");const t = document.getElementById("slot-error-banner"),n = document.getElementById("sponsor-banner"),a = document.getElementById("reg-submit-btn");try {const s = e.parent || e.sponsor,r = (await axios.get("/api/auth/validate-slot?sponsor=".concat(encodeURIComponent(e.sponsor), "&parent=").concat(encodeURIComponent(s), "&position=").concat(encodeURIComponent(e.position)))).data;if (r.valid) {document.getElementById("reg-sponsor").value = r.sponsor_id, document.getElementById("reg-binary-parent").value = r.parent_id, n.classList.remove("hidden");const t = r.parent_unique_id !== r.sponsor_unique_id ? "Parrain\xE9(e) par ".concat(r.sponsor_name, " \u2014 plac\xE9(e) sous ").concat(r.parent_name, " (").concat(r.parent_unique_id, "), jambe ").concat("L" === e.position ? "GAUCHE" : "DROITE") : "Vous serez plac\xE9(e) c\xF4t\xE9 ".concat("L" === e.position ? "GAUCHE" : "DROITE", " de ").concat(r.sponsor_name, " (").concat(r.sponsor_unique_id, ")");document.getElementById("sponsor-banner-text").textContent = t;} else t.classList.remove("hidden"), document.getElementById("slot-error-text").textContent = r.error || "Slot invalide", a.disabled = !0;} catch (e) {const n = e.response?.data?.error || "Lien de parrainage invalide ou expiré.";t.classList.remove("hidden"), document.getElementById("slot-error-text").textContent = n, a.disabled = !0;}return;}if ("M3" === t) {document.getElementById("reg-title").textContent = "Inscription — Via lien parrain", document.getElementById("reg-sponsor-field").classList.add("hidden");const t = document.getElementById("sponsor-banner"),n = document.getElementById("slot-error-banner"),a = document.getElementById("reg-submit-btn"),s = e.sponsorUid || "";if (s) try {const e = (await axios.get("/api/auth/sponsor/".concat(encodeURIComponent(s)))).data;e.found ? (document.getElementById("reg-sponsor").value = e.id, t.classList.remove("hidden"), document.getElementById("sponsor-banner-text").textContent = "Parrain\xE9(e) par : ".concat(e.name, " (").concat(e.unique_id, ")")) : "no_license" === e.reason ? (n.classList.remove("hidden"), document.getElementById("slot-error-text").textContent = e.message || "Ce lien de parrainage est inactif (licence du parrain expirée ou non activée).", a.disabled = !0) : (t.classList.remove("hidden"), document.getElementById("sponsor-banner-text").textContent = "Inscription sans parrain (lien introuvable)");} catch (e) {const t = e.response?.data?.error || "Lien de parrainage invalide.";n.classList.remove("hidden"), document.getElementById("slot-error-text").textContent = t, a.disabled = !0;}}}async function doRegister() {
++async function initRegistrationMode() {
++  const reg = window.__REGISTRATION__ || {};
++  const mode = reg.mode || "M1";
++  const button = document.getElementById("reg-submit-btn");
++  window._registrationReady = false;
++  document.getElementById("reg-sponsor").value = "";
++  document.getElementById("reg-binary-parent").value = "";
++  document.getElementById("slot-error-banner").classList.add("hidden");
++  document.getElementById("sponsor-banner").classList.add("hidden");
++  button.disabled = mode !== "M1";
++  if (mode === "M1") {
++    document.getElementById("reg-title").textContent = "Créer un compte";
++    document.getElementById("reg-sponsor-field").classList.remove("hidden");
++    return;
++  }
++  document.getElementById("reg-sponsor-field").classList.add("hidden");
++  document.getElementById("reg-title").textContent = mode === "M2" ? "Inscription — Placement direct" : "Inscription — Via lien parrain";
++  try {
++    let data;
++    if (mode === "M2") {
++      const query = new URLSearchParams({ sponsor: reg.sponsor || "", parent: reg.parent || reg.sponsor || "", position: reg.position || "" });
++      data = (await axios.get("/api/auth/validate-slot?" + query)).data;
++      if (!data.valid) throw new Error(data.error || "Place invalide.");
++      document.getElementById("reg-sponsor").value = data.sponsor_id;
++      document.getElementById("reg-binary-parent").value = data.parent_id;
++      reg.position = data.position;
++      document.getElementById("sponsor-banner-text").textContent =
++        "Parrain : " + data.sponsor_name + " — placement sous " + data.parent_name + ", jambe " + (data.position === "L" ? "GAUCHE" : "DROITE");
++    } else if (mode === "M3") {
++      if (!reg.sponsorUid) throw new Error("Le lien ne contient pas de parrain.");
++      data = (await axios.get("/api/auth/sponsor/" + encodeURIComponent(reg.sponsorUid.trim()))).data;
++      if (!data.found) throw new Error(data.message || data.error || "Parrain introuvable. Vérifiez le lien de parrainage.");
++      document.getElementById("reg-sponsor").value = data.id;
++      document.getElementById("sponsor-banner-text").textContent = "Parrain : " + data.name + " (" + data.unique_id + ")";
++    } else {
++      throw new Error("Méthode d’inscription invalide.");
++    }
++    document.getElementById("sponsor-banner").classList.remove("hidden");
++    window._registrationReady = true;
++    button.disabled = false;
++  } catch (error) {
++    document.getElementById("slot-error-text").textContent = error.response?.data?.error || (error.response ? "Impossible de vérifier le lien. Réessayez." : error.message) || "Impossible de vérifier le lien. Réessayez.";
++    document.getElementById("slot-error-banner").classList.remove("hidden");
++  }
++}
++async function doRegister() {
+   const e = window.__REGISTRATION__ || {},t = e.mode || "M1";
++  if (t !== "M1" && !window._registrationReady) {
++    document.getElementById("reg-error").textContent = "Le parrain et le placement doivent être validés avant de continuer.";
++    document.getElementById("reg-error").classList.remove("hidden");
++    return;
++  }
+   const n = document.getElementById("reg-firstname").value.trim();
+   const a = document.getElementById("reg-lastname").value.trim();
+   const s = document.getElementById("reg-email").value.trim();
+@@ -248,9 +298,27 @@ async function initRegistrationMode() {const e = window.__REGISTRATION__ || {},t
+   const fieldMap = { country: { val: i, label: "Pays" }, birth_date: { val: regBirthdate, label: "Date de naissance" }, nationality: { val: regNationality, label: "Nationalité" }, address: { val: regAddress, label: "Adresse" }, postal_code: { val: regPostal, label: "Code postal" }, city: { val: regCity, label: "Ville" } };
+   for (const fk of reqFields) {if (fieldMap[fk] && !fieldMap[fk].val) return c.textContent = "Le champ «" + fieldMap[fk].label + "» est obligatoire.", void c.classList.remove("hidden");}
+   const m = { first_name: n, last_name: a, email: s, password: l, phone: r || null, country: i || null, birth_date: regBirthdate || null, nationality: regNationality || null, address: regAddress || null, postal_code: regPostal || null, city: regCity || null };
+-  if ("M1" === t) {m.registration_method = "M1";const e = document.getElementById("reg-sponsor").value.trim();if (e) try {const t = await axios.get("/api/auth/sponsor/".concat(encodeURIComponent(e.toUpperCase())));t.data.found && (m.sponsor_id = t.data.id);} catch {}}
++  if ("M1" === t) {
++    m.registration_method = "M1";
++    const code = document.getElementById("reg-sponsor").value.trim();
++    if (code) {
++      try {
++        const data = (await axios.get("/api/auth/sponsor/" + encodeURIComponent(code))).data;
++        if (!data.found) throw new Error(data.message || data.error || "Parrain introuvable. Vérifiez le code.");
++        m.sponsor_id = data.id;
++      } catch (error) {
++        c.textContent = error.response?.data?.error || error.message || "Impossible de vérifier le parrain. Réessayez.";
++        c.classList.remove("hidden");
++        return;
++      }
++    }
++  }
+   if ("M2" === t && (m.registration_method = "M2", m.sponsor_id = document.getElementById("reg-sponsor").value.trim(), m.binary_parent_id = document.getElementById("reg-binary-parent").value.trim(), m.binary_position = e.position, !m.binary_parent_id || !m.sponsor_id)) return c.textContent = "Slot invalide — rechargez la page", void c.classList.remove("hidden");
+-  if ("M3" === t) {m.registration_method = "M3";const e = document.getElementById("reg-sponsor").value.trim();e && (m.sponsor_id = e);}
++  if ("M3" === t) {
++    m.registration_method = "M3";
++    m.sponsor_id = document.getElementById("reg-sponsor").value.trim();
++    if (!m.sponsor_id) { c.textContent = "Un parrain valide est obligatoire."; c.classList.remove("hidden"); return; }
++  }
+   p.disabled = !0, x.textContent = "Création en cours...";
+   try {const e = await api("POST", "/auth/register", m);memberToken = e.token, localStorage.setItem("leader_member_token", e.token), currentMember = e.member, showPinConfirmation(e);} catch (e) {c.textContent = e.error || "Erreur lors de l'inscription", c.classList.remove("hidden"), p.disabled = !1, x.textContent = "Créer mon compte";}
+ }function showPinConfirmation(e) {document.getElementById("register-form").classList.add("hidden"), document.getElementById("login-form").classList.add("hidden"), document.getElementById("pin-confirmation").classList.remove("hidden");const t = { M1: "Inscription libre", M2: "Placement direct", M3: "Via lien de parrainage" }[e.registration_method] || e.registration_method;document.getElementById("pin-confirm-content").innerHTML = "\n\n    <div class=\"space-y-4\">\n\n      <!-- Identifiant unique -->\n\n      <div class=\"bg-dark-700 rounded-xl p-4 border border-rouge-500/25\">\n\n        <div class=\"text-xs text-gray-400 mb-1 uppercase tracking-wider\">Votre identifiant unique</div>\n\n        <div class=\"text-2xl font-bold text-rouge-400 font-mono tracking-widest\">".concat(
+diff --git a/src/index.tsx b/src/index.tsx
+index ed4aeaa..9f979c7 100644
+--- a/src/index.tsx
++++ b/src/index.tsx
+@@ -1639,7 +1639,7 @@ function registerHTML(opts: RegisterHTMLOpts): string {
+       <div id="slot-error-banner" class="hidden mb-5 bg-red-900/30 border border-red-500/40 rounded-xl px-4 py-4 flex items-start gap-3">
+         <i class="fas fa-triangle-exclamation text-red-400 mt-0.5 flex-shrink-0"></i>
+         <div>
+-          <div class="text-sm font-semibold text-red-300">Lien invalide ou expiré</div>
++          <div class="text-sm font-semibold text-red-300">Inscription indisponible</div>
+           <div class="text-xs text-red-400/80 mt-1" id="slot-error-text"></div>
+           <a href="/" class="text-xs text-red-300 underline mt-2 inline-block">← Retour à l'accueil</a>
+         </div>
+@@ -1865,6 +1865,7 @@ const REG = window.__REG__ || { mode: 'M1' }
+ let _sponsorId = null       // UUID du sponsor (M2/M3)
+ let _binaryParentId = null  // UUID du parent binaire (M2)
+ let _memberToken = null     // JWT après inscription
++let _registrationReady = false
+ 
+ // ── Utilitaires ──────────────────────────────────
+ function showStep(id) {
+@@ -1900,6 +1901,10 @@ function acceptCGU() {
+ // ── INIT — appelé au chargement ──────────────────
+ async function initPage() {
+   const mode = REG.mode
++  _sponsorId = null
++  _binaryParentId = null
++  _registrationReady = false
++  document.getElementById('r-submit-btn').disabled = mode !== 'M1'
+ 
+   if (mode === 'M1') {
+     // Inscription libre — afficher le formulaire directement
+@@ -1917,7 +1922,7 @@ async function initPage() {
+     //                absent sur anciens liens → rétrocompat : parent = sponsor
+     const sponsor  = REG.sponsor  || ''
+     const parent   = REG.parent   || sponsor  // rétrocompat anciens liens
+-    const position = REG.position || ''
++    const position = (REG.position || '').trim().toUpperCase()
+     try {
+       const res = await axios.get(
+         '/api/auth/validate-slot?sponsor=' + encodeURIComponent(sponsor) +
+@@ -1928,6 +1933,9 @@ async function initPage() {
+       if (d.valid) {
+         _sponsorId      = d.sponsor_id   // UUID du RECRUTEUR → sponsor_id en DB
+         _binaryParentId = d.parent_id    // UUID du NŒUD DE PLACEMENT → binary_parent_id en DB
++        REG.position = d.position
++        _registrationReady = true
++        document.getElementById('r-submit-btn').disabled = false
+         document.getElementById('form-title').textContent = 'Inscription — Placement direct'
+         document.getElementById('form-subtitle').textContent =
+           'Vous serez placé(e) directement dans l\\'arbre binaire sur ce slot.'
+@@ -1967,7 +1975,7 @@ async function initPage() {
+ 
+   if (mode === 'M3') {
+     // Résoudre le sponsor via son unique_id
+-    const sponsorUid = (REG.sponsorUid || '').toUpperCase()
++    const sponsorUid = (REG.sponsorUid || '').trim()
+     document.getElementById('sponsor-field').classList.add('hidden')
+     document.getElementById('form-title').textContent = 'Inscription — Via lien parrain'
+     document.getElementById('form-subtitle').textContent =
+@@ -1980,6 +1988,8 @@ async function initPage() {
+         const d = res.data
+         if (d.found) {
+           _sponsorId = d.id
++          _registrationReady = true
++          document.getElementById('r-submit-btn').disabled = false
+           const banner = document.getElementById('sponsor-banner')
+           banner.classList.remove('hidden')
+           document.getElementById('sponsor-banner-name').textContent =
+@@ -1987,19 +1997,18 @@ async function initPage() {
+           document.getElementById('sponsor-banner-detail').textContent =
+             'Vous rejoignez le réseau de ' + d.name + '. Votre compte sera en attente de placement.'
+         } else {
+-          // Sponsor introuvable → inscription sans parrain
+-          const banner = document.getElementById('sponsor-banner')
+-          banner.classList.remove('hidden')
+-          banner.style.background = 'rgba(107,114,128,0.1)'
+-          banner.style.borderColor = 'rgba(107,114,128,0.3)'
+-          document.getElementById('sponsor-banner-name').style.color = '#9CA3AF'
+-          document.getElementById('sponsor-banner-name').textContent = 'Parrain introuvable'
+-          document.getElementById('sponsor-banner-detail').textContent =
+-            'Inscription sans parrain — vous serez rattaché à la racine du réseau.'
++          document.getElementById('slot-error-text').textContent =
++            d.message || d.error || 'Parrain introuvable. Vérifiez le lien de parrainage.'
++          document.getElementById('slot-error-banner').classList.remove('hidden')
+         }
+-      } catch {
+-        // Erreur silencieuse — inscription sans parrain
++      } catch (err) {
++        document.getElementById('slot-error-text').textContent =
++          err.response?.data?.error || 'Impossible de vérifier le parrain. Rechargez la page pour réessayer.'
++        document.getElementById('slot-error-banner').classList.remove('hidden')
+       }
++    } else {
++      document.getElementById('slot-error-text').textContent = 'Le lien ne contient pas de parrain.'
++      document.getElementById('slot-error-banner').classList.remove('hidden')
+     }
+     showStep('step-form')
+     return
+@@ -2119,6 +2128,9 @@ function msApplyRequiredMarkers(fields) {
+ // ── SOUMISSION DU FORMULAIRE ─────────────────────
+ async function doRegister() {
+   hideError()
++  if (REG.mode !== 'M1' && !_registrationReady) {
++    showError('Le parrain et le placement doivent être validés avant de continuer.'); return
++  }
+ 
+   const first_name    = (document.getElementById('r-firstname')?.value||'').trim()
+   const last_name     = (document.getElementById('r-lastname')?.value||'').trim()
+@@ -2180,24 +2192,30 @@ async function doRegister() {
+ 
+   if (REG.mode === 'M1') {
+     // Résoudre le code parrain optionnel
+-    const code = (document.getElementById('r-sponsor-code')?.value || '').trim().toUpperCase()
++    const code = (document.getElementById('r-sponsor-code')?.value || '').trim()
+     if (code) {
+       try {
+         const res = await axios.get('/api/auth/sponsor/' + encodeURIComponent(code))
+-        if (res.data.found) payload.sponsor_id = res.data.id
+-      } catch { /* sans parrain si erreur */ }
++        if (!res.data.found) {
++          showError(res.data.message || res.data.error || 'Parrain introuvable. Vérifiez le code.'); return
++        }
++        payload.sponsor_id = res.data.id
++      } catch (err) {
++        showError(err.response?.data?.error || 'Impossible de vérifier le parrain. Réessayez.'); return
++      }
+     }
+   }
+ 
+   if (REG.mode === 'M2') {
+-    if (!_binaryParentId) { showError('Lien invalide — rechargez la page.'); return }
++    if (!_binaryParentId || !_sponsorId) { showError('Lien invalide — rechargez la page.'); return }
+     payload.sponsor_id       = _sponsorId
+     payload.binary_parent_id = _binaryParentId
+     payload.binary_position  = REG.position
+   }
+ 
+   if (REG.mode === 'M3') {
+-    if (_sponsorId) payload.sponsor_id = _sponsorId
++    if (!_sponsorId) { showError('Un parrain valide est obligatoire.'); return }
++    payload.sponsor_id = _sponsorId
+   }
+ 
+   // Envoi
+diff --git a/src/lib/registration.ts b/src/lib/registration.ts
+new file mode 100644
+index 0000000..6121006
+--- /dev/null
++++ b/src/lib/registration.ts
+@@ -0,0 +1,128 @@
++// Shared validation for referral previews and the final registration request.
++export class RegistrationError extends Error {
++  constructor(public code: string, message: string, public status: 400 | 403 | 409 | 503 = 400) {
++    super(message)
++  }
++}
++
++export const registrationFields: Record<string, string> = {
++  phone: 'Téléphone', country: 'Pays de résidence', birth_date: 'Date de naissance',
++  nationality: 'Nationalité', address: 'Adresse', postal_code: 'Code postal', city: 'Ville',
++}
++
++export function registrationText(value: unknown): string {
++  return typeof value === 'string' ? value.trim() : ''
++}
++
++export async function findReferralMember(db: D1Database, uid: string, parent = false): Promise<any> {
++  const rows = await db.prepare(
++    `SELECT id, unique_id, first_name, last_name, license_active, binary_left_id, binary_right_id
++     FROM members WHERE unique_id = ? COLLATE NOCASE AND unique_id != 'ROOT' COLLATE NOCASE LIMIT 2`
++  ).bind(uid.trim()).all()
++  if (rows.results.length > 1) {
++    throw new RegistrationError('AMBIGUOUS_REFERRAL',
++      'Cet identifiant correspond à plusieurs comptes. Contactez le support.', 409)
++  }
++  const member = rows.results[0] as any
++  if (!member) throw new RegistrationError(parent ? 'INVALID_PARENT' : 'INVALID_SPONSOR',
++    parent ? 'Nœud de placement introuvable.' : 'Parrain introuvable. Vérifiez le lien de parrainage.')
++  return member
++}
++
++export function requireSponsorLicense(member: any): void {
++  if (!member.license_active) throw new RegistrationError('SPONSOR_NO_LICENSE',
++    'Ce lien de parrainage est inactif. Le parrain doit activer sa licence Finstrategia.', 403)
++}
++
++export async function requireAvailableSlot(db: D1Database, parentId: string, position: string): Promise<void> {
++  if (!parentId || !['L', 'R'].includes(position)) {
++    throw new RegistrationError('INVALID_POSITION', 'Position de placement invalide.')
++  }
++  const parent = await db.prepare(
++    `SELECT binary_left_id, binary_right_id FROM members WHERE id = ? AND unique_id != 'ROOT' COLLATE NOCASE`
++  ).bind(parentId).first() as any
++  if (!parent) throw new RegistrationError('INVALID_PARENT', 'Nœud de placement introuvable.')
++  const child = await db.prepare(
++    `SELECT id FROM members WHERE binary_parent_id = ? AND binary_position = ? LIMIT 1`
++  ).bind(parentId, position).first()
++  if ((position === 'L' ? parent.binary_left_id : parent.binary_right_id) || child) {
++    throw new RegistrationError('SLOT_TAKEN',
++      'Cette place est déjà occupée. Contactez votre parrain pour obtenir un nouveau lien.', 409)
++  }
++}
++
++export async function validateRegistration(db: D1Database, body: any) {
++  if (!body || typeof body !== 'object' || Array.isArray(body)) {
++    throw new RegistrationError('INVALID_REQUEST', 'Formulaire invalide.')
++  }
++  const method = body.registration_method === undefined ? 'M1' : registrationText(body.registration_method)
++  if (!['M1', 'M2', 'M3'].includes(method)) {
++    throw new RegistrationError('INVALID_METHOD', 'Méthode d’inscription invalide.')
++  }
++  const input = {
++    first_name: registrationText(body.first_name), last_name: registrationText(body.last_name),
++    email: registrationText(body.email).toLowerCase(),
++    password: typeof body.password === 'string' ? body.password : '',
++    registration_method: method,
++    sponsor_id: registrationText(body.sponsor_id),
++    binary_parent_id: registrationText(body.binary_parent_id),
++    binary_position: registrationText(body.binary_position).toUpperCase(),
++    phone: registrationText(body.phone), country: registrationText(body.country),
++    birth_date: registrationText(body.birth_date), nationality: registrationText(body.nationality),
++    address: registrationText(body.address), postal_code: registrationText(body.postal_code),
++    city: registrationText(body.city),
++  }
++  if (!input.first_name || !input.last_name || !input.email || !input.password) {
++    throw new RegistrationError('MISSING_FIELDS', 'Champs obligatoires manquants.')
++  }
++  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email)) {
++    throw new RegistrationError('INVALID_EMAIL', 'Adresse email invalide.')
++  }
++  if (input.password.length < 8) {
++    throw new RegistrationError('INVALID_PASSWORD', 'Le mot de passe doit faire au moins 8 caractères.')
++  }
++  if (input.birth_date) {
++    const date = new Date(input.birth_date + 'T00:00:00Z')
++    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.birth_date) || !Number.isFinite(date.getTime()) ||
++        date.toISOString().slice(0, 10) !== input.birth_date || date.getTime() > Date.now()) {
++      throw new RegistrationError('INVALID_BIRTH_DATE', 'Date de naissance invalide.')
++    }
++  }
++  const config = await db.prepare(`SELECT value FROM system_config WHERE key = 'reg_required_fields'`).first() as any
++  let required: unknown = []
++  try { required = config?.value ? JSON.parse(config.value) : [] } catch {
++    throw new RegistrationError('REGISTRATION_CONFIG_ERROR', 'Configuration du formulaire indisponible. Réessayez plus tard.', 503)
++  }
++  if (!Array.isArray(required)) {
++    throw new RegistrationError('REGISTRATION_CONFIG_ERROR', 'Configuration du formulaire indisponible. Réessayez plus tard.', 503)
++  }
++  for (const field of required) {
++    if (typeof field === 'string' && Object.hasOwn(registrationFields, field) && !input[field as keyof typeof input]) {
++      throw new RegistrationError('MISSING_FIELDS', `Le champ « ${registrationFields[field]} » est obligatoire.`)
++    }
++  }
++  await validateRegistrationRelations(db, input)
++  return input
++}
++
++export async function validateRegistrationRelations(db: D1Database, input: {
++  email: string; registration_method: string; sponsor_id: string; binary_parent_id: string; binary_position: string
++}) {
++  const existing = await db.prepare(`SELECT id FROM members WHERE email = ? COLLATE NOCASE`).bind(input.email).first()
++  if (existing) throw new RegistrationError('EMAIL_EXISTS', 'Cette adresse email est déjà utilisée.', 409)
++  if (input.registration_method !== 'M1' && !input.sponsor_id) {
++    throw new RegistrationError('INVALID_SPONSOR', 'Un parrain valide est obligatoire pour ce lien d’inscription.')
++  }
++  if (input.sponsor_id) {
++    const sponsor = await db.prepare(
++      `SELECT id, license_active FROM members WHERE id = ? AND unique_id != 'ROOT' COLLATE NOCASE`
++    ).bind(input.sponsor_id).first()
++    if (!sponsor) throw new RegistrationError('INVALID_SPONSOR', 'Parrain introuvable. Vérifiez le lien de parrainage.')
++    requireSponsorLicense(sponsor)
++  }
++  if (input.registration_method === 'M2') {
++    await requireAvailableSlot(db, input.binary_parent_id, input.binary_position)
++  } else if (input.binary_parent_id || input.binary_position) {
++    throw new RegistrationError('INVALID_POSITION', 'Le placement direct nécessite un lien provenant de l’arbre binaire.')
++  }
++}
+diff --git a/src/routes/auth.ts b/src/routes/auth.ts
+index 3d7457e..c252bba 100644
+--- a/src/routes/auth.ts
++++ b/src/routes/auth.ts
+@@ -7,6 +7,10 @@ import { createJWT, verifyPassword, hashPassword } from '../lib/auth.js'
+ import { initFastStart } from '../lib/mlm.js'
+ import type { Bindings } from '../types/index.js'
+ import { sendEmail } from '../lib/mailer.js'
++import {
++  RegistrationError, findReferralMember, requireSponsorLicense, requireAvailableSlot,
++  validateRegistration, validateRegistrationRelations,
++} from '../lib/registration.js'
+ 
+ // ── Protection brute force via KV ────────────────────────────
+ // OPTIMISATION KV : on ne lit le KV qu'APRÈS un échec d'auth (DB),
+@@ -61,14 +65,15 @@ function generatePin(): string {
+ }
+ 
+ async function getRootId(db: D1Database): Promise<string> {
+-  const root = await db.prepare(`SELECT id FROM members WHERE unique_id = 'ROOT'`).first() as any
+-  return root?.id || 'root-system-000000000000000000000000'
++  const root = await db.prepare(`SELECT id FROM members WHERE unique_id = 'ROOT' COLLATE NOCASE`).first() as any
++  if (!root) throw new RegistrationError('REGISTRATION_CONFIG_ERROR', 'Inscription temporairement indisponible. Contactez le support.', 503)
++  return root.id
+ }
+ 
+ async function generateUniqueIdSafe(db: D1Database): Promise<string | null> {
+   for (let i = 0; i < 5; i++) {
+     const candidate = generateUniqueId()
+-    const existing = await db.prepare(`SELECT id FROM members WHERE unique_id = ?`).bind(candidate).first()
++    const existing = await db.prepare(`SELECT id FROM members WHERE unique_id = ? COLLATE NOCASE`).bind(candidate).first()
+     if (!existing) return candidate
+   }
+   return null
+@@ -213,17 +218,13 @@ auth.post('/admin/login', async (c) => {
+ // Vérifie qu'un unique_id existe, est actif ET a une licence active
+ auth.get('/sponsor/:uniqueId', async (c) => {
+   try {
+-    const uid = c.req.param('uniqueId').toUpperCase()
+-    const sponsor = await c.env.DB.prepare(
+-      `SELECT id, unique_id, first_name, last_name, license_active
+-       FROM members WHERE unique_id = ? AND unique_id != 'ROOT'`
+-    ).bind(uid).first() as any
+-    if (!sponsor) return c.json({ found: false }, 200)
++    const sponsor = await findReferralMember(c.env.DB, c.req.param('uniqueId'))
+     // Point 4 : le parrainage n'est accessible que si la licence est active
+     if (!sponsor.license_active) {
+       return c.json({
+         found: false,
+         reason: 'no_license',
++        code: 'SPONSOR_NO_LICENSE',
+         message: 'Ce lien de parrainage est inactif. Le parrain doit activer sa licence Finstrategia.'
+       }, 200)
+     }
+@@ -234,6 +235,10 @@ auth.get('/sponsor/:uniqueId', async (c) => {
+       name: `${sponsor.first_name} ${sponsor.last_name}`
+     })
+   } catch (e: any) {
++    if (e instanceof RegistrationError) {
++      if (e.code === 'INVALID_SPONSOR') return c.json({ found: false, reason: 'not_found', code: e.code, message: e.message })
++      return c.json({ found: false, error: e.message, code: e.code }, e.status)
++    }
+     return c.json({ error: e.message }, 500)
+   }
+ })
+@@ -255,41 +260,15 @@ auth.get('/validate-slot', async (c) => {
+     const pos = position.toUpperCase() as 'L' | 'R'
+ 
+     // 1. Résoudre le RECRUTEUR (sponsor = celui qui parraine réellement)
+-    const sponsorMember = await c.env.DB.prepare(
+-      `SELECT id, unique_id, first_name, last_name, license_active
+-       FROM members WHERE unique_id = ? AND unique_id != 'ROOT'`
+-    ).bind(sponsor.toUpperCase()).first() as any
+-
+-    if (!sponsorMember) {
+-      return c.json({ error: 'Lien de parrainage invalide', code: 'INVALID_SPONSOR' }, 400)
+-    }
+-    if (!sponsorMember.license_active) {
+-      return c.json({
+-        error: 'Ce lien de parrainage est inactif. Le parrain doit activer sa licence Finstrategia.',
+-        code: 'SPONSOR_NO_LICENSE'
+-      }, 403)
+-    }
++    const sponsorMember = await findReferralMember(c.env.DB, sponsor)
++    requireSponsorLicense(sponsorMember)
+ 
+     // 2. Résoudre le NŒUD DE PLACEMENT (parent = où sera placé dans l'arbre binaire)
+     //    Rétrocompat : si pas de param 'parent', le nœud de placement = le sponsor lui-même
+-    const parentUid = (parent || sponsor).toUpperCase()
+-    const parentNode = await c.env.DB.prepare(
+-      `SELECT id, unique_id, first_name, last_name, binary_left_id, binary_right_id
+-       FROM members WHERE unique_id = ? AND unique_id != 'ROOT'`
+-    ).bind(parentUid).first() as any
+-
+-    if (!parentNode) {
+-      return c.json({ error: 'Nœud de placement introuvable', code: 'INVALID_PARENT' }, 400)
+-    }
++    const parentNode = await findReferralMember(c.env.DB, parent || sponsor, true)
+ 
+     // 3. Vérifier que le slot est libre sur le nœud de placement
+-    const slotTaken = pos === 'L' ? parentNode.binary_left_id : parentNode.binary_right_id
+-    if (slotTaken) {
+-      return c.json({
+-        error: 'Ce lien n\'est plus disponible. Contactez votre parrain pour en obtenir un nouveau.',
+-        code: 'SLOT_TAKEN'
+-      }, 409)
+-    }
++    await requireAvailableSlot(c.env.DB, parentNode.id, pos)
+ 
+     return c.json({
+       valid: true,
+@@ -304,6 +283,7 @@ auth.get('/validate-slot', async (c) => {
+       position: pos
+     })
+   } catch (e: any) {
++    if (e instanceof RegistrationError) return c.json({ error: e.message, code: e.code }, e.status)
+     return c.json({ error: e.message }, 500)
+   }
+ })
+@@ -311,206 +291,131 @@ auth.get('/validate-slot', async (c) => {
+ // ── POST /api/auth/register — Inscription unifiée M1/M2/M3 ────
+ auth.post('/register', async (c) => {
+   try {
+-    const body = await c.req.json()
++    const input = await validateRegistration(c.env.DB, await c.req.json())
+     const {
+       email, password, first_name, last_name, phone, country,
+-      registration_method = 'M1',
+-      sponsor_id,           // UUID du sponsor (M2/M3)
+-      binary_parent_id,     // UUID du parent binaire (M2 uniquement)
+-      binary_position,      // 'L' ou 'R' (M2 uniquement)
+-    } = body
+-
+-    // ── VALIDATIONS ──────────────────────────────────────────
+-    if (!email || !password || !first_name || !last_name) {
+-      return c.json({ error: 'Champs obligatoires manquants', code: 'MISSING_FIELDS' }, 400)
+-    }
+-
+-    if (password.length < 8) {
+-      return c.json({ error: 'Le mot de passe doit faire au moins 8 caractères' }, 400)
+-    }
+-
+-    // Unicité email
+-    const existing = await c.env.DB.prepare(
+-      `SELECT id FROM members WHERE email = ?`
+-    ).bind(email.toLowerCase().trim()).first()
+-    if (existing) return c.json({ error: 'Cette adresse email est déjà utilisée', code: 'EMAIL_EXISTS' }, 409)
+-
+-    // ── MÉTHODE M2 : Vérification atomique du slot ───────────
+-    if (registration_method === 'M2') {
+-      if (!binary_parent_id || !binary_position || !['L', 'R'].includes(binary_position)) {
+-        return c.json({ error: 'Position invalide', code: 'INVALID_POSITION' }, 400)
+-      }
+-      const parent = await c.env.DB.prepare(
+-        `SELECT id, binary_left_id, binary_right_id FROM members WHERE id = ?`
+-      ).bind(binary_parent_id).first() as any
+-      if (!parent) return c.json({ error: 'Code parrain invalide', code: 'INVALID_SPONSOR' }, 400)
+-
+-      const slotTaken = binary_position === 'L' ? parent.binary_left_id : parent.binary_right_id
+-      if (slotTaken) {
+-        return c.json({
+-          error: 'Ce lien n\'est plus disponible. Contactez votre parrain.',
+-          code: 'SLOT_TAKEN'
+-        }, 409)
+-      }
+-    }
+-
+-    // ── GÉNÉRATION IDENTIFIANTS ──────────────────────────────
++      birth_date, nationality, address, postal_code, city,
++      registration_method, sponsor_id, binary_parent_id, binary_position,
++    } = input
+     const uniqueId = await generateUniqueIdSafe(c.env.DB)
+-    if (!uniqueId) {
+-      return c.json({ error: 'Erreur technique, réessayez', code: 'UNIQUE_ID_COLLISION' }, 500)
+-    }
++    if (!uniqueId) return c.json({ error: 'Erreur technique, réessayez.', code: 'UNIQUE_ID_COLLISION' }, 503)
+ 
+-    const pin = generatePin()
+     const id = generateId()
++    const pin = generatePin()
+     const passwordHash = await hashPassword(password)
+     const pinHash = await hashPassword(pin)
+-
+-    // ── RÉSOLUTION SPONSOR ───────────────────────────────────
+-    const rootId = await getRootId(c.env.DB)
+-    const effectiveSponsorId = sponsor_id || rootId
+-
+-    // ── CRÉATION MEMBER ──────────────────────────────────────
+-    const inHoldingTank = registration_method !== 'M2' ? 1 : 0
+-    const effectiveBinaryParentId = registration_method === 'M2' ? binary_parent_id : null
+-    const effectiveBinaryPosition = registration_method === 'M2' ? binary_position : null
+-
+-    await c.env.DB.prepare(
+-      `INSERT INTO members (
+-        id, unique_id, email, password_hash, pin_hash,
+-        first_name, last_name, phone, country,
+-        sponsor_id, binary_parent_id, binary_position,
+-        member_status, current_rank,
+-        license_active, in_holding_tank,
+-        registration_method,
+-        created_at, updated_at
+-       ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,  'Membre','none',  0,?,?,  datetime('now'),datetime('now'))`
+-    ).bind(
+-      id, uniqueId, email.toLowerCase().trim(), passwordHash, pinHash,
+-      first_name.trim(), last_name.trim(), phone || null, country || null,
+-      effectiveSponsorId, effectiveBinaryParentId, effectiveBinaryPosition,
+-      inHoldingTank,
+-      registration_method
+-    ).run()
+-
+-    // ── CRÉATION WALLET ──────────────────────────────────────
+-    await c.env.DB.prepare(
+-      `INSERT INTO wallets (id, member_id, balance, total_earned, total_withdrawn) VALUES (?,?,0,0,0)`
+-    ).bind(generateId(), id).run()
+-
+-    // ── HOLDING TANK (M1 et M3) ──────────────────────────────
+-    if (registration_method !== 'M2') {
+-      const notes = registration_method === 'M3'
+-        ? `Inscription M3 par lien de parrainage (sponsor: ${effectiveSponsorId})`
+-        : 'Inscription M1 — sans parrain'
+-      await c.env.DB.prepare(
+-        `INSERT INTO holding_tank (id, member_id, sponsor_id, entry_reason, status) VALUES (?,?,?,?,  'waiting')`
+-      ).bind(generateId(), id, effectiveSponsorId, notes).run()
++    const effectiveSponsorId = sponsor_id || await getRootId(c.env.DB)
++    const inHoldingTank = registration_method === 'M2' ? 0 : 1
++    const effectiveParentId = registration_method === 'M2' ? binary_parent_id : null
++    const effectivePosition = registration_method === 'M2' ? binary_position : null
++    const sponsorRow = await c.env.DB.prepare(`SELECT first_name, last_name FROM members WHERE id = ?`)
++      .bind(effectiveSponsorId).first() as any
++
++    // Prepare the response token before committing the account.
++    const token = await createJWT({ sub: id, email, role: 'member' }, c.env.JWT_SECRET)
++
++    // Recheck eligibility inside the same D1 transaction as every account write.
++    // If the conditional INSERT inserts nothing, the wallet's member_id foreign key
++    // fails and D1 rolls back the entire batch (including notifications/placement).
++    // No schema change or rewrite of existing members is needed.
++    const conditions = [
++      sponsor_id
++        ? `s.id = ? AND s.unique_id != 'ROOT' COLLATE NOCASE AND s.license_active = 1`
++        : `s.id = ? AND s.unique_id = 'ROOT' COLLATE NOCASE`,
++    ]
++    const guardValues: string[] = [effectiveSponsorId]
++    if (registration_method === 'M2') {
++      const slotColumn = binary_position === 'L' ? 'binary_left_id' : 'binary_right_id'
++      conditions.push(`EXISTS (
++        SELECT 1 FROM members p WHERE p.id = ? AND p.unique_id != 'ROOT' COLLATE NOCASE
++          AND p.${slotColumn} IS NULL
++          AND NOT EXISTS (SELECT 1 FROM members child WHERE child.binary_parent_id = p.id AND child.binary_position = ?)
++      )`)
++      guardValues.push(binary_parent_id, binary_position)
+     }
+-
+-    // ── MISE À JOUR PARENT BINAIRE (M2) ──────────────────────
+-    if (registration_method === 'M2' && binary_parent_id && binary_position) {
++    const statements: D1PreparedStatement[] = [
++      c.env.DB.prepare(
++        `INSERT INTO members (
++          id, unique_id, email, password_hash, pin_hash, first_name, last_name, phone, country,
++          birth_date, nationality, address, postal_code, city,
++          sponsor_id, binary_parent_id, binary_position,
++          member_status, current_rank, license_active, in_holding_tank, registration_method,
++          created_at, updated_at
++         ) SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'Membre','none',0,?,?,datetime('now'),datetime('now')
++           FROM members s WHERE ${conditions.join(' AND ')}`
++      ).bind(id, uniqueId, email, passwordHash, pinHash, first_name, last_name, phone || null, country || null,
++        birth_date || null, nationality || null, address || null, postal_code || null, city || null,
++        effectiveSponsorId, effectiveParentId, effectivePosition, inHoldingTank, registration_method, ...guardValues),
++      c.env.DB.prepare(
++        `INSERT INTO wallets (id, member_id, balance, total_earned, total_withdrawn) VALUES (?,?,0,0,0)`
++      ).bind(generateId(), id),
++    ]
++    if (registration_method === 'M2') {
+       const col = binary_position === 'L' ? 'binary_left_id' : 'binary_right_id'
+-      await c.env.DB.prepare(
+-        `UPDATE members SET ${col} = ?, updated_at = datetime('now') WHERE id = ?`
+-      ).bind(id, binary_parent_id).run()
++      statements.push(c.env.DB.prepare(
++        `UPDATE members SET ${col} = ?, updated_at = datetime('now') WHERE id = ? AND ${col} IS NULL`
++      ).bind(id, binary_parent_id))
++    } else {
++      const notes = registration_method === 'M3'
++        ? `Inscription M3 par lien de parrainage (sponsor: ${effectiveSponsorId})`
++        : 'Inscription M1 — sans placement direct'
++      statements.push(c.env.DB.prepare(
++        `INSERT INTO holding_tank (id, member_id, sponsor_id, entry_reason, status) VALUES (?,?,?,?,'waiting')`
++      ).bind(generateId(), id, effectiveSponsorId, notes))
+     }
+-
+-    // ── NOTIFICATION WELCOME ─────────────────────────────────
+-    await c.env.DB.prepare(
+-      `INSERT INTO notifications (id, member_id, type, title, message) VALUES (?,?,?,?,?)`
+-    ).bind(
+-      generateId(), id, 'welcome',
+-      'Bienvenue sur LEADER !',
+-      `Votre compte a été créé avec succès. Votre identifiant unique est ${uniqueId}.`
+-    ).run()
+-
+-    // ── NOTIFICATIONS ADMINS (M1 et M3) ──────────────────────
+-    // Les admins utilisent admin_id, pas member_id (tables différentes)
++    statements.push(c.env.DB.prepare(
++      `INSERT INTO notifications (id, member_id, type, title, message) VALUES (?,?,'welcome',?,?)`
++    ).bind(generateId(), id, 'Bienvenue sur LEADER !',
++      `Votre compte a été créé avec succès. Votre identifiant unique est ${uniqueId}.`))
+     if (registration_method !== 'M2') {
+-      const admins = await c.env.DB.prepare(`SELECT id FROM admin_users`).all()
+-      for (const admin of (admins.results as any[])) {
+-        await c.env.DB.prepare(
+-          `INSERT INTO notifications (id, admin_id, type, title, message) VALUES (?,?,?,?,?)`
+-        ).bind(
+-          generateId(), admin.id, 'info',
+-          'Nouveau membre en attente de placement',
+-          `${first_name} ${last_name} (${uniqueId}) attend son placement dans l'arbre.`
+-        ).run()
+-      }
++      statements.push(c.env.DB.prepare(
++        `INSERT INTO notifications (id, admin_id, type, title, message)
++         SELECT lower(hex(randomblob(16))), id, 'info', ?, ? FROM admin_users`
++      ).bind('Nouveau membre en attente de placement',
++        `${first_name} ${last_name} (${uniqueId}) attend son placement dans l'arbre.`))
+     }
+-
+-    // ── NOTIFICATION SPONSOR (M2 et M3) ──────────────────────
+-    if (registration_method === 'M2' && binary_parent_id) {
+-      const posLabel = binary_position === 'L' ? 'gauche' : 'droite'
+-      await c.env.DB.prepare(
+-        `INSERT INTO notifications (id, member_id, type, title, message) VALUES (?,?,?,?,?)`
+-      ).bind(
+-        generateId(), binary_parent_id, 'success',
+-        'Nouveau filleul inscrit',
+-        `${first_name} ${last_name} vient de s'inscrire (jambe ${posLabel}).`
+-      ).run()
+-    }
+-    if (registration_method === 'M3' && sponsor_id && sponsor_id !== rootId) {
+-      await c.env.DB.prepare(
+-        `INSERT INTO notifications (id, member_id, type, title, message) VALUES (?,?,?,?,?)`
+-      ).bind(
+-        generateId(), sponsor_id, 'info',
+-        'Nouveau filleul en attente',
+-        `${first_name} ${last_name} vient de s'inscrire avec votre lien de parrainage. Il est en attente de placement dans l'arbre.`
+-      ).run()
++    if (registration_method === 'M2') {
++      statements.push(c.env.DB.prepare(
++        `INSERT INTO notifications (id, member_id, type, title, message) VALUES (?,?,'success',?,?)`
++      ).bind(generateId(), binary_parent_id, 'Nouveau filleul inscrit',
++        `${first_name} ${last_name} vient de s'inscrire (jambe ${binary_position === 'L' ? 'gauche' : 'droite'}).`))
++    } else if (registration_method === 'M3') {
++      statements.push(c.env.DB.prepare(
++        `INSERT INTO notifications (id, member_id, type, title, message) VALUES (?,?,'info',?,?)`
++      ).bind(generateId(), sponsor_id, 'Nouveau filleul en attente',
++        `${first_name} ${last_name} vient de s'inscrire avec votre lien de parrainage. Il est en attente de placement dans l'arbre.`))
+     }
+-
+-    // ── FAST START : initialiser la fenêtre dès l'inscription ──
+-    // La fenêtre de 30j part de created_at (= maintenant) du nouveau membre.
+-    // initFastStart est idempotent — pas de risque de double-init.
+     try {
+-      await initFastStart(c.env.DB, id)
+-    } catch (_) {}
+-
+-    // ── TOKEN JWT ────────────────────────────────────────────
+-    const token = await createJWT(
+-      { sub: id, email: email.toLowerCase().trim(), role: 'member' },
+-      c.env.JWT_SECRET
+-    )
++      await c.env.DB.batch(statements)
++    } catch (error) {
++      // A slot/license/email may have changed since the initial validation.
++      await validateRegistrationRelations(c.env.DB, input)
++      throw error
++    }
+ 
+-    // ── Email de bienvenue ──────────────────────────────────
+-    // NOTE: await direct — plus fiable que waitUntil dans les sous-routers Hono
+-    const sponsorRow = sponsor_id
+-      ? await c.env.DB.prepare(`SELECT first_name, last_name FROM members WHERE id=?`).bind(sponsor_id).first() as any
+-      : null
++    // Optional follow-up work must not turn a committed registration into an error.
++    try { await initFastStart(c.env.DB, id) } catch (_) {}
+     await sendEmail(c.env.DB, {
+-      to: email.toLowerCase().trim(),
+-      toName: `${first_name} ${last_name}`,
+-      templateId: 'welcome',
++      to: email, toName: `${first_name} ${last_name}`, templateId: 'welcome',
+       variables: {
+-        prenom:    first_name,
+-        nom:       last_name,
+-        email:     email.toLowerCase().trim(),
+-        membre_id: uniqueId,
+-        pin:       pin,
+-        parrain:   sponsorRow ? `${sponsorRow.first_name} ${sponsorRow.last_name}` : 'Aucun',
++        prenom: first_name, nom: last_name, email, membre_id: uniqueId, pin,
++        parrain: sponsor_id && sponsorRow ? `${sponsorRow.first_name} ${sponsorRow.last_name}` : 'Aucun',
+         login_url: 'https://willbeleader.com',
+-      }
++      },
+     }).catch(() => {})
+-
+     return c.json({
+-      success: true,
+-      token,
+-      member: {
+-        id,
+-        unique_id: uniqueId,
+-        email: email.toLowerCase().trim(),
+-        first_name,
+-        last_name,
+-        member_status: 'Membre'
+-      },
+-      pin_displayed: pin,           // PIN en clair — UNE SEULE FOIS
++      success: true, token,
++      member: { id, unique_id: uniqueId, email, first_name, last_name, member_status: 'Membre' },
++      pin_displayed: pin,
+       in_holding_tank: inHoldingTank === 1,
+       placed: registration_method === 'M2',
+-      registration_method
++      registration_method,
+     }, 201)
+   } catch (e: any) {
+-    return c.json({ error: e.message }, 500)
++    if (e instanceof RegistrationError) return c.json({ error: e.message, code: e.code }, e.status)
++    if (e instanceof SyntaxError) return c.json({ error: 'Formulaire invalide.', code: 'INVALID_REQUEST' }, 400)
++    console.error('[register] Account creation failed', e)
++    return c.json({ error: 'Inscription impossible pour le moment. Veuillez réessayer.', code: 'REGISTRATION_FAILED' }, 500)
+   }
+ })
+ 
+diff --git a/tests/registration.test.mjs b/tests/registration.test.mjs
+new file mode 100644
+index 0000000..67ad7d2
+--- /dev/null
++++ b/tests/registration.test.mjs
+@@ -0,0 +1,293 @@
++import assert from 'node:assert/strict';
++import { after, test } from 'node:test';
++import { DatabaseSync } from 'node:sqlite';
++import { readFileSync, mkdtempSync, rmSync } from 'node:fs';
++import { tmpdir } from 'node:os';
++import { join } from 'node:path';
++import { pathToFileURL } from 'node:url';
++import vm from 'node:vm';
++import { build } from 'esbuild';
++
++// Run with Node 24. Real Hono handlers + SQLite SQL; no production bindings or network.
++const temp = mkdtempSync(join(tmpdir(), 'leader-registration-'));
++after(() => rmSync(temp, { recursive: true, force: true }));
++await build({ stdin: { contents: "export { auth } from './src/routes/auth.ts'; export { default as app } from './src/index.tsx';", resolveDir: process.cwd() }, bundle: true, platform: 'node', format: 'esm', outfile: join(temp, 'app.mjs'), logLevel: 'silent' });
++const { auth, app } = await import(pathToFileURL(join(temp, 'app.mjs')));
++const originalFetch = globalThis.fetch;
++globalThis.fetch = async () => { throw new Error('Network is forbidden in registration tests'); };
++after(() => { globalThis.fetch = originalFetch; });
++
++class LocalD1 {
++  sqlite = new DatabaseSync(':memory:');
++  beforeBatch;
++  constructor() {
++    for (const file of ['0001_initial_schema.sql', '0007_inscription_methods.sql', '0012_system_config.sql', '0041_kyc_demographics.sql', '0052_members_address_fields.sql']) {
++      this.sqlite.exec(readFileSync(new URL('../migrations/' + file, import.meta.url), 'utf8'));
++    }
++    this.sqlite.exec('PRAGMA foreign_keys=ON');
++    assert.equal(this.sqlite.prepare('PRAGMA foreign_keys').get().foreign_keys, 1);
++  }
++  prepare(sql) {
++    const db = this.sqlite;
++    return {
++      sql, args: [],
++      bind(...args) { this.args = args; return this; },
++      async first() { return db.prepare(sql).get(...this.args) || null; },
++      async all() { return { results: db.prepare(sql).all(...this.args) }; },
++      async run() { const result = db.prepare(sql).run(...this.args); return { success: true, meta: { changes: Number(result.changes) } }; },
++    };
++  }
++  async batch(statements) {
++    if (this.beforeBatch) await this.beforeBatch();
++    this.sqlite.exec('BEGIN');
++    try {
++      const results = statements.map(s => ({ success: true, meta: { changes: Number(this.sqlite.prepare(s.sql).run(...s.args).changes) } }));
++      this.sqlite.exec('COMMIT');
++      return results;
++    } catch (error) {
++      this.sqlite.exec('ROLLBACK');
++      throw error;
++    }
++  }
++}
++function fixture(t) {
++  const DB = new LocalD1();
++  t.after(() => DB.sqlite.close());
++  seed(DB, 'sponsor', 'megalen');
++  return { DB, JWT_SECRET: 'test-only-registration-secret-never-used-in-production' };
++}
++function seed(db, id, uid, license = 1) {
++  db.sqlite.prepare(`INSERT INTO members(id,unique_id,email,password_hash,first_name,last_name,license_active) VALUES (?,?,?,'synthetic','Audit','Example',?)`).run(id, uid, id + '@example.invalid', license);
++}
++function body(overrides = {}) {
++  return { first_name: ' New ', last_name: ' Member ', email: 'new@example.invalid', password: 'test-only-password', registration_method: 'M1', ...overrides };
++}
++async function post(env, data) {
++  const response = await auth.request('/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }, env);
++  return { status: response.status, data: await response.json() };
++}
++async function get(env, path) {
++  const response = await auth.request(path, {}, env);
++  return { status: response.status, data: await response.json() };
++}
++function counts(db) {
++  return Object.fromEntries(['members', 'wallets', 'holding_tank', 'notifications'].map(table => [table, db.sqlite.prepare(`SELECT count(*) n FROM ${table}`).get().n]));
++}
++
++test('referral and placement lookups accept historical UID case variants', async t => {
++  const env = fixture(t);
++  for (const uid of ['megalen', 'MEGALEN', 'Megalen']) {
++    const sponsor = await get(env, '/sponsor/' + uid);
++    assert.equal(sponsor.data.id, 'sponsor');
++    const slot = await get(env, `/validate-slot?sponsor=${uid}&parent=${uid}&position=l`);
++    assert.equal(slot.status, 200);
++    assert.equal(slot.data.parent_id, 'sponsor');
++    assert.equal(slot.data.position, 'L');
++  }
++});
++test('ambiguous UID case collisions never choose an arbitrary account', async t => {
++  const env = fixture(t); seed(env.DB, 'other', 'MEGALEN');
++  for (const path of ['/sponsor/megalen', '/validate-slot?sponsor=megalen&position=L']) {
++    const res = await get(env, path);
++    assert.equal(res.status, 409); assert.equal(res.data.code, 'AMBIGUOUS_REFERRAL');
++  }
++});
++test('lookup distinguishes absent sponsor, inactive license, absent parent and occupied slot', async t => {
++  const env = fixture(t);
++  assert.equal((await get(env, '/sponsor/missing')).data.reason, 'not_found');
++  seed(env.DB, 'inactive', 'inactive', 0);
++  assert.equal((await get(env, '/sponsor/inactive')).data.reason, 'no_license');
++  assert.equal((await get(env, '/validate-slot?sponsor=inactive&position=L')).data.code, 'SPONSOR_NO_LICENSE');
++  assert.equal((await get(env, '/validate-slot?sponsor=megalen&parent=missing&position=L')).data.code, 'INVALID_PARENT');
++  seed(env.DB, 'child', 'child');
++  env.DB.sqlite.exec("UPDATE members SET binary_parent_id='sponsor', binary_position='L' WHERE id='child'");
++  assert.equal((await get(env, '/validate-slot?sponsor=megalen&position=L')).data.code, 'SLOT_TAKEN');
++});
++test('M1 without referral creates root sponsorship, wallet, holding entry and preserves profile fields', async t => {
++  const env = fixture(t);
++  const values = { phone: '+230 1234', country: 'Maurice', birth_date: '1990-02-28', nationality: 'Mauricienne', address: 'Example road', postal_code: '12345', city: 'Example city' };
++  const result = await post(env, body(values));
++  assert.equal(result.status, 201, JSON.stringify(result.data));
++  const member = env.DB.sqlite.prepare('SELECT * FROM members WHERE id=?').get(result.data.member.id);
++  for (const [field, value] of Object.entries(values)) assert.equal(member[field], value);
++  assert.equal(member.first_name, 'New');
++  assert.equal(member.sponsor_id, 'root-system-000000000000000000000000');
++  assert.equal(member.in_holding_tank, 1);
++  assert.equal(counts(env.DB).holding_tank, 1);
++  assert.ok(env.DB.sqlite.prepare('SELECT * FROM wallets WHERE member_id=?').get(member.id));
++});
++test('M3 preserves sponsor in member and holding tank', async t => {
++  const env = fixture(t); const result = await post(env, body({ registration_method: 'M3', sponsor_id: 'sponsor' }));
++  assert.equal(result.status, 201, JSON.stringify(result.data));
++  const member = env.DB.sqlite.prepare('SELECT * FROM members WHERE id=?').get(result.data.member.id);
++  assert.equal(member.sponsor_id, 'sponsor'); assert.equal(member.binary_parent_id, null);
++  assert.equal(env.DB.sqlite.prepare('SELECT sponsor_id FROM holding_tank WHERE member_id=?').get(member.id).sponsor_id, 'sponsor');
++});
++for (const position of ['L', 'R']) test(`M2 ${position} preserves distinct sponsor and binary parent`, async t => {
++  const env = fixture(t); seed(env.DB, 'parent', 'parent');
++  const result = await post(env, body({ registration_method: 'M2', sponsor_id: 'sponsor', binary_parent_id: 'parent', binary_position: position.toLowerCase() }));
++  assert.equal(result.status, 201, JSON.stringify(result.data));
++  const member = env.DB.sqlite.prepare('SELECT * FROM members WHERE id=?').get(result.data.member.id);
++  assert.equal(member.sponsor_id, 'sponsor'); assert.equal(member.binary_parent_id, 'parent'); assert.equal(member.binary_position, position); assert.equal(member.in_holding_tank, 0);
++  const column = position === 'L' ? 'binary_left_id' : 'binary_right_id';
++  assert.equal(env.DB.sqlite.prepare(`SELECT ${column} child FROM members WHERE id='parent'`).get().child, member.id);
++  assert.equal(counts(env.DB).holding_tank, 0);
++});
++test('final POST rejects missing, invalid and inactive sponsors, invalid method and placement', async t => {
++  const env = fixture(t); seed(env.DB, 'inactive', 'inactive', 0);
++  const before = counts(env.DB);
++  const cases = [
++    [{ registration_method: 'M3' }, 'INVALID_SPONSOR'],
++    [{ registration_method: 'M2', binary_parent_id: 'sponsor', binary_position: 'L' }, 'INVALID_SPONSOR'],
++    [{ sponsor_id: 'missing' }, 'INVALID_SPONSOR'],
++    [{ registration_method: 'M3', sponsor_id: 'inactive' }, 'SPONSOR_NO_LICENSE'],
++    [{ registration_method: 'unknown' }, 'INVALID_METHOD'],
++    [{ registration_method: 'M2', sponsor_id: 'sponsor', binary_parent_id: 'missing', binary_position: 'L' }, 'INVALID_PARENT'],
++    [{ registration_method: 'M2', sponsor_id: 'sponsor', binary_parent_id: 'sponsor', binary_position: 'X' }, 'INVALID_POSITION'],
++    [{ binary_parent_id: 'sponsor', binary_position: 'L' }, 'INVALID_POSITION'],
++  ];
++  for (const [overrides, code] of cases) assert.equal((await post(env, body(overrides))).data.code, code);
++  assert.deepEqual(counts(env.DB), before);
++});
++test('server enforces configured required fields and real birth dates', async t => {
++  const env = fixture(t);
++  env.DB.sqlite.exec(`INSERT OR REPLACE INTO system_config(key,value) VALUES ('reg_required_fields','["phone","city"]')`);
++  assert.equal((await post(env, body())).data.code, 'MISSING_FIELDS');
++  assert.equal((await post(env, body({ phone: '123', city: 'Example', birth_date: '1990-02-30' }))).data.code, 'INVALID_BIRTH_DATE');
++  assert.equal((await post(env, body({ phone: '123', city: 'Example' }))).status, 201);
++});
++test('two concurrent registrations cannot occupy the same binary slot', async t => {
++  const env = fixture(t); const before = counts(env.DB);
++  let arrived = 0; let release; const gate = new Promise(resolve => { release = resolve; });
++  env.DB.beforeBatch = async () => { if (++arrived === 2) release(); await gate; };
++  const common = { registration_method: 'M2', sponsor_id: 'sponsor', binary_parent_id: 'sponsor', binary_position: 'L' };
++  const results = await Promise.all([post(env, body(common)), post(env, body({ ...common, email: 'second@example.invalid' }))]);
++  assert.deepEqual(results.map(r => r.status).sort(), [201, 409]);
++  assert.equal(results.find(r => r.status === 409).data.code, 'SLOT_TAKEN');
++  assert.equal(counts(env.DB).members, before.members + 1);
++  assert.equal(counts(env.DB).wallets, before.wallets + 1);
++  assert.equal(env.DB.sqlite.prepare("SELECT count(*) n FROM members WHERE binary_parent_id='sponsor' AND binary_position='L'").get().n, 1);
++});
++test('license deactivation between validation and insertion prevents all writes', async t => {
++  const env = fixture(t); const before = counts(env.DB);
++  env.DB.beforeBatch = async () => { env.DB.sqlite.exec("UPDATE members SET license_active=0 WHERE id='sponsor'"); };
++  const result = await post(env, body({ registration_method: 'M3', sponsor_id: 'sponsor' }));
++  assert.equal(result.status, 403); assert.equal(result.data.code, 'SPONSOR_NO_LICENSE'); assert.deepEqual(counts(env.DB), before);
++});
++test('an intermediate SQL failure rolls back account, wallet, placement and notifications', async t => {
++  const env = fixture(t); const before = counts(env.DB);
++  env.DB.sqlite.exec("CREATE TRIGGER fail_notification BEFORE INSERT ON notifications BEGIN SELECT RAISE(ABORT, 'synthetic notification failure'); END");
++  const originalError = console.error; console.error = () => {};
++  let result;
++  try { result = await post(env, body({ registration_method: 'M2', sponsor_id: 'sponsor', binary_parent_id: 'sponsor', binary_position: 'L' })); }
++  finally { console.error = originalError; }
++  assert.equal(result.status, 500); assert.equal(result.data.code, 'REGISTRATION_FAILED');
++  assert.deepEqual(counts(env.DB), before);
++  assert.equal(env.DB.sqlite.prepare("SELECT binary_left_id FROM members WHERE id='sponsor'").get().binary_left_id, null);
++  env.DB.sqlite.exec('DROP TRIGGER fail_notification');
++  assert.equal((await post(env, body())).status, 201);
++});
++test('concurrent duplicate emails produce one complete account', async t => {
++  const env = fixture(t); const before = counts(env.DB);
++  let arrived = 0; let release; const gate = new Promise(resolve => { release = resolve; });
++  env.DB.beforeBatch = async () => { if (++arrived === 2) release(); await gate; };
++  const results = await Promise.all([post(env, body()), post(env, body({ email: 'NEW@example.invalid' }))]);
++  assert.deepEqual(results.map(r => r.status).sort(), [201, 409]);
++  assert.equal(results.find(r => r.status === 409).data.code, 'EMAIL_EXISTS');
++  assert.equal(counts(env.DB).members, before.members + 1); assert.equal(counts(env.DB).wallets, before.wallets + 1);
++});
++
++function browserContext(reg, getResponse, legacy = false) {
++  const elements = new Map();
++  const element = id => {
++    if (!elements.has(id)) elements.set(id, { value: '', textContent: '', innerHTML: '', checked: true, disabled: false, style: {}, classList: { add() {}, remove() {}, toggle() {} }, scrollIntoView() {}, addEventListener() {} });
++    return elements.get(id);
++  };
++  const calls = [];
++  const context = vm.createContext({ URLSearchParams, console, setTimeout, clearTimeout,
++    addEventListener() {},
++    document: { getElementById: element, querySelectorAll: () => [], addEventListener() {} },
++    axios: { get: async () => { if (getResponse instanceof Error) throw getResponse; return { data: getResponse }; }, post: async (...args) => { calls.push(args); throw new Error('Unexpected registration'); } },
++    localStorage: { setItem() {}, getItem() { return null; }, removeItem() {} },
++    api: async (...args) => { if (args[0] === 'GET') return { fields: [] }; calls.push(args); throw new Error('Unexpected registration'); },
++  });
++  context.window = context;
++  context.__REG__ = reg; context.__REGISTRATION__ = reg;
++  const prefix = legacy ? 'reg-' : 'r-';
++  for (const suffix of ['firstname', 'lastname']) element(prefix + suffix).value = 'Audit';
++  element(prefix + 'email').value = 'audit@example.invalid';
++  for (const suffix of ['password', 'password2']) element(prefix + suffix).value = 'test-only-password';
++  return { context, element, calls };
++}
++let publicScripts;
++async function standaloneScripts(env) {
++  if (!publicScripts) {
++    const html = await (await app.request('/register/megalen', {}, env)).text();
++    publicScripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m => m[1]).filter(s => s.trim() && !s.includes('window.__REG__ ='));
++    assert.ok(publicScripts.some(s => s.includes('async function doRegister')));
++    for (const script of publicScripts) new vm.Script(script);
++  }
++  return publicScripts;
++}
++for (const legacy of [false, true]) {
++  const name = legacy ? 'legacy form' : 'standalone form';
++  test(`${name}: invalid, inactive or unavailable referral cannot submit without a sponsor`, async t => {
++    const env = fixture(t);
++    for (const response of [{ found: false, message: 'Parrain introuvable.' }, { found: false, reason: 'no_license', message: 'Licence inactive.' }, new Error('Network unavailable')]) {
++      const browser = browserContext({ mode: 'M3', sponsorUid: 'megalen' }, response, legacy);
++      if (legacy) {
++        const source = readFileSync(new URL('../public/static/member-app.js', import.meta.url), 'utf8');
++        vm.runInContext(source.slice(source.indexOf('async function initRegistrationMode()'), source.indexOf('function showPinConfirmation')), browser.context);
++      } else for (const script of await standaloneScripts(env)) vm.runInContext(script, browser.context);
++      await vm.runInContext(legacy ? 'initRegistrationMode()' : 'initPage()', browser.context);
++      assert.equal(browser.element(legacy ? 'reg-submit-btn' : 'r-submit-btn').disabled, true);
++      await vm.runInContext('doRegister()', browser.context);
++      assert.equal(browser.calls.length, 0);
++    }
++  });
++  test(`${name}: valid sponsor enables submission and preserves canonical UID`, async t => {
++    const env = fixture(t);
++    const browser = browserContext({ mode: 'M3', sponsorUid: 'MEGALEN' }, { found: true, id: 'sponsor', name: 'Audit Example', unique_id: 'megalen' }, legacy);
++    if (legacy) {
++      const source = readFileSync(new URL('../public/static/member-app.js', import.meta.url), 'utf8');
++      vm.runInContext(source.slice(source.indexOf('async function initRegistrationMode()'), source.indexOf('function showPinConfirmation')), browser.context);
++    } else for (const script of await standaloneScripts(env)) vm.runInContext(script, browser.context);
++    await vm.runInContext(legacy ? 'initRegistrationMode()' : 'initPage()', browser.context);
++    assert.equal(browser.element(legacy ? 'reg-submit-btn' : 'r-submit-btn').disabled, false);
++    assert.match(browser.element(legacy ? 'sponsor-banner-text' : 'sponsor-banner-name').textContent, /megalen/);
++    await vm.runInContext('doRegister()', browser.context);
++    assert.equal(browser.calls.length, 1);
++    const submitted = browser.calls[0][legacy ? 2 : 1];
++    assert.equal(submitted.registration_method, 'M3');
++    assert.equal(submitted.sponsor_id, 'sponsor');
++  });
++  test(`${name}: an invalid optional referral is never silently discarded`, async t => {
++    const env = fixture(t);
++    const browser = browserContext({ mode: 'M1' }, { found: false, message: 'Parrain introuvable.' }, legacy);
++    if (legacy) {
++      const source = readFileSync(new URL('../public/static/member-app.js', import.meta.url), 'utf8');
++      vm.runInContext(source.slice(source.indexOf('async function initRegistrationMode()'), source.indexOf('function showPinConfirmation')), browser.context);
++    } else for (const script of await standaloneScripts(env)) vm.runInContext(script, browser.context);
++    await vm.runInContext(legacy ? 'initRegistrationMode()' : 'initPage()', browser.context);
++    browser.element(legacy ? 'reg-sponsor' : 'r-sponsor-code').value = 'missing';
++    await vm.runInContext('doRegister()', browser.context);
++    assert.equal(browser.calls.length, 0);
++  });
++  test(`${name}: binary link submits the recruiter, selected parent and normalized side`, async t => {
++    const env = fixture(t);
++    const browser = browserContext({ mode: 'M2', sponsor: 'MEGALEN', parent: 'other', position: 'l' },
++      { valid: true, sponsor_id: 'sponsor', parent_id: 'parent', sponsor_name: 'Sponsor', parent_name: 'Parent', sponsor_unique_id: 'megalen', parent_unique_id: 'other', position: 'L' }, legacy);
++    if (legacy) {
++      const source = readFileSync(new URL('../public/static/member-app.js', import.meta.url), 'utf8');
++      vm.runInContext(source.slice(source.indexOf('async function initRegistrationMode()'), source.indexOf('function showPinConfirmation')), browser.context);
++    } else for (const script of await standaloneScripts(env)) vm.runInContext(script, browser.context);
++    await vm.runInContext(legacy ? 'initRegistrationMode()' : 'initPage()', browser.context);
++    await vm.runInContext('doRegister()', browser.context);
++    assert.equal(browser.calls.length, 1);
++    const submitted = browser.calls[0][legacy ? 2 : 1];
++    assert.equal(submitted.registration_method, 'M2');
++    assert.equal(submitted.sponsor_id, 'sponsor');
++    assert.equal(submitted.binary_parent_id, 'parent');
++    assert.equal(submitted.binary_position, 'L');
++  });
++}
